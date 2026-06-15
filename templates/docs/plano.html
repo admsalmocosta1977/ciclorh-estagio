@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Plano de Atividades – {{ d.est_nome }}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; background: #fff; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 20mm 15mm; }
+  h1 { font-size: 13pt; text-align: center; text-transform: uppercase; margin-bottom: 4px; }
+  .subtitulo { font-size: 10pt; text-align: center; color: #333; margin-bottom: 16px; }
+  .secao { font-size: 10.5pt; font-weight: bold; text-transform: uppercase; margin: 14px 0 6px; border-bottom: 1px solid #000; padding-bottom: 2px; }
+  table.dados { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  table.dados td { padding: 3px 6px; vertical-align: top; }
+  table.dados td.label { font-weight: bold; white-space: nowrap; width: 38%; }
+  table.atividades { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  table.atividades th { background: #1a2845; color: #fff; padding: 6px 8px; font-size: 10pt; text-align: left; }
+  table.atividades td { padding: 6px 8px; border: 1px solid #ccc; font-size: 10.5pt; }
+  table.atividades tr:nth-child(even) td { background: #f5f7fa; }
+  .assinaturas { margin-top: 28px; }
+  .assinatura-bloco { display: inline-block; width: 30%; text-align: center; vertical-align: top; margin: 0 1.6%; }
+  .assinatura-linha { border-top: 1px solid #000; margin-top: 40px; padding-top: 4px; }
+  .rodape { font-size: 8pt; color: #555; text-align: center; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 6px; }
+  @media print { .no-print { display: none !important; } .page { padding: 15mm 18mm 12mm; } }
+</style>
+</head>
+<body>
+<div class="no-print" style="background:#1a2845;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center">
+  <span>Plano de Atividades — {{ d.est_nome }}</span>
+  <div>
+    <button onclick="window.print()" style="background:#fff;color:#1a2845;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;font-weight:bold">Imprimir / Salvar PDF</button>
+    <button onclick="window.close()" style="background:transparent;color:#aaa;border:none;padding:6px 12px;cursor:pointer">✕</button>
+  </div>
+</div>
+
+<div class="page">
+  <h1>Plano de Atividades de Estágio</h1>
+  <div class="subtitulo">Ciclo RH – Agente de Integração de Estágio</div>
+
+  <div class="secao">Identificação</div>
+  <table class="dados">
+    <tr><td class="label">Estagiário(a):</td><td>{{ d.est_nome }}</td></tr>
+    <tr><td class="label">CPF:</td><td>{{ d.est_cpf }}</td></tr>
+    <tr><td class="label">Curso:</td><td>{{ d.curso }}</td></tr>
+    <tr><td class="label">Instituição de Ensino:</td><td>{{ d.ie_nome }}</td></tr>
+    <tr><td class="label">Empresa:</td><td>{{ d.emp_nome }}</td></tr>
+    <tr><td class="label">Supervisor:</td><td>{{ d.supervisor_nome or '________________' }}{% if d.supervisor_cargo %} — {{ d.supervisor_cargo }}{% endif %}</td></tr>
+    <tr><td class="label">Período:</td><td>{{ fmt_date(d.data_inicio) }} a {{ fmt_date(d.data_fim) }}</td></tr>
+    <tr><td class="label">Carga Horária:</td><td>{{ d.ch_diaria or 6 }}h/dia — {{ d.ch_semanal or 30 }}h/semana</td></tr>
+    <tr><td class="label">Área de Atuação:</td><td>{{ d.area_atuacao or d.curso }}</td></tr>
+  </table>
+
+  <div class="secao">Atividades Previstas</div>
+  <table class="atividades">
+    <thead>
+      <tr><th style="width:50px">N.º</th><th>Descrição da Atividade</th></tr>
+    </thead>
+    <tbody>
+    {% set ats = d.atividades.split('||') if d.atividades else [] %}
+    {% for at in ats %}
+    {% if at.strip() %}
+    <tr><td style="text-align:center">{{ loop.index }}</td><td>{{ at.strip() }}</td></tr>
+    {% endif %}
+    {% else %}
+    <tr><td colspan="2" style="text-align:center;color:#888;padding:16px">Atividades não informadas.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <p style="text-align:center; margin-top:18px">
+    Vitória da Conquista – BA, {{ data_hoje }}
+  </p>
+
+  <div class="assinaturas">
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Parte Concedente</strong><br>
+        <small>{{ d.emp_nome }}</small><br>
+        <small>{{ d.emp_representante or '' }}</small>
+      </div>
+    </div>
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Instituição de Ensino</strong><br>
+        <small>{{ d.ie_nome }}</small><br>
+        <small>{{ d.ie_coordenador or '' }}</small>
+      </div>
+    </div>
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Estagiário(a)</strong><br>
+        <small>{{ d.est_nome }}</small><br>
+        <small>CPF: {{ d.est_cpf }}</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="rodape">
+    {{ agente.nome }} — CNPJ {{ agente.cnpj }} — {{ agente.endereco }}, {{ agente.cidade }} — {{ agente.email }}
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Termo de Ciência – {{ d.est_nome }}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; background: #fff; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 20mm 15mm; }
+  h1 { font-size: 13pt; text-align: center; text-transform: uppercase; margin-bottom: 4px; }
+  .subtitulo { font-size: 10pt; text-align: center; color: #333; margin-bottom: 20px; }
+  p { margin-bottom: 10px; line-height: 1.6; text-align: justify; }
+  .destaque { font-weight: bold; }
+  table.dados { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  table.dados td { padding: 4px 6px; vertical-align: top; border-bottom: 1px dotted #ccc; }
+  table.dados td.label { font-weight: bold; width: 40%; }
+  .assinatura-area { margin-top: 50px; text-align: center; }
+  .assinatura-linha { display: inline-block; width: 280px; border-top: 1px solid #000; padding-top: 4px; text-align: center; }
+  .rodape { font-size: 8pt; color: #555; text-align: center; margin-top: 30px; border-top: 1px solid #ccc; padding-top: 6px; position: absolute; bottom: 15mm; left: 20mm; right: 20mm; }
+  @media print { .no-print { display: none !important; } .page { padding: 15mm 18mm 12mm; } }
+</style>
+</head>
+<body>
+<div class="no-print" style="background:#1a2845;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center">
+  <span>Termo de Ciência — {{ d.est_nome }}</span>
+  <div>
+    <button onclick="window.print()" style="background:#fff;color:#1a2845;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;font-weight:bold">Imprimir / Salvar PDF</button>
+    <button onclick="window.close()" style="background:transparent;color:#aaa;border:none;padding:6px 12px;cursor:pointer">✕</button>
+  </div>
+</div>
+
+<div class="page">
+  <h1>Termo de Ciência do Estagiário</h1>
+  <div class="subtitulo">Ciclo RH – Agente de Integração de Estágio</div>
+
+  <p>Pelo presente instrumento, eu, <span class="destaque">{{ d.est_nome }}</span>, inscrito(a) no CPF sob o n.º <span class="destaque">{{ d.est_cpf }}</span>, declaro ter pleno conhecimento das condições e obrigações estabelecidas no Termo de Compromisso de Estágio celebrado entre as partes:</p>
+
+  <table class="dados">
+    <tr><td class="label">Parte Concedente:</td><td>{{ d.emp_nome }}</td></tr>
+    <tr><td class="label">Instituição de Ensino:</td><td>{{ d.ie_nome }}</td></tr>
+    <tr><td class="label">Agente de Integração:</td><td>{{ agente.nome }}</td></tr>
+    <tr><td class="label">Curso:</td><td>{{ d.curso }}</td></tr>
+    <tr><td class="label">Período de Estágio:</td><td>{{ fmt_date(d.data_inicio) }} a {{ fmt_date(d.data_fim) }}</td></tr>
+    <tr><td class="label">Bolsa Auxílio Mensal:</td><td>R$ {{ '%.2f'|format(d.bolsa or 0) }}</td></tr>
+    {% if d.aux_transporte %}<tr><td class="label">Auxílio Transporte:</td><td>R$ {{ '%.2f'|format(d.aux_transporte) }} / dia</td></tr>{% endif %}
+  </table>
+
+  <p>Declaro ainda estar ciente de que:</p>
+  <p>I — O estágio não cria vínculo empregatício de qualquer natureza, nos termos do art. 3.º da Lei n.º 11.788/2008;</p>
+  <p>II — Devo cumprir as normas internas da Parte Concedente e manter sigilo sobre informações confidenciais a que tiver acesso;</p>
+  <p>III — O não cumprimento das atividades previstas no Plano de Atividades ou o descumprimento das normas internas poderá resultar no encerramento antecipado do estágio;</p>
+  <p>IV — Fui orientado(a) sobre os meus direitos e deveres como estagiário(a), conforme previsto na legislação vigente;</p>
+  <p>V — Li e compreendi todas as cláusulas do Termo de Compromisso de Estágio e do Plano de Atividades, concordando integralmente com os seus termos.</p>
+
+  <p style="text-align:center; margin-top:24px">
+    Vitória da Conquista – BA, {{ data_hoje }}
+  </p>
+
+  <div class="assinatura-area">
+    <div class="assinatura-linha">
+      <strong>{{ d.est_nome }}</strong><br>
+      <small>CPF: {{ d.est_cpf }}</small><br>
+      <small>Estagiário(a)</small>
+    </div>
+  </div>
+
+  <div class="rodape">
+    {{ agente.nome }} — CNPJ {{ agente.cnpj }} — {{ agente.endereco }}, {{ agente.cidade }} — {{ agente.email }}
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h4 class="mb-4 fw-bold"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h4>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card text-center p-3">
+      <div class="fs-1 fw-bold text-primary">{{ total }}</div>
+      <div class="text-muted small">Contratos Ativos</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center p-3">
+      <div class="fs-1 fw-bold text-success">{{ total_est }}</div>
+      <div class="text-muted small">Estagiários</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center p-3">
+      <div class="fs-1 fw-bold text-info">{{ total_emp }}</div>
+      <div class="text-muted small">Empresas</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-center p-3">
+      <div class="fs-1 fw-bold text-warning">{{ total_ie }}</div>
+      <div class="text-muted small">Instituições de Ensino</div>
+    </div>
+  </div>
+</div>
+
+{% if vencendo %}
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+    <span>Contratos vencendo nos próximos 30 dias ({{ vencendo|length }})</span>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light"><tr>
+        <th>Estagiário</th><th>Empresa</th><th>Vencimento</th><th>Situação</th><th></th>
+      </tr></thead>
+      <tbody>
+      {% for r in vencendo %}
+      <tr>
+        <td>{{ r.est_nome }}</td>
+        <td>{{ r.emp_nome }}</td>
+        <td>{{ fmt_date(r.data_fim) }}</td>
+        <td>
+          {% set st = calcular_status(r.data_fim) %}
+          {% if 'DIAS' in st %}<span class="badge badge-vencendo">{{ st }}</span>
+          {% elif st == 'VENCIDO' %}<span class="badge badge-vencido">VENCIDO</span>
+          {% else %}<span class="badge badge-ativo">ATIVO</span>{% endif %}
+        </td>
+        <td>
+          <a href="{{ url_for('contrato_editar', id=r.id) }}" class="btn btn-sm btn-outline-secondary">Editar</a>
+          <a href="{{ url_for('doc_tce', id=r.id) }}" class="btn btn-sm btn-outline-primary" target="_blank">TCE</a>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-clock-history me-2"></i>Contratos recentes</span>
+    <a href="{{ url_for('contrato_novo') }}" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Novo Contrato
+    </a>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light"><tr>
+        <th>Estagiário</th><th>Empresa</th><th>Vigência</th><th>Documentos</th>
+      </tr></thead>
+      <tbody>
+      {% for r in recentes %}
+      <tr>
+        <td>{{ r.est_nome }}</td>
+        <td>{{ r.emp_nome }}</td>
+        <td>{{ fmt_date(r.data_inicio) }} – {{ fmt_date(r.data_fim) }}</td>
+        <td class="d-flex gap-1 flex-wrap">
+          <a href="{{ url_for('doc_tce', id=r.id) }}" class="btn btn-sm btn-outline-primary btn-doc" target="_blank">TCE</a>
+          <a href="{{ url_for('doc_plano', id=r.id) }}" class="btn btn-sm btn-outline-success btn-doc" target="_blank">Plano</a>
+          <a href="{{ url_for('doc_ciencia', id=r.id) }}" class="btn btn-sm btn-outline-info btn-doc" target="_blank">Ciência</a>
+          <a href="{{ url_for('doc_tre', id=r.id) }}" class="btn btn-sm btn-outline-warning btn-doc" target="_blank">TRE</a>
+          <a href="{{ url_for('doc_relatorio', id=r.id) }}" class="btn btn-sm btn-outline-secondary btn-doc" target="_blank">Relatório</a>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if not recentes %}
+      <tr><td colspan="4" class="text-center text-muted py-4">
+        Nenhum contrato ativo. <a href="{{ url_for('contrato_novo') }}">Criar o primeiro</a>
+      </td></tr>
+      {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if ie else 'Nova' }} Instituição{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{{ url_for('ies') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="fw-bold mb-0">{{ 'Editar' if ie else 'Nova' }} Instituição de Ensino</h4>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="post">
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label class="form-label fw-semibold">Nome da Instituição *</label>
+          <input type="text" name="nome" class="form-control" value="{{ ie.nome if ie else '' }}" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Sigla</label>
+          <input type="text" name="sigla" class="form-control" value="{{ ie.sigla if ie else '' }}" placeholder="ex: UESB, UFBA">
+        </div>
+        <div class="col-md-8">
+          <label class="form-label fw-semibold">Endereço</label>
+          <input type="text" name="endereco" class="form-control" value="{{ ie.endereco if ie else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Cidade</label>
+          <input type="text" name="cidade" class="form-control" value="{{ ie.cidade if ie else 'Vitória da Conquista' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Coordenador(a) de Estágio</label>
+          <input type="text" name="coordenador" class="form-control" value="{{ ie.coordenador if ie else '' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Cargo/Função</label>
+          <input type="text" name="coordenador_cargo" class="form-control" value="{{ ie.coordenador_cargo if ie else '' }}" placeholder="ex: Coordenador de Estágios">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Telefone</label>
+          <input type="text" name="telefone" class="form-control" value="{{ ie.telefone if ie else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">E-mail</label>
+          <input type="email" name="email" class="form-control" value="{{ ie.email if ie else '' }}">
+        </div>
+      </div>
+      <hr>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar</button>
+        <a href="{{ url_for('ies') }}" class="btn btn-outline-secondary">Cancelar</a>
+        {% if ie %}
+        <a href="{{ url_for('ie_excluir', id=ie.id) }}" class="btn btn-outline-danger ms-auto"
+           onclick="return confirm('Excluir esta instituição?')">
+          <i class="bi bi-trash me-1"></i>Excluir
+        </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

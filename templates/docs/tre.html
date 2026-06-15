@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>TRE – {{ d.est_nome }}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; background: #fff; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 20mm 15mm; }
+  h1 { font-size: 13pt; text-align: center; text-transform: uppercase; margin-bottom: 4px; }
+  .subtitulo { font-size: 10pt; text-align: center; color: #333; margin-bottom: 20px; }
+  .secao { font-size: 10.5pt; font-weight: bold; text-transform: uppercase; margin: 14px 0 6px; border-bottom: 1px solid #000; padding-bottom: 2px; }
+  table.dados { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  table.dados td { padding: 4px 6px; vertical-align: top; border-bottom: 1px dotted #ddd; }
+  table.dados td.label { font-weight: bold; width: 40%; }
+  p { margin-bottom: 8px; line-height: 1.5; text-align: justify; }
+  .assinaturas { margin-top: 30px; }
+  .assinatura-bloco { display: inline-block; width: 30%; text-align: center; vertical-align: top; margin: 0 1.6%; }
+  .assinatura-linha { border-top: 1px solid #000; margin-top: 40px; padding-top: 4px; }
+  .rodape { font-size: 8pt; color: #555; text-align: center; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 6px; }
+  @media print { .no-print { display: none !important; } .page { padding: 15mm 18mm 12mm; } }
+</style>
+</head>
+<body>
+<div class="no-print" style="background:#1a2845;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center">
+  <span>TRE — {{ d.est_nome }}</span>
+  <div>
+    <button onclick="window.print()" style="background:#fff;color:#1a2845;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;font-weight:bold">Imprimir / Salvar PDF</button>
+    <button onclick="window.close()" style="background:transparent;color:#aaa;border:none;padding:6px 12px;cursor:pointer">✕</button>
+  </div>
+</div>
+
+<div class="page">
+  <h1>Termo de Realização de Estágio — TRE</h1>
+  <div class="subtitulo">Declaração de Conclusão de Estágio Curricular</div>
+
+  <div class="secao">Dados do Estágio</div>
+  <table class="dados">
+    <tr><td class="label">Estagiário(a):</td><td>{{ d.est_nome }}</td></tr>
+    <tr><td class="label">CPF:</td><td>{{ d.est_cpf }}</td></tr>
+    <tr><td class="label">Curso:</td><td>{{ d.curso }}</td></tr>
+    <tr><td class="label">Instituição de Ensino:</td><td>{{ d.ie_nome }}</td></tr>
+    <tr><td class="label">Empresa:</td><td>{{ d.emp_nome }}</td></tr>
+    <tr><td class="label">Área de Atuação:</td><td>{{ d.area_atuacao or d.curso }}</td></tr>
+    <tr><td class="label">Período:</td><td>{{ fmt_date(d.data_inicio) }} a {{ fmt_date(d.data_fim) }}</td></tr>
+    <tr><td class="label">Carga Horária Total:</td><td>{{ ch_total }} horas</td></tr>
+    <tr><td class="label">Tipo de Estágio:</td><td>{{ d.tipo_estagio or 'Não Obrigatório' }}</td></tr>
+    <tr><td class="label">Supervisor:</td><td>{{ d.supervisor_nome or '________________' }}{% if d.supervisor_cargo %} — {{ d.supervisor_cargo }}{% endif %}</td></tr>
+  </table>
+
+  {% if d.atividades %}
+  <div class="secao">Atividades Realizadas</div>
+  {% set ats = d.atividades.split('||') %}
+  {% for at in ats %}{% if at.strip() %}
+  <p>{{ loop.index }}. {{ at.strip() }}</p>
+  {% endif %}{% endfor %}
+  {% endif %}
+
+  <div class="secao">Declaração</div>
+  <p>Declaramos que o(a) estagiário(a) <strong>{{ d.est_nome }}</strong>, CPF n.º {{ d.est_cpf }}, realizou estágio {{ (d.tipo_estagio or 'não obrigatório').lower() }} junto à empresa <strong>{{ d.emp_nome }}</strong>, no período de <strong>{{ fmt_date(d.data_inicio) }}</strong> a <strong>{{ fmt_date(d.data_fim) }}</strong>, perfazendo um total de <strong>{{ ch_total }} horas</strong>, na área de <strong>{{ d.area_atuacao or d.curso }}</strong>, conforme atividades descritas no Plano de Atividades de Estágio.</p>
+
+  <p>O presente Termo é emitido pelo Agente de Integração <strong>{{ agente.nome }}</strong>, CNPJ {{ agente.cnpj }}, nos termos da Lei n.º 11.788/2008.</p>
+
+  <p style="text-align:center; margin-top:18px">
+    Vitória da Conquista – BA, {{ data_hoje }}
+  </p>
+
+  <div class="assinaturas">
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Parte Concedente</strong><br>
+        <small>{{ d.emp_nome }}</small><br>
+        <small>{{ d.emp_representante or '' }}</small>
+      </div>
+    </div>
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Agente de Integração</strong><br>
+        <small>{{ agente.nome }}</small><br>
+        <small>{{ agente.representante }}</small>
+      </div>
+    </div>
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Estagiário(a)</strong><br>
+        <small>{{ d.est_nome }}</small><br>
+        <small>CPF: {{ d.est_cpf }}</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="rodape">
+    {{ agente.nome }} — CNPJ {{ agente.cnpj }} — {{ agente.endereco }}, {{ agente.cidade }} — {{ agente.email }}
+  </div>
+</div>
+</body>
+</html>

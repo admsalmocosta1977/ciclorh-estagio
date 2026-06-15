@@ -1,0 +1,794 @@
+import os, psycopg2, psycopg2.extras
+from flask import Flask, render_template, request, redirect, url_for, flash, g, jsonify, abort
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import date, datetime, timedelta
+from functools import wraps
+
+app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'ciclorh-dev-troque-em-producao')
+
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Faça login para acessar o sistema.'
+login_manager.login_message_category = 'warning'
+
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
+
+
+class _Agente:
+    nome = 'CICLO RH – apoio administrativo LTDA'
+    cnpj = '32.075.028/0001-84'
+    endereco = 'Av. Juracy Magalhães, 3340, Bloco A, sala 1104, Felícia'
+    cidade = 'Vitória da Conquista – Bahia'
+    email = 'adm.salmocosta@gmail.com'
+    representante = 'Salmo Lima Costa'
+    cargo = 'Sócio Gerente'
+    cpf = '915.569.295-87'
+
+
+AGENTE = _Agente()
+
+
+class User(UserMixin):
+    def __init__(self, id, username, nome, role):
+        self.id = str(id)
+        self.username = username
+        self.nome = nome
+        self.role = role
+
+    @property
+    def is_admin(self):
+        return self.role == 'admin'
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    row = _q("SELECT * FROM usuario WHERE id = %s", (user_id,), one=True)
+    if row:
+        return User(row['id'], row['username'], row['nome'], row['role'])
+    return None
+
+
+def admin_required(f):
+    @wraps(f)
+    @login_required
+    def decorated(*args, **kwargs):
+        if not current_user.is_admin:
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated
+
+
+# ─── BANCO DE DADOS ───────────────────────────────────────────────────────────
+
+def _get_conn():
+    if 'db' not in g:
+        url = DATABASE_URL
+        if url.startswith('postgres://'):
+            url = url.replace('postgres://', 'postgresql://', 1)
+        conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+        conn.autocommit = True
+        g.db = conn
+    return g.db
+
+
+@app.teardown_appcontext
+def close_db(e=None):
+    db = g.pop('db', None)
+    if db and not db.closed:
+        db.close()
+
+
+def _q(sql, params=(), one=False):
+    with _get_conn().cursor() as cur:
+        cur.execute(sql, params)
+        return cur.fetchone() if one else cur.fetchall()
+
+
+def _run(sql, params=()):
+    with _get_conn().cursor() as cur:
+        cur.execute(sql, params)
+
+
+def _ins(sql, params=()):
+    with _get_conn().cursor() as cur:
+        cur.execute(sql + ' RETURNING id', params)
+        return cur.fetchone()['id']
+
+
+def init_db():
+    url = DATABASE_URL
+    if url.startswith('postgres://'):
+        url = url.replace('postgres://', 'postgresql://', 1)
+    conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+    conn.autocommit = True
+    with conn.cursor() as cur:
+        cur.execute('''
+        CREATE TABLE IF NOT EXISTS usuario (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            nome TEXT,
+            role TEXT DEFAULT 'operador'
+        );
+        CREATE TABLE IF NOT EXISTS estagiario (
+            id SERIAL PRIMARY KEY,
+            nome TEXT NOT NULL,
+            cpf TEXT UNIQUE NOT NULL,
+            rg TEXT,
+            data_nascimento TEXT,
+            telefone TEXT,
+            email TEXT,
+            endereco TEXT,
+            banco TEXT,
+            agencia TEXT,
+            conta TEXT,
+            obs TEXT
+        );
+        CREATE TABLE IF NOT EXISTS empresa (
+            id SERIAL PRIMARY KEY,
+            nome TEXT NOT NULL,
+            cnpj TEXT,
+            endereco TEXT,
+            cidade TEXT DEFAULT \'Vitória da Conquista\',
+            telefone TEXT,
+            email TEXT,
+            ramo TEXT,
+            representante TEXT,
+            cargo_representante TEXT,
+            supervisor_nome TEXT,
+            supervisor_cargo TEXT,
+            supervisor_registro TEXT
+        );
+        CREATE TABLE IF NOT EXISTS ie (
+            id SERIAL PRIMARY KEY,
+            nome TEXT NOT NULL,
+            sigla TEXT,
+            endereco TEXT,
+            cidade TEXT DEFAULT \'Vitória da Conquista\',
+            telefone TEXT,
+            email TEXT,
+            coordenador TEXT,
+            coordenador_cargo TEXT
+        );
+        CREATE TABLE IF NOT EXISTS contrato (
+            id SERIAL PRIMARY KEY,
+            estagiario_id INTEGER NOT NULL REFERENCES estagiario(id),
+            empresa_id INTEGER NOT NULL REFERENCES empresa(id),
+            ie_id INTEGER NOT NULL REFERENCES ie(id),
+            orientador TEXT DEFAULT \'Salmo Lima Costa\',
+            supervisor_nome TEXT,
+            supervisor_cargo TEXT,
+            supervisor_registro TEXT,
+            curso TEXT NOT NULL,
+            tipo_estagio TEXT DEFAULT \'Não Obrigatório\',
+            area_atuacao TEXT,
+            ch_diaria INTEGER DEFAULT 6,
+            ch_semanal INTEGER DEFAULT 30,
+            data_inicio TEXT NOT NULL,
+            data_fim TEXT NOT NULL,
+            numero_contrato TEXT,
+            bolsa REAL,
+            taxa REAL,
+            aux_transporte REAL,
+            atividades TEXT,
+            obs TEXT,
+            num_relatorio INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        ''')
+        cur.execute("SELECT id FROM usuario WHERE username = 'salmo'")
+        if not cur.fetchone():
+            cur.execute(
+                "INSERT INTO usuario (username, password_hash, nome, role) VALUES (%s, %s, %s, %s)",
+                ('salmo', generate_password_hash('ciclorh2026'), 'Salmo Lima Costa', 'admin')
+            )
+    conn.close()
+
+
+# ─── HELPERS ──────────────────────────────────────────────────────────────────
+
+def fmt_date(d):
+    if not d:
+        return ''
+    if isinstance(d, str):
+        try:
+            d = datetime.strptime(d[:10], '%Y-%m-%d').date()
+        except Exception:
+            return d
+    return d.strftime('%d/%m/%Y')
+
+
+def calcular_status(data_fim_str):
+    if not data_fim_str:
+        return 'SEM DATA'
+    try:
+        fim = datetime.strptime(str(data_fim_str)[:10], '%Y-%m-%d').date()
+        diff = (fim - date.today()).days
+        if diff < 0:
+            return 'VENCIDO'
+        if diff <= 30:
+            return f'VENCE EM {diff} DIAS'
+        return 'ATIVO'
+    except Exception:
+        return 'ATIVO'
+
+
+app.jinja_env.globals.update(fmt_date=fmt_date, calcular_status=calcular_status)
+
+
+# ─── AUTH ─────────────────────────────────────────────────────────────────────
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip().lower()
+        senha = request.form.get('senha', '')
+        row = _q("SELECT * FROM usuario WHERE username = %s", (username,), one=True)
+        if row and check_password_hash(row['password_hash'], senha):
+            user = User(row['id'], row['username'], row['nome'], row['role'])
+            login_user(user, remember=True)
+            return redirect(request.args.get('next') or url_for('index'))
+        flash('Usuário ou senha incorretos.', 'danger')
+    return render_template('auth/login.html')
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+
+# ─── ADMIN — USUÁRIOS ─────────────────────────────────────────────────────────
+
+@app.route('/admin/usuarios')
+@admin_required
+def admin_usuarios():
+    rows = _q("SELECT id, username, nome, role FROM usuario ORDER BY role DESC, nome")
+    return render_template('admin/usuarios.html', usuarios=rows)
+
+
+@app.route('/admin/usuarios/novo', methods=['GET', 'POST'])
+@admin_required
+def admin_usuario_novo():
+    if request.method == 'POST':
+        username = request.form['username'].strip().lower()
+        senha = request.form['senha']
+        nome = request.form.get('nome', '').strip()
+        role = request.form.get('role', 'operador')
+        if len(senha) < 6:
+            flash('Senha deve ter no mínimo 6 caracteres.', 'danger')
+        else:
+            try:
+                _ins("INSERT INTO usuario (username, password_hash, nome, role) VALUES (%s, %s, %s, %s)",
+                     (username, generate_password_hash(senha), nome, role))
+                flash(f'Usuário "{username}" criado!', 'success')
+                return redirect(url_for('admin_usuarios'))
+            except psycopg2.errors.UniqueViolation:
+                flash('Nome de usuário já existe.', 'danger')
+    return render_template('admin/usuario_form.html', u=None)
+
+
+@app.route('/admin/usuarios/<int:id>/editar', methods=['GET', 'POST'])
+@admin_required
+def admin_usuario_editar(id):
+    u = _q("SELECT * FROM usuario WHERE id = %s", (id,), one=True)
+    if not u:
+        abort(404)
+    if request.method == 'POST':
+        nome = request.form.get('nome', '').strip()
+        role = request.form.get('role', 'operador')
+        _run("UPDATE usuario SET nome = %s, role = %s WHERE id = %s", (nome, role, id))
+        senha = request.form.get('senha', '').strip()
+        if senha:
+            if len(senha) < 6:
+                flash('Senha deve ter no mínimo 6 caracteres.', 'danger')
+                return render_template('admin/usuario_form.html', u=u)
+            _run("UPDATE usuario SET password_hash = %s WHERE id = %s",
+                 (generate_password_hash(senha), id))
+        flash('Usuário atualizado!', 'success')
+        return redirect(url_for('admin_usuarios'))
+    return render_template('admin/usuario_form.html', u=u)
+
+
+@app.route('/admin/usuarios/<int:id>/excluir')
+@admin_required
+def admin_usuario_excluir(id):
+    if str(id) == current_user.id:
+        flash('Você não pode excluir sua própria conta.', 'danger')
+        return redirect(url_for('admin_usuarios'))
+    _run("DELETE FROM usuario WHERE id = %s", (id,))
+    flash('Usuário excluído.', 'warning')
+    return redirect(url_for('admin_usuarios'))
+
+
+# ─── ADMIN — IMPORTAR PLANILHA ────────────────────────────────────────────────
+
+@app.route('/admin/importar', methods=['GET', 'POST'])
+@admin_required
+def admin_importar():
+    resultado = None
+    if request.method == 'POST':
+        arquivo = request.files.get('arquivo')
+        if not arquivo or not arquivo.filename.endswith(('.xlsx', '.xlsm')):
+            flash('Envie um arquivo .xlsx ou .xlsm válido.', 'danger')
+            return render_template('admin/importar.html', resultado=None)
+        import tempfile, importar as imp_mod
+        with tempfile.NamedTemporaryFile(suffix='.xlsm', delete=False) as tmp:
+            arquivo.save(tmp.name)
+            resultado = imp_mod.run_from_file(tmp.name, DATABASE_URL)
+        os.unlink(tmp.name)
+        flash(f'Importação concluída: {resultado["ok"]} contratos importados.', 'success')
+    return render_template('admin/importar.html', resultado=resultado)
+
+
+# ─── DASHBOARD ────────────────────────────────────────────────────────────────
+
+@app.route('/')
+@login_required
+def index():
+    total = _q("SELECT COUNT(*) AS n FROM contrato", one=True)['n']
+    d30 = (date.today() + timedelta(days=30)).isoformat()
+    vencendo = _q("""
+        SELECT c.*, e.nome est_nome, emp.nome emp_nome
+        FROM contrato c
+        JOIN estagiario e ON e.id = c.estagiario_id
+        JOIN empresa emp ON emp.id = c.empresa_id
+        WHERE c.data_fim <= %s ORDER BY c.data_fim
+    """, (d30,))
+    recentes = _q("""
+        SELECT c.*, e.nome est_nome, emp.nome emp_nome
+        FROM contrato c
+        JOIN estagiario e ON e.id = c.estagiario_id
+        JOIN empresa emp ON emp.id = c.empresa_id
+        ORDER BY c.created_at DESC LIMIT 10
+    """)
+    total_est = _q("SELECT COUNT(*) AS n FROM estagiario", one=True)['n']
+    total_emp = _q("SELECT COUNT(*) AS n FROM empresa", one=True)['n']
+    total_ie = _q("SELECT COUNT(*) AS n FROM ie", one=True)['n']
+    return render_template('index.html', total=total, vencendo=vencendo, recentes=recentes,
+                           total_est=total_est, total_emp=total_emp, total_ie=total_ie)
+
+
+# ─── ESTAGIÁRIOS ──────────────────────────────────────────────────────────────
+
+@app.route('/estagiarios')
+@login_required
+def estagiarios():
+    q = request.args.get('q', '')
+    if q:
+        rows = _q("""SELECT e.*,
+                     (SELECT COUNT(*) FROM contrato WHERE estagiario_id = e.id) qtd_contratos
+                     FROM estagiario e
+                     WHERE e.nome ILIKE %s OR e.cpf ILIKE %s ORDER BY e.nome""",
+                  (f'%{q}%', f'%{q}%'))
+    else:
+        rows = _q("""SELECT e.*,
+                     (SELECT COUNT(*) FROM contrato WHERE estagiario_id = e.id) qtd_contratos
+                     FROM estagiario e ORDER BY e.nome""")
+    return render_template('estagiarios/lista.html', estagiarios=rows, q=q)
+
+
+@app.route('/estagiarios/novo', methods=['GET', 'POST'])
+@login_required
+def estagiario_novo():
+    if request.method == 'POST':
+        try:
+            _ins("""INSERT INTO estagiario
+                    (nome,cpf,rg,data_nascimento,telefone,email,endereco,banco,agencia,conta,obs)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                 (request.form['nome'], request.form['cpf'],
+                  request.form.get('rg'), request.form.get('data_nascimento') or None,
+                  request.form.get('telefone'), request.form.get('email'),
+                  request.form.get('endereco'), request.form.get('banco'),
+                  request.form.get('agencia'), request.form.get('conta'),
+                  request.form.get('obs')))
+            flash('Estagiário cadastrado!', 'success')
+            return redirect(url_for('estagiarios'))
+        except psycopg2.errors.UniqueViolation:
+            flash('CPF já cadastrado!', 'danger')
+    return render_template('estagiarios/form.html', e=None)
+
+
+@app.route('/estagiarios/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+def estagiario_editar(id):
+    e = _q("SELECT * FROM estagiario WHERE id = %s", (id,), one=True)
+    if not e:
+        abort(404)
+    if request.method == 'POST':
+        _run("""UPDATE estagiario SET
+                nome=%s,cpf=%s,rg=%s,data_nascimento=%s,telefone=%s,email=%s,
+                endereco=%s,banco=%s,agencia=%s,conta=%s,obs=%s WHERE id=%s""",
+             (request.form['nome'], request.form['cpf'],
+              request.form.get('rg'), request.form.get('data_nascimento') or None,
+              request.form.get('telefone'), request.form.get('email'),
+              request.form.get('endereco'), request.form.get('banco'),
+              request.form.get('agencia'), request.form.get('conta'),
+              request.form.get('obs'), id))
+        flash('Atualizado!', 'success')
+        return redirect(url_for('estagiarios'))
+    return render_template('estagiarios/form.html', e=e)
+
+
+@app.route('/estagiarios/<int:id>/excluir')
+@login_required
+def estagiario_excluir(id):
+    _run("DELETE FROM estagiario WHERE id = %s", (id,))
+    flash('Excluído.', 'warning')
+    return redirect(url_for('estagiarios'))
+
+
+# ─── EMPRESAS ─────────────────────────────────────────────────────────────────
+
+@app.route('/empresas')
+@login_required
+def empresas():
+    q = request.args.get('q', '')
+    if q:
+        rows = _q("""SELECT emp.*,
+                     (SELECT COUNT(*) FROM contrato WHERE empresa_id = emp.id) qtd_contratos
+                     FROM empresa emp
+                     WHERE emp.nome ILIKE %s OR emp.cnpj ILIKE %s ORDER BY emp.nome""",
+                  (f'%{q}%', f'%{q}%'))
+    else:
+        rows = _q("""SELECT emp.*,
+                     (SELECT COUNT(*) FROM contrato WHERE empresa_id = emp.id) qtd_contratos
+                     FROM empresa emp ORDER BY emp.nome""")
+    return render_template('empresas/lista.html', empresas=rows, q=q)
+
+
+@app.route('/empresas/nova', methods=['GET', 'POST'])
+@login_required
+def empresa_nova():
+    if request.method == 'POST':
+        _ins("""INSERT INTO empresa
+                (nome,cnpj,endereco,cidade,telefone,email,ramo,
+                 representante,cargo_representante,supervisor_nome,supervisor_cargo,supervisor_registro)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+             (request.form['nome'], request.form.get('cnpj'),
+              request.form.get('endereco'), request.form.get('cidade', 'Vitória da Conquista'),
+              request.form.get('telefone'), request.form.get('email'),
+              request.form.get('ramo'), request.form.get('representante'),
+              request.form.get('cargo_representante'), request.form.get('supervisor_nome'),
+              request.form.get('supervisor_cargo'), request.form.get('supervisor_registro')))
+        flash('Empresa cadastrada!', 'success')
+        return redirect(url_for('empresas'))
+    return render_template('empresas/form.html', emp=None)
+
+
+@app.route('/empresas/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+def empresa_editar(id):
+    emp = _q("SELECT * FROM empresa WHERE id = %s", (id,), one=True)
+    if not emp:
+        abort(404)
+    if request.method == 'POST':
+        _run("""UPDATE empresa SET
+                nome=%s,cnpj=%s,endereco=%s,cidade=%s,telefone=%s,email=%s,ramo=%s,
+                representante=%s,cargo_representante=%s,supervisor_nome=%s,
+                supervisor_cargo=%s,supervisor_registro=%s WHERE id=%s""",
+             (request.form['nome'], request.form.get('cnpj'),
+              request.form.get('endereco'), request.form.get('cidade'),
+              request.form.get('telefone'), request.form.get('email'),
+              request.form.get('ramo'), request.form.get('representante'),
+              request.form.get('cargo_representante'), request.form.get('supervisor_nome'),
+              request.form.get('supervisor_cargo'), request.form.get('supervisor_registro'), id))
+        flash('Atualizada!', 'success')
+        return redirect(url_for('empresas'))
+    return render_template('empresas/form.html', emp=emp)
+
+
+@app.route('/empresas/<int:id>/excluir')
+@login_required
+def empresa_excluir(id):
+    _run("DELETE FROM empresa WHERE id = %s", (id,))
+    flash('Excluída.', 'warning')
+    return redirect(url_for('empresas'))
+
+
+@app.route('/api/empresa/<int:id>')
+@login_required
+def api_empresa(id):
+    row = _q("SELECT * FROM empresa WHERE id = %s", (id,), one=True)
+    return jsonify(dict(row) if row else {})
+
+
+# ─── IEs ──────────────────────────────────────────────────────────────────────
+
+@app.route('/ies')
+@login_required
+def ies():
+    rows = _q("""SELECT ie.*,
+                 (SELECT COUNT(*) FROM contrato WHERE ie_id = ie.id) qtd_contratos
+                 FROM ie ORDER BY ie.nome""")
+    return render_template('ies/lista.html', ies=rows)
+
+
+@app.route('/ies/nova', methods=['GET', 'POST'])
+@login_required
+def ie_nova():
+    if request.method == 'POST':
+        _ins("""INSERT INTO ie (nome,sigla,endereco,cidade,telefone,email,coordenador,coordenador_cargo)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+             (request.form['nome'], request.form.get('sigla'),
+              request.form.get('endereco'), request.form.get('cidade', 'Vitória da Conquista'),
+              request.form.get('telefone'), request.form.get('email'),
+              request.form.get('coordenador'), request.form.get('coordenador_cargo')))
+        flash('Instituição cadastrada!', 'success')
+        return redirect(url_for('ies'))
+    return render_template('ies/form.html', ie=None)
+
+
+@app.route('/ies/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+def ie_editar(id):
+    ie = _q("SELECT * FROM ie WHERE id = %s", (id,), one=True)
+    if not ie:
+        abort(404)
+    if request.method == 'POST':
+        _run("""UPDATE ie SET nome=%s,sigla=%s,endereco=%s,cidade=%s,telefone=%s,email=%s,
+                coordenador=%s,coordenador_cargo=%s WHERE id=%s""",
+             (request.form['nome'], request.form.get('sigla'),
+              request.form.get('endereco'), request.form.get('cidade'),
+              request.form.get('telefone'), request.form.get('email'),
+              request.form.get('coordenador'), request.form.get('coordenador_cargo'), id))
+        flash('Atualizada!', 'success')
+        return redirect(url_for('ies'))
+    return render_template('ies/form.html', ie=ie)
+
+
+@app.route('/ies/<int:id>/excluir')
+@login_required
+def ie_excluir(id):
+    _run("DELETE FROM ie WHERE id = %s", (id,))
+    flash('Excluída.', 'warning')
+    return redirect(url_for('ies'))
+
+
+# ─── CONTRATOS ────────────────────────────────────────────────────────────────
+
+@app.route('/contratos')
+@login_required
+def contratos():
+    q = request.args.get('q', '')
+    status = request.args.get('status', '')
+    sql = """SELECT c.*, e.nome est_nome, emp.nome emp_nome,
+             ie.sigla ie_sigla, ie.nome ie_nome
+             FROM contrato c
+             JOIN estagiario e ON e.id = c.estagiario_id
+             JOIN empresa emp ON emp.id = c.empresa_id
+             JOIN ie ON ie.id = c.ie_id"""
+    params = []
+    if q:
+        sql += " WHERE (e.nome ILIKE %s OR emp.nome ILIKE %s)"
+        params += [f'%{q}%', f'%{q}%']
+    sql += ' ORDER BY c.data_fim'
+    rows = _q(sql, params)
+    if status:
+        filtered = []
+        for r in rows:
+            st = calcular_status(r['data_fim'])
+            if status == 'ativo' and st == 'ATIVO':
+                filtered.append(r)
+            elif status == 'vencendo' and 'DIAS' in st:
+                filtered.append(r)
+            elif status == 'vencido' and st == 'VENCIDO':
+                filtered.append(r)
+        rows = filtered
+    return render_template('contratos/lista.html', contratos=rows, q=q, status=status)
+
+
+@app.route('/contratos/novo', methods=['GET', 'POST'])
+@login_required
+def contrato_novo():
+    if request.method == 'POST':
+        ats = '||'.join(request.form.get(f'atividade_{i}', '') for i in range(1, 10))
+        _ins("""INSERT INTO contrato
+                (estagiario_id,empresa_id,ie_id,orientador,
+                 supervisor_nome,supervisor_cargo,supervisor_registro,
+                 curso,tipo_estagio,area_atuacao,ch_diaria,ch_semanal,
+                 data_inicio,data_fim,numero_contrato,bolsa,taxa,aux_transporte,atividades,obs)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+             (request.form['estagiario_id'], request.form['empresa_id'], request.form['ie_id'],
+              request.form.get('orientador', 'Salmo Lima Costa'),
+              request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
+              request.form.get('supervisor_registro'),
+              request.form['curso'], request.form.get('tipo_estagio', 'Não Obrigatório'),
+              request.form.get('area_atuacao'),
+              request.form.get('ch_diaria', 6), request.form.get('ch_semanal', 30),
+              request.form['data_inicio'], request.form['data_fim'],
+              request.form.get('numero_contrato'),
+              request.form.get('bolsa') or None,
+              request.form.get('taxa') or None,
+              request.form.get('aux_transporte') or None,
+              ats, request.form.get('obs')))
+        flash('Contrato criado!', 'success')
+        return redirect(url_for('contratos'))
+    estagiarios = _q("SELECT * FROM estagiario ORDER BY nome")
+    empresas_list = _q("SELECT * FROM empresa ORDER BY nome")
+    ies_list = _q("SELECT * FROM ie ORDER BY nome")
+    return render_template('contratos/form.html', c=None,
+                           estagiarios=estagiarios, empresas=empresas_list, ies=ies_list)
+
+
+@app.route('/contratos/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+def contrato_editar(id):
+    c = _q("SELECT * FROM contrato WHERE id = %s", (id,), one=True)
+    if not c:
+        abort(404)
+    if request.method == 'POST':
+        ats = '||'.join(request.form.get(f'atividade_{i}', '') for i in range(1, 10))
+        _run("""UPDATE contrato SET
+                estagiario_id=%s,empresa_id=%s,ie_id=%s,orientador=%s,
+                supervisor_nome=%s,supervisor_cargo=%s,supervisor_registro=%s,
+                curso=%s,tipo_estagio=%s,area_atuacao=%s,ch_diaria=%s,ch_semanal=%s,
+                data_inicio=%s,data_fim=%s,numero_contrato=%s,bolsa=%s,taxa=%s,
+                aux_transporte=%s,atividades=%s,obs=%s WHERE id=%s""",
+             (request.form['estagiario_id'], request.form['empresa_id'], request.form['ie_id'],
+              request.form.get('orientador'),
+              request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
+              request.form.get('supervisor_registro'),
+              request.form['curso'], request.form.get('tipo_estagio'),
+              request.form.get('area_atuacao'),
+              request.form.get('ch_diaria'), request.form.get('ch_semanal'),
+              request.form['data_inicio'], request.form['data_fim'],
+              request.form.get('numero_contrato'),
+              request.form.get('bolsa') or None,
+              request.form.get('taxa') or None,
+              request.form.get('aux_transporte') or None,
+              ats, request.form.get('obs'), id))
+        flash('Contrato atualizado!', 'success')
+        return redirect(url_for('contratos'))
+    estagiarios = _q("SELECT * FROM estagiario ORDER BY nome")
+    empresas_list = _q("SELECT * FROM empresa ORDER BY nome")
+    ies_list = _q("SELECT * FROM ie ORDER BY nome")
+    return render_template('contratos/form.html', c=c,
+                           estagiarios=estagiarios, empresas=empresas_list, ies=ies_list)
+
+
+@app.route('/contratos/<int:id>/excluir')
+@login_required
+def contrato_excluir(id):
+    _run("DELETE FROM contrato WHERE id = %s", (id,))
+    flash('Excluído.', 'warning')
+    return redirect(url_for('contratos'))
+
+
+# ─── DOCUMENTOS ───────────────────────────────────────────────────────────────
+
+def _doc_ctx(id):
+    c = _q("SELECT * FROM contrato WHERE id = %s", (id,), one=True)
+    if not c:
+        return None
+    est = _q("SELECT * FROM estagiario WHERE id = %s", (c['estagiario_id'],), one=True)
+    emp = _q("SELECT * FROM empresa WHERE id = %s", (c['empresa_id'],), one=True)
+    ie = _q("SELECT * FROM ie WHERE id = %s", (c['ie_id'],), one=True)
+
+    try:
+        ini = datetime.strptime(str(c['data_inicio'])[:10], '%Y-%m-%d').date()
+        fim = datetime.strptime(str(c['data_fim'])[:10], '%Y-%m-%d').date()
+        meses = (fim.year - ini.year) * 12 + fim.month - ini.month + 1
+        ch_total = meses * 4 * (c['ch_semanal'] or 30)
+    except Exception:
+        ch_total = 0
+
+    d = type('D', (), {
+        'id': c['id'],
+        'curso': c['curso'],
+        'tipo_estagio': c['tipo_estagio'],
+        'area_atuacao': c['area_atuacao'] or c['curso'],
+        'ch_diaria': c['ch_diaria'] or 6,
+        'ch_semanal': c['ch_semanal'] or 30,
+        'data_inicio': c['data_inicio'],
+        'data_fim': c['data_fim'],
+        'numero_contrato': c['numero_contrato'],
+        'bolsa': c['bolsa'],
+        'taxa': c['taxa'],
+        'aux_transporte': c['aux_transporte'],
+        'atividades': c['atividades'],
+        'orientador': c['orientador'],
+        'supervisor_nome': c['supervisor_nome'],
+        'supervisor_cargo': c['supervisor_cargo'],
+        'supervisor_registro': c['supervisor_registro'],
+        'num_relatorio': c['num_relatorio'] or 1,
+        'est_nome': est['nome'] if est else '',
+        'est_cpf': est['cpf'] if est else '',
+        'est_rg': est['rg'] if est else '',
+        'est_data_nasc': est['data_nascimento'] if est else '',
+        'est_telefone': est['telefone'] if est else '',
+        'est_email': est['email'] if est else '',
+        'est_endereco': est['endereco'] if est else '',
+        'emp_nome': emp['nome'] if emp else '',
+        'emp_cnpj': emp['cnpj'] if emp else '',
+        'emp_endereco': emp['endereco'] if emp else '',
+        'emp_cidade': emp['cidade'] if emp else 'Vitória da Conquista',
+        'emp_representante': emp['representante'] if emp else '',
+        'emp_cargo_rep': emp['cargo_representante'] if emp else '',
+        'ie_nome': ie['nome'] if ie else '',
+        'ie_sigla': ie['sigla'] if ie else '',
+        'ie_endereco': ie['endereco'] if ie else '',
+        'ie_cidade': ie['cidade'] if ie else 'Vitória da Conquista',
+        'ie_coordenador': ie['coordenador'] if ie else '',
+        'ie_coord_cargo': ie['coordenador_cargo'] if ie else '',
+    })()
+
+    return dict(d=d, agente=AGENTE, ch_total=ch_total,
+                data_hoje=fmt_date(date.today()), fmt_date=fmt_date)
+
+
+@app.route('/contratos/<int:id>/tce')
+@login_required
+def doc_tce(id):
+    ctx = _doc_ctx(id)
+    if not ctx:
+        flash('Contrato não encontrado.', 'danger')
+        return redirect(url_for('contratos'))
+    return render_template('docs/tce.html', **ctx)
+
+
+@app.route('/contratos/<int:id>/plano')
+@login_required
+def doc_plano(id):
+    ctx = _doc_ctx(id)
+    if not ctx:
+        flash('Contrato não encontrado.', 'danger')
+        return redirect(url_for('contratos'))
+    return render_template('docs/plano.html', **ctx)
+
+
+@app.route('/contratos/<int:id>/ciencia')
+@login_required
+def doc_ciencia(id):
+    ctx = _doc_ctx(id)
+    if not ctx:
+        flash('Contrato não encontrado.', 'danger')
+        return redirect(url_for('contratos'))
+    return render_template('docs/ciencia.html', **ctx)
+
+
+@app.route('/contratos/<int:id>/tre')
+@login_required
+def doc_tre(id):
+    ctx = _doc_ctx(id)
+    if not ctx:
+        flash('Contrato não encontrado.', 'danger')
+        return redirect(url_for('contratos'))
+    return render_template('docs/tre.html', **ctx)
+
+
+@app.route('/contratos/<int:id>/relatorio')
+@login_required
+def doc_relatorio(id):
+    ctx = _doc_ctx(id)
+    if not ctx:
+        flash('Contrato não encontrado.', 'danger')
+        return redirect(url_for('contratos'))
+    return render_template('docs/relatorio.html', **ctx)
+
+
+# ─── ERROS ────────────────────────────────────────────────────────────────────
+
+@app.errorhandler(403)
+def forbidden(e):
+    return render_template('erro.html', codigo=403,
+                           msg='Acesso negado. Apenas o administrador pode acessar esta área.'), 403
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return render_template('erro.html', codigo=404, msg='Página não encontrada.'), 404
+
+
+if __name__ == '__main__':
+    init_db()
+    print('\n' + '=' * 50)
+    print('  CICLO RH — Sistema de Estágio')
+    print('  Acesse: http://localhost:5000')
+    print('=' * 50 + '\n')
+    app.run(debug=False, port=5000)

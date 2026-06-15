@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Instituições de Ensino{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0"><i class="bi bi-mortarboard me-2"></i>Instituições de Ensino</h4>
+  <a href="{{ url_for('ie_nova') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Nova Instituição
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr><th>Nome</th><th>Sigla</th><th>Cidade</th><th>Coordenador</th><th>Contratos</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for ie in ies %}
+      <tr>
+        <td class="fw-semibold">{{ ie.nome }}</td>
+        <td><span class="badge bg-secondary">{{ ie.sigla or '—' }}</span></td>
+        <td>{{ ie.cidade or '—' }}</td>
+        <td>{{ ie.coordenador or '—' }}</td>
+        <td><span class="badge bg-light text-dark border">{{ ie.qtd_contratos }}</span></td>
+        <td class="text-end">
+          <a href="{{ url_for('ie_editar', id=ie.id) }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-pencil"></i>
+          </a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-center text-muted py-5">Nenhuma instituição cadastrada ainda.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

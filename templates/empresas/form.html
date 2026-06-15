@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if emp else 'Nova' }} Empresa{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{{ url_for('empresas') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="fw-bold mb-0">{{ 'Editar' if emp else 'Nova' }} Empresa</h4>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="post">
+      <h6 class="text-muted mb-3">Dados da Empresa</h6>
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label class="form-label fw-semibold">Razão Social *</label>
+          <input type="text" name="nome" class="form-control" value="{{ emp.nome if emp else '' }}" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">CNPJ</label>
+          <input type="text" name="cnpj" class="form-control" value="{{ emp.cnpj if emp else '' }}" placeholder="00.000.000/0000-00">
+        </div>
+        <div class="col-md-8">
+          <label class="form-label fw-semibold">Endereço</label>
+          <input type="text" name="endereco" class="form-control" value="{{ emp.endereco if emp else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Cidade</label>
+          <input type="text" name="cidade" class="form-control" value="{{ emp.cidade if emp else 'Vitória da Conquista' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Telefone</label>
+          <input type="text" name="telefone" class="form-control" value="{{ emp.telefone if emp else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">E-mail</label>
+          <input type="email" name="email" class="form-control" value="{{ emp.email if emp else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Ramo de Atividade</label>
+          <input type="text" name="ramo" class="form-control" value="{{ emp.ramo if emp else '' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Representante Legal</label>
+          <input type="text" name="representante" class="form-control" value="{{ emp.representante if emp else '' }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Cargo do Representante</label>
+          <input type="text" name="cargo_representante" class="form-control" value="{{ emp.cargo_representante if emp else '' }}">
+        </div>
+      </div>
+
+      <hr class="my-4">
+      <h6 class="text-muted mb-3">Supervisor Padrão</h6>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Nome do Supervisor</label>
+          <input type="text" name="supervisor_nome" class="form-control" value="{{ emp.supervisor_nome if emp else '' }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Cargo</label>
+          <input type="text" name="supervisor_cargo" class="form-control" value="{{ emp.supervisor_cargo if emp else '' }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">CREA/CRM/CRP (se houver)</label>
+          <input type="text" name="supervisor_registro" class="form-control" value="{{ emp.supervisor_registro if emp else '' }}">
+        </div>
+      </div>
+
+      <hr>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar</button>
+        <a href="{{ url_for('empresas') }}" class="btn btn-outline-secondary">Cancelar</a>
+        {% if emp %}
+        <a href="{{ url_for('empresa_excluir', id=emp.id) }}" class="btn btn-outline-danger ms-auto"
+           onclick="return confirm('Excluir esta empresa?')">
+          <i class="bi bi-trash me-1"></i>Excluir
+        </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

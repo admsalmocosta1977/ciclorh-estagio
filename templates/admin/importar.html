@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Importar Planilha{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <h4 class="fw-bold mb-0"><i class="bi bi-upload me-2"></i>Importar Planilha</h4>
+</div>
+
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">Enviar arquivo</div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">
+          Envie a planilha <strong>PLANILHA SALMO.xlsm</strong> (ou qualquer .xlsx / .xlsm)
+          para importar estagiários, empresas, IEs e contratos automaticamente.
+          Registros já existentes não serão duplicados.
+        </p>
+        <form method="post" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Arquivo Excel</label>
+            <input type="file" name="arquivo" class="form-control" accept=".xlsx,.xlsm" required>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-upload me-1"></i>Importar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {% if resultado %}
+  <div class="col-md-6">
+    <div class="card border-success">
+      <div class="card-header text-success">Resultado da Importação</div>
+      <div class="card-body">
+        <table class="table table-sm mb-0">
+          <tr><td>Contratos importados</td><td class="fw-bold text-success">{{ resultado.ok }}</td></tr>
+          <tr><td>Linhas ignoradas</td><td class="text-muted">{{ resultado.skip }}</td></tr>
+          <tr><td>Empresas</td><td>{{ resultado.empresas }}</td></tr>
+          <tr><td>Instituições</td><td>{{ resultado.ies }}</td></tr>
+          <tr><td>Estagiários</td><td>{{ resultado.estagiarios }}</td></tr>
+        </table>
+        <a href="{{ url_for('contratos') }}" class="btn btn-outline-primary btn-sm mt-3">
+          <i class="bi bi-list-ul me-1"></i>Ver Contratos
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="alert alert-warning mt-4" style="font-size:.88rem">
+  <i class="bi bi-exclamation-triangle me-1"></i>
+  <strong>Atenção:</strong> a importação lê a primeira aba com dados da planilha.
+  Verifique se os dados foram importados corretamente antes de excluir a planilha original.
+</div>
+{% endblock %}

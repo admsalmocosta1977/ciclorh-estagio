@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Login — Sistema de Estágio</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+  body { background: #f0f4f8; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .card { border: none; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,.10); width: 100%; max-width: 380px; }
+  .brand { background: #1a2845; color: #fff; border-radius: 16px 16px 0 0; padding: 28px 32px 20px; }
+  .brand h5 { font-weight: 700; margin: 0; font-size: 1.15rem; }
+  .brand small { color: #8fa8cc; font-size: .82rem; }
+  .card-body { padding: 28px 32px 32px; }
+  label { font-weight: 600; font-size: .9rem; }
+  .btn-entrar { background: #1a2845; border-color: #1a2845; font-weight: 700; letter-spacing: .03em; }
+  .btn-entrar:hover { background: #2d4070; }
+  .rodape { font-size: .78rem; color: #aaa; text-align: center; margin-top: 20px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">
+    <h5>Ciclo RH</h5>
+    <small>Sistema de Gerenciamento de Estágio</small>
+  </div>
+  <div class="card-body">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in msgs %}
+      <div class="alert alert-{{ cat }} py-2 mb-3" style="font-size:.88rem">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+    <form method="post" autocomplete="on">
+      <div class="mb-3">
+        <label for="username">Usuário</label>
+        <input type="text" name="username" id="username" class="form-control mt-1"
+               autocomplete="username" autofocus required>
+      </div>
+      <div class="mb-4">
+        <label for="senha">Senha</label>
+        <input type="password" name="senha" id="senha" class="form-control mt-1"
+               autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn btn-entrar text-white w-100">Entrar</button>
+    </form>
+    <p class="rodape mt-3 mb-0">CICLO RH – apoio administrativo LTDA</p>
+  </div>
+</div>
+</body>
+</html>

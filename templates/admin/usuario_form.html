@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if u else 'Novo' }} Usuário{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{{ url_for('admin_usuarios') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="fw-bold mb-0">{{ 'Editar' if u else 'Novo' }} Usuário</h4>
+</div>
+
+<div class="card" style="max-width:480px">
+  <div class="card-body">
+    <form method="post">
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Nome Completo</label>
+        <input type="text" name="nome" class="form-control" value="{{ u.nome if u else '' }}" placeholder="Ex: Maria Silva">
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Usuário (login) {% if not u %}*{% endif %}</label>
+        {% if u %}
+          <input type="text" class="form-control" value="{{ u.username }}" disabled>
+          <small class="text-muted">O nome de usuário não pode ser alterado.</small>
+        {% else %}
+          <input type="text" name="username" class="form-control" required
+                 placeholder="Ex: maria" autocomplete="off">
+          <small class="text-muted">Somente letras minúsculas e números, sem espaço.</small>
+        {% endif %}
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">
+          {{ 'Nova Senha' if u else 'Senha *' }}
+        </label>
+        <input type="password" name="senha" class="form-control"
+               {% if not u %}required{% endif %}
+               placeholder="{{ 'Deixe em branco para não alterar' if u else 'Mínimo 6 caracteres' }}"
+               autocomplete="new-password">
+      </div>
+      <div class="mb-4">
+        <label class="form-label fw-semibold">Perfil</label>
+        <select name="role" class="form-select">
+          <option value="operador" {% if not u or u.role == 'operador' %}selected{% endif %}>
+            Operador — acessa cadastros e documentos
+          </option>
+          <option value="admin" {% if u and u.role == 'admin' %}selected{% endif %}>
+            Administrador — acesso completo + gestão de usuários
+          </option>
+        </select>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar</button>
+        <a href="{{ url_for('admin_usuarios') }}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

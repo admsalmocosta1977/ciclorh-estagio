@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if c else 'Novo' }} Contrato{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{{ url_for('contratos') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="fw-bold mb-0">{{ 'Editar' if c else 'Novo' }} Contrato de Estágio</h4>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="post">
+
+      <h6 class="text-muted mb-3">Partes Envolvidas</h6>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Estagiário *</label>
+          <select name="estagiario_id" class="form-select" required id="sel-estagiario">
+            <option value="">Selecione...</option>
+            {% for e in estagiarios %}
+            <option value="{{ e.id }}" {% if c and c.estagiario_id==e.id %}selected{% endif %}>{{ e.nome }}</option>
+            {% endfor %}
+          </select>
+          <div class="mt-1">
+            <a href="{{ url_for('estagiario_novo') }}" class="small text-primary" target="_blank">
+              <i class="bi bi-plus-circle me-1"></i>Cadastrar novo estagiário
+            </a>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Empresa *</label>
+          <select name="empresa_id" class="form-select" required id="sel-empresa">
+            <option value="">Selecione...</option>
+            {% for emp in empresas %}
+            <option value="{{ emp.id }}" {% if c and c.empresa_id==emp.id %}selected{% endif %}>{{ emp.nome }}</option>
+            {% endfor %}
+          </select>
+          <div class="mt-1">
+            <a href="{{ url_for('empresa_nova') }}" class="small text-primary" target="_blank">
+              <i class="bi bi-plus-circle me-1"></i>Cadastrar nova empresa
+            </a>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Instituição de Ensino *</label>
+          <select name="ie_id" class="form-select" required id="sel-ie">
+            <option value="">Selecione...</option>
+            {% for ie in ies %}
+            <option value="{{ ie.id }}" {% if c and c.ie_id==ie.id %}selected{% endif %}>{{ ie.nome }}</option>
+            {% endfor %}
+          </select>
+          <div class="mt-1">
+            <a href="{{ url_for('ie_nova') }}" class="small text-primary" target="_blank">
+              <i class="bi bi-plus-circle me-1"></i>Cadastrar nova instituição
+            </a>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Supervisor na Empresa</label>
+          <input type="text" name="supervisor_nome" class="form-control" id="sup-nome"
+                 value="{{ c.supervisor_nome if c else '' }}" placeholder="Preenchido automaticamente">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Cargo do Supervisor</label>
+          <input type="text" name="supervisor_cargo" class="form-control" id="sup-cargo"
+                 value="{{ c.supervisor_cargo if c else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Registro Prof. (CREA/CRM etc.)</label>
+          <input type="text" name="supervisor_registro" class="form-control" id="sup-reg"
+                 value="{{ c.supervisor_registro if c else '' }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Orientador (CICLO RH)</label>
+          <input type="text" name="orientador" class="form-control"
+                 value="{{ c.orientador if c else 'Salmo Lima Costa' }}">
+        </div>
+      </div>
+
+      <hr>
+      <h6 class="text-muted mb-3">Dados do Estágio</h6>
+      <div class="row g-3 mb-4">
+        <div class="col-md-8">
+          <label class="form-label fw-semibold">Curso *</label>
+          <input type="text" name="curso" class="form-control" value="{{ c.curso if c else '' }}" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Tipo</label>
+          <select name="tipo_estagio" class="form-select">
+            <option value="Obrigatório" {% if c and c.tipo_estagio=='Obrigatório' %}selected{% endif %}>Obrigatório</option>
+            <option value="Não Obrigatório" {% if not c or c.tipo_estagio=='Não Obrigatório' %}selected{% endif %}>Não Obrigatório</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Área de Atuação</label>
+          <input type="text" name="area_atuacao" class="form-control" value="{{ c.area_atuacao if c else '' }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Carga Horária Diária</label>
+          <div class="input-group">
+            <input type="number" name="ch_diaria" class="form-control" value="{{ c.ch_diaria if c else 6 }}" min="1" max="8">
+            <span class="input-group-text">h</span>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">CH Semanal</label>
+          <div class="input-group">
+            <input type="number" name="ch_semanal" class="form-control" value="{{ c.ch_semanal if c else 30 }}" min="1" max="40">
+            <span class="input-group-text">h</span>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Data de Início *</label>
+          <input type="date" name="data_inicio" class="form-control" value="{{ c.data_inicio if c else '' }}" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Data de Término *</label>
+          <input type="date" name="data_fim" class="form-control" value="{{ c.data_fim if c else '' }}" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Número do Contrato</label>
+          <input type="text" name="numero_contrato" class="form-control" value="{{ c.numero_contrato if c else '' }}" placeholder="Ex: 001/2025">
+        </div>
+      </div>
+
+      <hr>
+      <h6 class="text-muted mb-3">Valores</h6>
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Bolsa Mensal (R$)</label>
+          <div class="input-group">
+            <span class="input-group-text">R$</span>
+            <input type="number" name="bolsa" step="0.01" class="form-control" value="{{ c.bolsa if c else '' }}">
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Taxa Mensal (R$)</label>
+          <div class="input-group">
+            <span class="input-group-text">R$</span>
+            <input type="number" name="taxa" step="0.01" class="form-control" value="{{ c.taxa if c else '' }}">
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Auxílio Transporte (R$)</label>
+          <div class="input-group">
+            <span class="input-group-text">R$</span>
+            <input type="number" name="aux_transporte" step="0.01" class="form-control" value="{{ c.aux_transporte if c else 0 }}">
+          </div>
+        </div>
+      </div>
+
+      <hr>
+      <h6 class="text-muted mb-3">Atividades (Plano de Estágio)</h6>
+      <div id="atividades-container">
+        {% set ats = c.atividades.split('||') if c and c.atividades else [''] %}
+        {% for i in range(9) %}
+        <div class="row g-2 mb-2 atividade-row" {% if i > 0 and (i >= ats|length or not ats[i]) %}style="display:none"{% endif %}>
+          <div class="col-auto d-flex align-items-center">
+            <span class="text-muted small fw-semibold">{{ i+1 }}.</span>
+          </div>
+          <div class="col">
+            <input type="text" name="atividade_{{ i+1 }}" class="form-control form-control-sm"
+                   value="{{ ats[i] if i < ats|length else '' }}"
+                   placeholder="Descrição da atividade {{ i+1 }}">
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="btn-add-at">
+        <i class="bi bi-plus me-1"></i>Adicionar atividade
+      </button>
+
+      <hr>
+      <div class="col-12">
+        <label class="form-label fw-semibold">Observações</label>
+        <textarea name="obs" class="form-control" rows="2">{{ c.obs if c else '' }}</textarea>
+      </div>
+
+      <hr>
+      <div class="d-flex gap-2 mt-3">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar Contrato</button>
+        <a href="{{ url_for('contratos') }}" class="btn btn-outline-secondary">Cancelar</a>
+        {% if c %}
+        <div class="ms-auto d-flex gap-2">
+          <a href="{{ url_for('doc_tce', id=c.id) }}" class="btn btn-outline-primary" target="_blank">TCE</a>
+          <a href="{{ url_for('doc_plano', id=c.id) }}" class="btn btn-outline-success" target="_blank">Plano</a>
+          <a href="{{ url_for('doc_ciencia', id=c.id) }}" class="btn btn-outline-info" target="_blank">Ciência</a>
+          <a href="{{ url_for('doc_tre', id=c.id) }}" class="btn btn-outline-warning" target="_blank">TRE</a>
+          <a href="{{ url_for('doc_relatorio', id=c.id) }}" class="btn btn-outline-secondary" target="_blank">Relatório</a>
+          <a href="{{ url_for('contrato_excluir', id=c.id) }}" class="btn btn-outline-danger"
+             onclick="return confirm('Excluir este contrato?')"><i class="bi bi-trash"></i></a>
+        </div>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-preencher supervisor ao selecionar empresa
+document.getElementById('sel-empresa').addEventListener('change', function() {
+  const id = this.value;
+  if (!id) return;
+  fetch('/api/empresa/' + id)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('sup-nome').value = d.supervisor_nome || '';
+      document.getElementById('sup-cargo').value = d.supervisor_cargo || '';
+      document.getElementById('sup-reg').value = d.supervisor_registro || '';
+    });
+});
+
+// Mostrar próxima linha de atividade
+let visibleAts = document.querySelectorAll('.atividade-row:not([style*="none"])').length;
+document.getElementById('btn-add-at').addEventListener('click', function() {
+  const rows = document.querySelectorAll('.atividade-row');
+  if (visibleAts < rows.length) {
+    rows[visibleAts].style.display = '';
+    visibleAts++;
+  }
+  if (visibleAts >= rows.length) this.style.display = 'none';
+});
+</script>
+{% endblock %}
