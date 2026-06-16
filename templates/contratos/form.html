@@ -242,20 +242,28 @@
       </div>
       <div class="modal-body">
         <div class="mb-3">
-          <label class="form-label fw-semibold">Nova Data de Término <span class="text-danger">*</span></label>
+          <label class="form-label fw-semibold">Nova Data de Término</label>
           <input type="date" id="aditivo-data" class="form-control">
-          <div class="form-text">Cláusula 1ª — DA VIGÊNCIA: "Fica alterada a vigência do TCE original para esta data."</div>
+          <div class="form-text">Opcional — deixe em branco se a vigência não for alterada.</div>
         </div>
         <hr>
-        <p class="text-muted small mb-2">Opcional — preencha somente se houver outra cláusula a alterar:</p>
-        <div class="mb-3">
-          <label class="form-label fw-semibold">Título da Cláusula Adicional</label>
-          <input type="text" id="aditivo-titulo" class="form-control" placeholder="Ex: Cláusula Segunda — Da Bolsa-Auxílio">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-semibold">Cláusulas Adicionais</span>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-add-clausula">
+            <i class="bi bi-plus me-1"></i>Adicionar
+          </button>
         </div>
-        <div class="mb-3">
-          <label class="form-label fw-semibold">Texto da Cláusula</label>
-          <textarea id="aditivo-texto" class="form-control" rows="3" placeholder="Digite o novo texto da cláusula..."></textarea>
+        <div id="clausulas-container">
+          <div class="clausula-extra-row border rounded p-2 mb-2">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <small class="text-muted fw-semibold">Cláusula 1</small>
+              <button type="button" class="btn btn-sm btn-outline-danger remover-clausula py-0">✕</button>
+            </div>
+            <input type="text" class="form-control form-control-sm mb-2 clausula-titulo" placeholder="Título — ex: Da Bolsa-Auxílio">
+            <textarea class="form-control form-control-sm clausula-texto" rows="2" placeholder="Texto da cláusula..."></textarea>
+          </div>
         </div>
+        <p class="text-muted small mt-2 mb-0"><i class="bi bi-info-circle me-1"></i>Preencha ao menos a data de término ou uma cláusula adicional.</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -287,15 +295,42 @@ document.getElementById('sel-empresa').addEventListener('change', function() {
 // Gerar aditivo
 function gerarAditivo() {
   const data = document.getElementById('aditivo-data').value;
-  if (!data) { alert('Informe a nova data de término.'); return; }
-  const titulo = document.getElementById('aditivo-titulo').value;
-  const texto = document.getElementById('aditivo-texto').value;
+  const rows = document.querySelectorAll('#clausulas-container .clausula-extra-row');
+  const clausulas = Array.from(rows).filter(r =>
+    r.querySelector('.clausula-titulo').value.trim() || r.querySelector('.clausula-texto').value.trim()
+  );
+  if (!data && clausulas.length === 0) {
+    alert('Informe a nova data de término ou pelo menos uma cláusula adicional.');
+    return;
+  }
   const url = new URL('{{ url_for("doc_aditivo", id=c.id) }}', window.location.origin);
-  url.searchParams.set('nova_data_fim', data);
-  if (titulo) url.searchParams.set('clausula_extra_titulo', titulo);
-  if (texto) url.searchParams.set('clausula_extra_texto', texto);
+  if (data) url.searchParams.set('nova_data_fim', data);
+  clausulas.forEach(function(row, i) {
+    url.searchParams.set('clausula_' + (i+1) + '_titulo', row.querySelector('.clausula-titulo').value.trim());
+    url.searchParams.set('clausula_' + (i+1) + '_texto', row.querySelector('.clausula-texto').value.trim());
+  });
   window.open(url.toString(), '_blank');
 }
+
+// Adicionar/remover cláusulas
+document.getElementById('btn-add-clausula').addEventListener('click', function() {
+  const container = document.getElementById('clausulas-container');
+  const count = container.querySelectorAll('.clausula-extra-row').length + 1;
+  const div = document.createElement('div');
+  div.className = 'clausula-extra-row border rounded p-2 mb-2';
+  div.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-2">' +
+    '<small class="text-muted fw-semibold">Cláusula ' + count + '</small>' +
+    '<button type="button" class="btn btn-sm btn-outline-danger remover-clausula py-0">✕</button></div>' +
+    '<input type="text" class="form-control form-control-sm mb-2 clausula-titulo" placeholder="Título — ex: Da Bolsa-Auxílio">' +
+    '<textarea class="form-control form-control-sm clausula-texto" rows="2" placeholder="Texto da cláusula..."></textarea>';
+  container.appendChild(div);
+});
+
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('remover-clausula')) {
+    e.target.closest('.clausula-extra-row').remove();
+  }
+});
 
 // Mostrar próxima linha de atividade
 let visibleAts = document.querySelectorAll('.atividade-row:not([style*="none"])').length;
