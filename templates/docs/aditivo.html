@@ -41,15 +41,23 @@
     A empresa <strong>{{ d.emp_nome }}</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob o n.º <strong>{{ d.emp_cnpj or '___________________________' }}</strong>, sediada na <strong>{{ d.emp_endereco or '___________________________' }}, {{ d.emp_cidade or 'Vitória da Conquista – BA' }}</strong>, doravante denominada <strong>CONCEDENTE</strong>, neste ato através do seu representante legal, o(a) Sr.(a) <strong>{{ d.emp_representante or '___________________________' }}</strong>{% if d.emp_cargo_rep %}, {{ d.emp_cargo_rep }}{% endif %}, e de outro lado, o(a) Sr.(a) <strong>{{ d.est_nome }}</strong>, estudante, regularmente matriculado(a) no curso de <strong>{{ d.curso }}</strong>, portador(a) do CPF n.º <strong>{{ d.est_cpf }}</strong>, doravante denominado(a) <strong>EDUCANDO(A)/ESTAGIÁRIO(A)</strong>, e como <strong>INSTITUIÇÃO DE ENSINO</strong>, <strong>{{ d.ie_nome }}</strong>{% if d.ie_coordenador %}, representada neste ato pelo(a) <strong>{{ d.ie_coordenador }}</strong>{% if d.ie_coord_cargo %}, {{ d.ie_coord_cargo }}{% endif %}{% endif %}, doravante denominada <strong>INSTITUIÇÃO DE ENSINO</strong>, resolvem firmar o presente <strong>TERMO ADITIVO</strong>, nos termos da Lei n.º 11.788/08, intermediados pelo <strong>AGENTE</strong>, a <strong>{{ agente.nome }}</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob o n.º <strong>{{ agente.cnpj }}</strong>, endereço eletrônico: <strong>{{ agente.email }}</strong>, situada à <strong>{{ agente.endereco }}, {{ agente.cidade }}</strong>, mediante as seguintes cláusulas:
   </p>
 
-  <p class="clausula-titulo">CLÁUSULA PRIMEIRA: DA VIGÊNCIA:</p>
-  <p>Fica alterada a vigência do TCE original{% if nova_data_fim %} para a data <strong>{{ fmt_date(nova_data_fim) }}</strong>{% else %}: ___________________________{% endif %}.</p>
+  {# Numeração dinâmica das cláusulas #}
+  {% set ns = namespace(num=0) %}
 
-  {% if clausula_extra_titulo and clausula_extra_texto %}
-  <p class="clausula-titulo">{{ clausula_extra_titulo | upper }}:</p>
-  <p>{{ clausula_extra_texto }}</p>
+  {% if nova_data_fim %}
+  {% set ns.num = ns.num + 1 %}
+  <p class="clausula-titulo">CLÁUSULA {{ ns.num }}ª — DA VIGÊNCIA:</p>
+  <p>Fica alterada a vigência do TCE original para a data <strong>{{ fmt_date(nova_data_fim) }}</strong>.</p>
   {% endif %}
 
-  <p class="clausula-titulo">CLÁUSULA {% if clausula_extra_titulo and clausula_extra_texto %}TERCEIRA{% else %}SEGUNDA{% endif %}: DAS DISPOSIÇÕES GERAIS</p>
+  {% for cl in clausulas_extras %}
+  {% set ns.num = ns.num + 1 %}
+  <p class="clausula-titulo">CLÁUSULA {{ ns.num }}ª — {{ cl.titulo | upper }}:</p>
+  <p>{{ cl.texto }}</p>
+  {% endfor %}
+
+  {% set ns.num = ns.num + 1 %}
+  <p class="clausula-titulo">CLÁUSULA {{ ns.num }}ª — DAS DISPOSIÇÕES GERAIS:</p>
   <p>Permanecem inalteradas as demais cláusulas vigentes do Termo de Compromisso de Estágio que não colidirem com as disposições do presente instrumento.</p>
 
   <p style="margin-top:18px; text-align:justify">E, por estarem justas e convencionadas, as partes assinam o presente TERMO ADITIVO, em 04 (quatro) vias de igual teor e forma, para que produza seus efeitos jurídicos e legais.</p>
