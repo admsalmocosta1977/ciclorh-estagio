@@ -63,6 +63,8 @@
             <a href="{{ url_for('doc_ciencia', id=c.id) }}" class="btn btn-sm btn-outline-info btn-doc" target="_blank">Ciência</a>
             <a href="{{ url_for('doc_tre', id=c.id) }}" class="btn btn-sm btn-outline-warning btn-doc" target="_blank">TRE</a>
             <a href="{{ url_for('doc_relatorio', id=c.id) }}" class="btn btn-sm btn-outline-secondary btn-doc" target="_blank">Rel.</a>
+            <button class="btn btn-sm btn-outline-dark btn-doc btn-aditivo"
+                    data-id="{{ c.id }}" data-bs-toggle="modal" data-bs-target="#modal-aditivo-lista">Adi.</button>
           </div>
         </td>
         <td>
@@ -81,4 +83,105 @@
     </table>
   </div>
 </div>
+
+<!-- Modal Aditivo (lista) -->
+<div class="modal fade" id="modal-aditivo-lista" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">Gerar Termo Aditivo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Nova Data de Término</label>
+          <input type="date" id="lista-aditivo-data" class="form-control">
+          <div class="form-text">Opcional — deixe em branco se a vigência não for alterada.</div>
+        </div>
+        <hr>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-semibold">Cláusulas Adicionais</span>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="lista-btn-add-clausula">
+            <i class="bi bi-plus me-1"></i>Adicionar
+          </button>
+        </div>
+        <div id="lista-clausulas-container">
+          <div class="clausula-extra-row border rounded p-2 mb-2">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <small class="text-muted fw-semibold">Cláusula 1</small>
+              <button type="button" class="btn btn-sm btn-outline-danger remover-clausula-lista py-0">✕</button>
+            </div>
+            <input type="text" class="form-control form-control-sm mb-2 clausula-titulo" placeholder="Título — ex: Da Bolsa-Auxílio">
+            <textarea class="form-control form-control-sm clausula-texto" rows="2" placeholder="Texto da cláusula..."></textarea>
+          </div>
+        </div>
+        <p class="text-muted small mt-2 mb-0"><i class="bi bi-info-circle me-1"></i>Preencha ao menos a data ou uma cláusula adicional.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-dark" id="lista-btn-gerar-aditivo">
+          <i class="bi bi-file-earmark-text me-1"></i>Gerar Aditivo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let aditivoContratoId = null;
+
+document.querySelectorAll('.btn-aditivo').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    aditivoContratoId = this.dataset.id;
+    document.getElementById('lista-aditivo-data').value = '';
+    document.getElementById('lista-clausulas-container').innerHTML =
+      '<div class="clausula-extra-row border rounded p-2 mb-2">' +
+      '<div class="d-flex justify-content-between align-items-center mb-2">' +
+      '<small class="text-muted fw-semibold">Cláusula 1</small>' +
+      '<button type="button" class="btn btn-sm btn-outline-danger remover-clausula-lista py-0">✕</button></div>' +
+      '<input type="text" class="form-control form-control-sm mb-2 clausula-titulo" placeholder="Título — ex: Da Bolsa-Auxílio">' +
+      '<textarea class="form-control form-control-sm clausula-texto" rows="2" placeholder="Texto da cláusula..."></textarea></div>';
+  });
+});
+
+document.getElementById('lista-btn-add-clausula').addEventListener('click', function() {
+  const container = document.getElementById('lista-clausulas-container');
+  const count = container.querySelectorAll('.clausula-extra-row').length + 1;
+  const div = document.createElement('div');
+  div.className = 'clausula-extra-row border rounded p-2 mb-2';
+  div.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-2">' +
+    '<small class="text-muted fw-semibold">Cláusula ' + count + '</small>' +
+    '<button type="button" class="btn btn-sm btn-outline-danger remover-clausula-lista py-0">✕</button></div>' +
+    '<input type="text" class="form-control form-control-sm mb-2 clausula-titulo" placeholder="Título — ex: Da Bolsa-Auxílio">' +
+    '<textarea class="form-control form-control-sm clausula-texto" rows="2" placeholder="Texto da cláusula..."></textarea>';
+  container.appendChild(div);
+});
+
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('remover-clausula-lista')) {
+    e.target.closest('.clausula-extra-row').remove();
+  }
+});
+
+document.getElementById('lista-btn-gerar-aditivo').addEventListener('click', function() {
+  const data = document.getElementById('lista-aditivo-data').value;
+  const rows = document.querySelectorAll('#lista-clausulas-container .clausula-extra-row');
+  const clausulas = Array.from(rows).filter(function(r) {
+    return r.querySelector('.clausula-titulo').value.trim() || r.querySelector('.clausula-texto').value.trim();
+  });
+  if (!data && clausulas.length === 0) {
+    alert('Informe a nova data de término ou pelo menos uma cláusula adicional.');
+    return;
+  }
+  const url = new URL('/contratos/' + aditivoContratoId + '/aditivo', window.location.origin);
+  if (data) url.searchParams.set('nova_data_fim', data);
+  clausulas.forEach(function(row, i) {
+    url.searchParams.set('clausula_' + (i+1) + '_titulo', row.querySelector('.clausula-titulo').value.trim());
+    url.searchParams.set('clausula_' + (i+1) + '_texto', row.querySelector('.clausula-texto').value.trim());
+  });
+  window.open(url.toString(), '_blank');
+});
+</script>
 {% endblock %}
