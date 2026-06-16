@@ -222,6 +222,7 @@
           <a href="{{ url_for('doc_ciencia', id=c.id) }}" class="btn btn-outline-info" target="_blank">Ciência</a>
           <a href="{{ url_for('doc_tre', id=c.id) }}" class="btn btn-outline-warning" target="_blank">TRE</a>
           <a href="{{ url_for('doc_relatorio', id=c.id) }}" class="btn btn-outline-secondary" target="_blank">Relatório</a>
+          <a href="#" class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modal-aditivo">Aditivo</a>
           <a href="{{ url_for('contrato_excluir', id=c.id) }}" class="btn btn-outline-danger"
              onclick="return confirm('Excluir este contrato?')"><i class="bi bi-trash"></i></a>
         </div>
@@ -230,6 +231,42 @@
     </form>
   </div>
 </div>
+{% if c %}
+<!-- Modal Aditivo -->
+<div class="modal fade" id="modal-aditivo" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">Gerar Termo Aditivo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Nova Data de Término <span class="text-danger">*</span></label>
+          <input type="date" id="aditivo-data" class="form-control">
+          <div class="form-text">Cláusula 1ª — DA VIGÊNCIA: "Fica alterada a vigência do TCE original para esta data."</div>
+        </div>
+        <hr>
+        <p class="text-muted small mb-2">Opcional — preencha somente se houver outra cláusula a alterar:</p>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Título da Cláusula Adicional</label>
+          <input type="text" id="aditivo-titulo" class="form-control" placeholder="Ex: Cláusula Segunda — Da Bolsa-Auxílio">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Texto da Cláusula</label>
+          <textarea id="aditivo-texto" class="form-control" rows="3" placeholder="Digite o novo texto da cláusula..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-dark" onclick="gerarAditivo()">
+          <i class="bi bi-file-earmark-text me-1"></i>Gerar Aditivo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -246,6 +283,19 @@ document.getElementById('sel-empresa').addEventListener('change', function() {
       document.getElementById('sup-reg').value = d.supervisor_registro || '';
     });
 });
+
+// Gerar aditivo
+function gerarAditivo() {
+  const data = document.getElementById('aditivo-data').value;
+  if (!data) { alert('Informe a nova data de término.'); return; }
+  const titulo = document.getElementById('aditivo-titulo').value;
+  const texto = document.getElementById('aditivo-texto').value;
+  const url = new URL('{{ url_for("doc_aditivo", id=c.id) }}', window.location.origin);
+  url.searchParams.set('nova_data_fim', data);
+  if (titulo) url.searchParams.set('clausula_extra_titulo', titulo);
+  if (texto) url.searchParams.set('clausula_extra_texto', texto);
+  window.open(url.toString(), '_blank');
+}
 
 // Mostrar próxima linha de atividade
 let visibleAts = document.querySelectorAll('.atividade-row:not([style*="none"])').length;
