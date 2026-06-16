@@ -862,6 +862,19 @@ def doc_relatorio(id):
     return render_template('docs/relatorio.html', **ctx)
 
 
+@app.route('/contratos/<int:id>/aditivo')
+@login_required
+def doc_aditivo(id):
+    ctx = _doc_ctx(id)
+    if not ctx:
+        flash('Contrato não encontrado.', 'danger')
+        return redirect(url_for('contratos'))
+    ctx['nova_data_fim'] = request.args.get('nova_data_fim', '')
+    ctx['clausula_extra_titulo'] = request.args.get('clausula_extra_titulo', '')
+    ctx['clausula_extra_texto'] = request.args.get('clausula_extra_texto', '')
+    return render_template('docs/aditivo.html', **ctx)
+
+
 # ─── ERROS ────────────────────────────────────────────────────────────────────
 
 @app.errorhandler(403)
