@@ -1,128 +1,39 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>Relatório de Estágio – {{ d.est_nome }}</title>
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; background: #fff; }
-  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 20mm 15mm; }
-  h1 { font-size: 13pt; text-align: center; text-transform: uppercase; margin-bottom: 4px; }
-  .subtitulo { font-size: 10pt; text-align: center; color: #333; margin-bottom: 20px; }
-  .secao { font-size: 10.5pt; font-weight: bold; text-transform: uppercase; margin: 14px 0 6px; border-bottom: 1px solid #000; padding-bottom: 2px; }
-  table.dados { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-  table.dados td { padding: 4px 6px; vertical-align: top; border-bottom: 1px dotted #ddd; }
-  table.dados td.label { font-weight: bold; width: 40%; }
-  table.avaliacao { width: 100%; border-collapse: collapse; margin-top: 8px; }
-  table.avaliacao th { background: #1a2845; color: #fff; padding: 6px 10px; font-size: 10pt; }
-  table.avaliacao td { padding: 7px 10px; border: 1px solid #ccc; font-size: 10.5pt; }
-  table.avaliacao tr:nth-child(even) td { background: #f5f7fa; }
-  table.avaliacao .resp { text-align: center; width: 60px; font-weight: bold; }
-  .area-texto { border: 1px solid #ccc; min-height: 60px; padding: 8px; margin-top: 6px; border-radius: 4px; background: #fafafa; }
-  .assinaturas { margin-top: 28px; }
-  .assinatura-bloco { display: inline-block; width: 30%; text-align: center; vertical-align: top; margin: 0 1.6%; }
-  .assinatura-linha { border-top: 1px solid #000; margin-top: 40px; padding-top: 4px; }
-  .rodape { font-size: 8pt; color: #555; text-align: center; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 6px; }
-  @media print { .no-print { display: none !important; } .page { padding: 15mm 18mm 12mm; } }
-</style>
-</head>
-<body>
-<div class="no-print" style="background:#1a2845;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center">
-  <span>Relatório de Estágio — {{ d.est_nome }}</span>
-  <div>
-    <button onclick="window.print()" style="background:#fff;color:#1a2845;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;font-weight:bold">Imprimir / Salvar PDF</button>
-    <button onclick="window.close()" style="background:transparent;color:#aaa;border:none;padding:6px 12px;cursor:pointer">✕</button>
-  </div>
-</div>
+Relatório de Estágio — {{ d.est_nome }}
+Imprimir / Salvar PDF ✕
+Relatório de Estágio N.º {{ d.num_relatorio or '___' }}
+{{ agente.nome }}
+1. Identificação
+Estagiário(a):	{{ d.est_nome }}
+CPF:	{{ d.est_cpf }}
+Curso:	{{ d.curso }}
+Instituição de Ensino:	{{ d.ie_nome }}
+Empresa:	{{ d.emp_nome }}
+Supervisor:	{{ d.supervisor_nome or '________________' }}
+Período do Relatório:	{{ fmt_date(d.data_inicio) }} a {{ fmt_date(d.data_fim) }}
+2. Atividades Desenvolvidas no Período
+{% if d.atividades %} {% set ats = d.atividades.split('||') %} {% for at in ats %}{% if at.strip() %}
+{{ loop.index }}. {{ at.strip() }}
 
-<div class="page">
-  <h1>Relatório de Estágio N.º {{ d.num_relatorio or '___' }}</h1>
-  <div class="subtitulo">{{ agente.nome }}</div>
+{% endif %}{% endfor %} {% else %}
+ 
+{% endif %}
+3. Avaliação do Estagiário pelo Supervisor
+{% set criterios = [ 'O estagiário cumpre os horários estabelecidos?', 'Executa as atividades com qualidade satisfatória?', 'Demonstra iniciativa e proatividade?', 'Mantém bom relacionamento com a equipe?', 'Aplica os conhecimentos do curso no estágio?', 'Cumpre as normas internas da empresa?', 'Apresenta evolução ao longo do período?' ] %} {% for c in criterios %} {% endfor %}
+Critério de Avaliação	Sim	Não
+{{ c }}	( )	( )
+4. Observações e Comentários do Supervisor
+ 
+ 
+ 
+Vitória da Conquista – BA, {{ data_hoje }}
 
-  <div class="secao">1. Identificação</div>
-  <table class="dados">
-    <tr><td class="label">Estagiário(a):</td><td>{{ d.est_nome }}</td></tr>
-    <tr><td class="label">CPF:</td><td>{{ d.est_cpf }}</td></tr>
-    <tr><td class="label">Curso:</td><td>{{ d.curso }}</td></tr>
-    <tr><td class="label">Instituição de Ensino:</td><td>{{ d.ie_nome }}</td></tr>
-    <tr><td class="label">Empresa:</td><td>{{ d.emp_nome }}</td></tr>
-    <tr><td class="label">Supervisor:</td><td>{{ d.supervisor_nome or '________________' }}</td></tr>
-    <tr><td class="label">Período do Relatório:</td><td>{{ fmt_date(d.data_inicio) }} a {{ fmt_date(d.data_fim) }}</td></tr>
-  </table>
-
-  <div class="secao">2. Atividades Desenvolvidas no Período</div>
-  {% if d.atividades %}
-  {% set ats = d.atividades.split('||') %}
-  {% for at in ats %}{% if at.strip() %}
-  <p style="margin-bottom:4px; line-height:1.5">{{ loop.index }}. {{ at.strip() }}</p>
-  {% endif %}{% endfor %}
-  {% else %}
-  <div class="area-texto">&nbsp;</div>
-  {% endif %}
-
-  <div class="secao">3. Avaliação do Estagiário pelo Supervisor</div>
-  <table class="avaliacao">
-    <thead>
-      <tr>
-        <th>Critério de Avaliação</th>
-        <th class="resp" style="width:60px">Sim</th>
-        <th class="resp" style="width:60px">Não</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% set criterios = [
-        'O estagiário cumpre os horários estabelecidos?',
-        'Executa as atividades com qualidade satisfatória?',
-        'Demonstra iniciativa e proatividade?',
-        'Mantém bom relacionamento com a equipe?',
-        'Aplica os conhecimentos do curso no estágio?',
-        'Cumpre as normas internas da empresa?',
-        'Apresenta evolução ao longo do período?'
-      ] %}
-      {% for c in criterios %}
-      <tr>
-        <td>{{ c }}</td>
-        <td class="resp">( )</td>
-        <td class="resp">( )</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <div class="secao">4. Observações e Comentários do Supervisor</div>
-  <div class="area-texto">&nbsp;<br>&nbsp;<br>&nbsp;</div>
-
-  <p style="text-align:center; margin-top:18px">
-    Vitória da Conquista – BA, {{ data_hoje }}
-  </p>
-
-  <div class="assinaturas">
-    <div class="assinatura-bloco">
-      <div class="assinatura-linha">
-        <strong>Supervisor de Estágio</strong><br>
-        <small>{{ d.supervisor_nome or '' }}</small><br>
-        <small>{{ d.supervisor_cargo or '' }}</small>
-      </div>
-    </div>
-    <div class="assinatura-bloco">
-      <div class="assinatura-linha">
-        <strong>Estagiário(a)</strong><br>
-        <small>{{ d.est_nome }}</small><br>
-        <small>CPF: {{ d.est_cpf }}</small>
-      </div>
-    </div>
-    <div class="assinatura-bloco">
-      <div class="assinatura-linha">
-        <strong>Agente de Integração</strong><br>
-        <small>{{ agente.nome }}</small><br>
-        <small>{{ agente.representante }}</small>
-      </div>
-    </div>
-  </div>
-
-  <div class="rodape">
-    {{ agente.nome }} — CNPJ {{ agente.cnpj }} — {{ agente.endereco }}, {{ agente.cidade }} — {{ agente.email }}
-  </div>
-</div>
-</body>
-</html>
+Supervisor de Estágio
+{{ d.supervisor_nome or '' }}
+{{ d.supervisor_cargo or '' }}
+Estagiário(a)
+{{ d.est_nome }}
+CPF: {{ d.est_cpf }}
+Agente de Integração
+{{ agente.nome }}
+{{ agente.representante }} — {{ agente.cargo }}
+{{ agente.nome }} — CNPJ {{ agente.cnpj }} — {{ agente.endereco }}, {{ agente.cidade }} — {{ agente.email }}
