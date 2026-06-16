@@ -888,8 +888,9 @@ def not_found(e):
     return render_template('erro.html', codigo=404, msg='Página não encontrada.'), 404
 
 
+init_db()
+
 if __name__ == '__main__':
-    init_db()
     print('\n' + '=' * 50)
     print('  CICLO RH — Sistema de Estágio')
     print('  Acesse: http://localhost:5000')
