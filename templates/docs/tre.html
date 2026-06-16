@@ -1,94 +1,207 @@
-TRE — {{ d.est_nome }}
-Imprimir / Salvar PDF ✕
-Termo de Realização de Estágio — TRE
-Lei Federal n.º 11.788, de 25 de setembro de 2008 — art. 7.º, IV
-Declaração de Conclusão / Encerramento de Estágio Curricular
-I — Identificação das Partes
-AGENTE DE INTEGRAÇÃO:
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>TRE – {{ d.est_nome }}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 10.5pt; color: #000; background: #fff; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 18mm 20mm 15mm; }
+  h1 { font-size: 13pt; text-align: center; text-transform: uppercase; margin-bottom: 3px; font-weight: bold; }
+  .subtitulo { font-size: 10pt; text-align: center; color: #333; margin-bottom: 4px; }
+  .subtitulo2 { font-size: 9.5pt; text-align: center; color: #333; margin-bottom: 14px; }
+  .secao { font-size: 10.5pt; font-weight: bold; text-transform: uppercase; margin: 12px 0 5px; border-bottom: 1.5px solid #000; padding-bottom: 2px; letter-spacing: 0.5px; }
+  table.dados { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+  table.dados td { padding: 3px 5px; vertical-align: top; border-bottom: 1px dotted #ddd; }
+  table.dados td.label { font-weight: bold; width: 38%; }
+  p { margin-bottom: 6px; line-height: 1.5; text-align: justify; }
+  .par { margin-bottom: 5px; line-height: 1.45; text-align: justify; }
+  .clausula { margin-bottom: 7px; }
+  .atividade-item { margin: 2px 0 2px 14px; line-height: 1.4; }
+  .assinaturas { display: flex; justify-content: space-between; gap: 12px; margin-top: 26px; }
+  .assinaturas-2 { display: flex; justify-content: space-around; gap: 12px; margin-top: 22px; }
+  .assinatura-bloco { flex: 1; text-align: center; }
+  .assinatura-bloco-2 { flex: 1; text-align: center; }
+  .assinatura-linha { border-top: 1px solid #000; padding-top: 4px; font-size: 9pt; }
+  .assinatura-img { height: 58px; display: block; margin: 0 auto 2px; object-fit: contain; }
+  .rodape { font-size: 8pt; color: #555; text-align: center; margin-top: 16px; border-top: 1px solid #ccc; padding-top: 5px; }
+  .caixa-destaque { border: 1px solid #333; padding: 8px 12px; margin: 8px 0; background: #fafafa; }
+  @media print {
+    body { print-color-adjust: exact; }
+    .no-print { display: none !important; }
+    .page { padding: 14mm 18mm 12mm; }
+  }
+</style>
+</head>
+<body>
+<div class="no-print" style="background:#1a2845;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center">
+  <span>TRE — {{ d.est_nome }}</span>
+  <div>
+    <button onclick="window.print()" style="background:#fff;color:#1a2845;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;font-weight:bold">Imprimir / Salvar PDF</button>
+    <button onclick="window.close()" style="background:transparent;color:#aaa;border:none;padding:6px 12px;cursor:pointer">✕</button>
+  </div>
+</div>
 
-Razão Social:	{{ agente.nome }}
-CNPJ:	{{ agente.cnpj }}
-Endereço:	{{ agente.endereco }}, {{ agente.cidade }}
-Representante Legal:	{{ agente.representante }} — {{ agente.cargo }} — CPF: {{ agente.cpf }}
-PARTE CONCEDENTE (EMPRESA):
+<div class="page">
+  <h1>Termo de Realização de Estágio — TRE</h1>
+  <div class="subtitulo">Lei Federal n.º 11.788, de 25 de setembro de 2008 — art. 7.º, IV</div>
+  <div class="subtitulo2">Declaração de Conclusão / Encerramento de Estágio Curricular</div>
 
-Razão Social / Nome:	{{ d.emp_nome }}
-CNPJ / CPF:	{{ d.emp_cnpj or '___________________________' }}
-Endereço:	{{ d.emp_endereco or '___________________________' }}, {{ d.emp_cidade or 'Vitória da Conquista – BA' }}
-Representante Legal:	{{ d.emp_representante or '___________________________' }}{% if d.emp_cargo_rep %} — {{ d.emp_cargo_rep }}{% endif %}
-Supervisor de Estágio:	{{ d.supervisor_nome or '___________________________' }}{% if d.supervisor_cargo %} — {{ d.supervisor_cargo }}{% endif %}{% if d.supervisor_registro %} — Reg.: {{ d.supervisor_registro }}{% endif %}
-INSTITUIÇÃO DE ENSINO:
+  <!-- IDENTIFICAÇÃO -->
+  <div class="secao">I — Identificação das Partes</div>
 
-Nome:	{{ d.ie_nome }}
-Coordenador(a) de Estágio:	{{ d.ie_coordenador or '___________________________' }}{% if d.ie_coord_cargo %} — {{ d.ie_coord_cargo }}{% endif %}
-ESTAGIÁRIO(A):
+  <p><strong>AGENTE DE INTEGRAÇÃO:</strong></p>
+  <table class="dados">
+    <tr><td class="label">Razão Social:</td><td>{{ agente.nome }}</td></tr>
+    <tr><td class="label">CNPJ:</td><td>{{ agente.cnpj }}</td></tr>
+    <tr><td class="label">Endereço:</td><td>{{ agente.endereco }}, {{ agente.cidade }}</td></tr>
+    <tr><td class="label">Representante Legal:</td><td>{{ agente.representante }} — {{ agente.cargo }} — CPF: {{ agente.cpf }}</td></tr>
+  </table>
 
-Nome Completo:	{{ d.est_nome }}
-CPF:	{{ d.est_cpf }}
-RG:	{{ d.est_rg or '___________________________' }}
-Curso:	{{ d.curso }}
-Matrícula:	{{ d.est_matricula or '___________________________' }}
-II — Dados do Estágio Realizado
-Área de Atuação:	{{ d.area_atuacao or d.curso }}
-Tipo de Estágio:	{{ d.tipo_estagio or 'Não Obrigatório' }}
-Data de Início:	{{ fmt_date(d.data_inicio) }}
-Data de Encerramento:	{{ fmt_date(d.data_fim) }}
-Carga Horária Diária:	{{ d.ch_diaria or 6 }} horas
-Carga Horária Semanal:	{{ d.ch_semanal or 30 }} horas
-Carga Horária Total Cumprida:	{{ ch_total }} horas
-Bolsa-Auxílio Mensal:	R$ {{ '%.2f'|format(d.bolsa or 0) }}
-{% if d.atividades %}
-III — Atividades Desenvolvidas
-{% set ats = d.atividades.split('||') %} {% for at in ats %}{% if at.strip() %}
-{{ loop.index }}. {{ at.strip() }}
+  <p style="margin-top:7px"><strong>PARTE CONCEDENTE (EMPRESA):</strong></p>
+  <table class="dados">
+    <tr><td class="label">Razão Social / Nome:</td><td>{{ d.emp_nome }}</td></tr>
+    <tr><td class="label">CNPJ / CPF:</td><td>{{ d.emp_cnpj or '___________________________' }}</td></tr>
+    <tr><td class="label">Endereço:</td><td>{{ d.emp_endereco or '___________________________' }}, {{ d.emp_cidade or 'Vitória da Conquista – BA' }}</td></tr>
+    <tr><td class="label">Representante Legal:</td><td>{{ d.emp_representante or '___________________________' }}{% if d.emp_cargo_rep %} — {{ d.emp_cargo_rep }}{% endif %}</td></tr>
+    <tr><td class="label">Supervisor de Estágio:</td><td>{{ d.supervisor_nome or '___________________________' }}{% if d.supervisor_cargo %} — {{ d.supervisor_cargo }}{% endif %}{% if d.supervisor_registro %} — Reg.: {{ d.supervisor_registro }}{% endif %}</td></tr>
+  </table>
 
-{% endif %}{% endfor %} {% endif %}
-{% if d.atividades %}IV{% else %}III{% endif %} — Avaliação de Desempenho
-Assiduidade:	{{ d.aval_assiduidade or '( ) Ótimo ( ) Bom ( ) Regular ( ) Insuficiente' }}
-Pontualidade:	{{ d.aval_pontualidade or '( ) Ótimo ( ) Bom ( ) Regular ( ) Insuficiente' }}
-Iniciativa:	{{ d.aval_iniciativa or '( ) Ótimo ( ) Bom ( ) Regular ( ) Insuficiente' }}
-Relacionamento Interpessoal:	{{ d.aval_relacionamento or '( ) Ótimo ( ) Bom ( ) Regular ( ) Insuficiente' }}
-Desempenho Técnico:	{{ d.aval_tecnico or '( ) Ótimo ( ) Bom ( ) Regular ( ) Insuficiente' }}
-Responsabilidade:	{{ d.aval_responsabilidade or '( ) Ótimo ( ) Bom ( ) Regular ( ) Insuficiente' }}
-Aprendizagem / Desenvolvimento:	{{ d.aval_aprendizagem or '( ) Ótimo ( ) Bom ( ) Regular ( ) Insuficiente' }}
-Conceito Geral:	{{ d.aval_geral or '( ) Ótimo ( ) Bom ( ) Regular ( ) Insuficiente' }}
-{% if d.aval_observacoes %}
-Observações do Supervisor: {{ d.aval_observacoes }}
+  <p style="margin-top:7px"><strong>INSTITUIÇÃO DE ENSINO:</strong></p>
+  <table class="dados">
+    <tr><td class="label">Nome:</td><td>{{ d.ie_nome }}</td></tr>
+    <tr><td class="label">Coordenador(a) de Estágio:</td><td>{{ d.ie_coordenador or '___________________________' }}{% if d.ie_coord_cargo %} — {{ d.ie_coord_cargo }}{% endif %}</td></tr>
+  </table>
 
-{% else %}
-Observações do Supervisor: _______________________________________________________________________________ _______________________________________________________________________________
+  <p style="margin-top:7px"><strong>ESTAGIÁRIO(A):</strong></p>
+  <table class="dados">
+    <tr><td class="label">Nome Completo:</td><td>{{ d.est_nome }}</td></tr>
+    <tr><td class="label">CPF:</td><td>{{ d.est_cpf }}</td></tr>
+    <tr><td class="label">RG:</td><td>{{ d.est_rg or '___________________________' }}</td></tr>
+    <tr><td class="label">Curso:</td><td>{{ d.curso }}</td></tr>
+    <tr><td class="label">Matrícula:</td><td>{{ d.est_matricula or '___________________________' }}</td></tr>
+  </table>
 
-{% endif %}
-{% if d.atividades %}V{% else %}IV{% endif %} — Declaração de Realização
-O Agente de Integração {{ agente.nome }}, CNPJ {{ agente.cnpj }}, por meio deste instrumento, declara que o(a) estudante {{ d.est_nome }}, CPF n.º {{ d.est_cpf }}, matriculado(a) no curso de {{ d.curso }} na {{ d.ie_nome }}, realizou estágio curricular {{ (d.tipo_estagio or 'não obrigatório').lower() }} junto à empresa {{ d.emp_nome }}, no período de {{ fmt_date(d.data_inicio) }} a {{ fmt_date(d.data_fim) }}, na área de {{ d.area_atuacao or d.curso }}, sob a supervisão de {{ d.supervisor_nome or '___________________________' }}{% if d.supervisor_cargo %} ({{ d.supervisor_cargo }}){% endif %}, cumprindo carga horária total de {{ ch_total }} horas.
+  <!-- DADOS DO ESTÁGIO -->
+  <div class="secao">II — Dados do Estágio Realizado</div>
+  <table class="dados">
+    <tr><td class="label">Área de Atuação:</td><td>{{ d.area_atuacao or d.curso }}</td></tr>
+    <tr><td class="label">Tipo de Estágio:</td><td>{{ d.tipo_estagio or 'Não Obrigatório' }}</td></tr>
+    <tr><td class="label">Data de Início:</td><td>{{ fmt_date(d.data_inicio) }}</td></tr>
+    <tr><td class="label">Data de Encerramento:</td><td>{{ fmt_date(d.data_fim) }}</td></tr>
+    <tr><td class="label">Carga Horária Diária:</td><td>{{ d.ch_diaria or 6 }} horas</td></tr>
+    <tr><td class="label">Carga Horária Semanal:</td><td>{{ d.ch_semanal or 30 }} horas</td></tr>
+    <tr><td class="label">Carga Horária Total Cumprida:</td><td><strong>{{ ch_total }} horas</strong></td></tr>
+    <tr><td class="label">Bolsa-Auxílio Mensal:</td><td>R$ {{ '%.2f'|format(d.bolsa or 0) }}</td></tr>
+  </table>
 
-{% if d.atividades %}VI{% else %}V{% endif %} — Disposições Finais
-Cláusula 1ª — Da Natureza do Vínculo. Fica expressamente consignado que o estágio objeto deste Termo não gerou, em nenhum momento, vínculo empregatício entre o(a) Estagiário(a) e a Parte Concedente, nos termos do art. 3.º da Lei n.º 11.788/2008, tendo sido observados todos os requisitos legais durante sua realização.
+  <!-- ATIVIDADES -->
+  {% if d.atividades %}
+  <div class="secao">III — Atividades Desenvolvidas</div>
+  {% set ats = d.atividades.split('||') %}
+  {% for at in ats %}{% if at.strip() %}
+  <p class="atividade-item">{{ loop.index }}. {{ at.strip() }}</p>
+  {% endif %}{% endfor %}
+  {% endif %}
 
-Cláusula 2ª — Das Obrigações Cumpridas. As partes declaram que as obrigações legais e contratuais decorrentes do Termo de Compromisso de Estágio foram integralmente cumpridas durante o período de estágio, incluindo: supervisão adequada, atividades compatíveis com o curso, pagamento da bolsa-auxílio, manutenção do seguro contra acidentes pessoais e envio de relatórios periódicos à Instituição de Ensino.
+  <!-- AVALIAÇÃO DE DESEMPENHO -->
+  <div class="secao">{% if d.atividades %}IV{% else %}III{% endif %} — Avaliação de Desempenho</div>
+  <table class="dados">
+    <tr><td class="label">Assiduidade:</td><td>{{ d.aval_assiduidade or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+    <tr><td class="label">Pontualidade:</td><td>{{ d.aval_pontualidade or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+    <tr><td class="label">Iniciativa:</td><td>{{ d.aval_iniciativa or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+    <tr><td class="label">Relacionamento Interpessoal:</td><td>{{ d.aval_relacionamento or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+    <tr><td class="label">Desempenho Técnico:</td><td>{{ d.aval_tecnico or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+    <tr><td class="label">Responsabilidade:</td><td>{{ d.aval_responsabilidade or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+    <tr><td class="label">Aprendizagem / Desenvolvimento:</td><td>{{ d.aval_aprendizagem or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+    <tr><td class="label">Conceito Geral:</td><td>{{ d.aval_geral or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+  </table>
 
-Cláusula 3ª — Do Recesso. As partes declaram que o recesso a que tem direito o(a) Estagiário(a), nos termos do art. 13 da Lei n.º 11.788/2008, foi: ( ) concedido integralmente ( ) concedido proporcionalmente ( ) compensado financeiramente ( ) não aplicável (duração inferior a 1 ano).
+  {% if d.aval_observacoes %}
+  <p style="margin-top:6px"><strong>Observações do Supervisor:</strong> {{ d.aval_observacoes }}</p>
+  {% else %}
+  <p style="margin-top:6px"><strong>Observações do Supervisor:</strong> _______________________________________________________________________________ _______________________________________________________________________________</p>
+  {% endif %}
 
-Cláusula 4ª — Da Documentação. O presente Termo é emitido em 3 (três) vias de igual teor e forma: uma para o(a) Estagiário(a), uma para a Parte Concedente e uma para o Agente de Integração, que a encaminhará à Instituição de Ensino conforme art. 7.º, IV, da Lei n.º 11.788/2008.
+  <!-- DECLARAÇÃO -->
+  <div class="secao">{% if d.atividades %}V{% else %}IV{% endif %} — Declaração de Realização</div>
 
-Cláusula 5ª — Do Foro. As partes elegem o Foro da Comarca de Vitória da Conquista – BA para dirimir eventuais conflitos oriundos do presente Termo.
+  <div class="caixa-destaque">
+    <p>O Agente de Integração <strong>{{ agente.nome }}</strong>, CNPJ {{ agente.cnpj }}, por meio deste instrumento, declara que o(a) estudante <strong>{{ d.est_nome }}</strong>, CPF n.º <strong>{{ d.est_cpf }}</strong>, matriculado(a) no curso de <strong>{{ d.curso }}</strong> na <strong>{{ d.ie_nome }}</strong>, realizou estágio curricular {{ (d.tipo_estagio or 'não obrigatório').lower() }} junto à empresa <strong>{{ d.emp_nome }}</strong>, no período de <strong>{{ fmt_date(d.data_inicio) }}</strong> a <strong>{{ fmt_date(d.data_fim) }}</strong>, na área de <strong>{{ d.area_atuacao or d.curso }}</strong>, sob a supervisão de <strong>{{ d.supervisor_nome or '___________________________' }}</strong>{% if d.supervisor_cargo %} ({{ d.supervisor_cargo }}){% endif %}, cumprindo carga horária total de <strong>{{ ch_total }} horas</strong>.</p>
+  </div>
 
-Vitória da Conquista – BA, {{ data_hoje }}
+  <!-- CLÁUSULAS -->
+  <div class="secao">{% if d.atividades %}VI{% else %}V{% endif %} — Disposições Finais</div>
 
-Parte Concedente
-{{ d.emp_nome }}
-{{ d.emp_representante or '' }}{% if d.emp_cargo_rep %}
-{{ d.emp_cargo_rep }}{% endif %}
-Agente de Integração
-{{ agente.nome }}
-{{ agente.representante }} — {{ agente.cargo }}
-Instituição de Ensino
-{{ d.ie_nome }}
-{{ d.ie_coordenador or '' }}
-Estagiário(a)
-{{ d.est_nome }}
-CPF: {{ d.est_cpf }}
-Supervisor(a) de Estágio
-{{ d.supervisor_nome or '___________________________' }}
-{{ d.supervisor_cargo or '' }}{% if d.supervisor_registro %} — Reg.: {{ d.supervisor_registro }}{% endif %}
-{{ agente.nome }} — CNPJ {{ agente.cnpj }} — {{ agente.endereco }}, {{ agente.cidade }} — {{ agente.email }}
+  <div class="clausula">
+    <p><strong>Cláusula 1ª — Da Natureza do Vínculo.</strong> Fica expressamente consignado que o estágio objeto deste Termo não gerou, em nenhum momento, vínculo empregatício entre o(a) Estagiário(a) e a Parte Concedente, nos termos do art. 3.º da Lei n.º 11.788/2008, tendo sido observados todos os requisitos legais durante sua realização.</p>
+  </div>
+
+  <div class="clausula">
+    <p><strong>Cláusula 2ª — Das Obrigações Cumpridas.</strong> As partes declaram que as obrigações legais e contratuais decorrentes do Termo de Compromisso de Estágio foram integralmente cumpridas durante o período de estágio, incluindo: supervisão adequada, atividades compatíveis com o curso, pagamento da bolsa-auxílio, manutenção do seguro contra acidentes pessoais e envio de relatórios periódicos à Instituição de Ensino.</p>
+  </div>
+
+  <div class="clausula">
+    <p><strong>Cláusula 3ª — Do Recesso.</strong> As partes declaram que o recesso a que tem direito o(a) Estagiário(a), nos termos do art. 13 da Lei n.º 11.788/2008, foi: (  ) concedido integralmente  (  ) concedido proporcionalmente  (  ) compensado financeiramente  (  ) não aplicável (duração inferior a 1 ano).</p>
+  </div>
+
+  <div class="clausula">
+    <p><strong>Cláusula 4ª — Da Documentação.</strong> O presente Termo é emitido em 3 (três) vias de igual teor e forma: uma para o(a) Estagiário(a), uma para a Parte Concedente e uma para o Agente de Integração, que a encaminhará à Instituição de Ensino conforme art. 7.º, IV, da Lei n.º 11.788/2008.</p>
+  </div>
+
+  <div class="clausula">
+    <p><strong>Cláusula 5ª — Do Foro.</strong> As partes elegem o Foro da Comarca de Vitória da Conquista – BA para dirimir eventuais conflitos oriundos do presente Termo.</p>
+  </div>
+
+  <p style="text-align:center; margin-top:16px">
+    Vitória da Conquista – BA, {{ data_hoje }}
+  </p>
+
+  <div class="assinaturas">
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Parte Concedente</strong><br>
+        {{ d.emp_nome }}<br>
+        {{ d.emp_representante or '' }}{% if d.emp_cargo_rep %}<br>{{ d.emp_cargo_rep }}{% endif %}
+      </div>
+    </div>
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <img src="{{ url_for('static', filename='assinatura_ciclorh.jpg') }}" class="assinatura-img">
+        <strong>Agente de Integração</strong><br>
+        {{ agente.nome }}<br>
+        {{ agente.representante }} — {{ agente.cargo }}
+      </div>
+    </div>
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Instituição de Ensino</strong><br>
+        {{ d.ie_nome }}<br>
+        {{ d.ie_coordenador or '' }}
+      </div>
+    </div>
+  </div>
+
+  <div class="assinaturas-2">
+    <div class="assinatura-bloco-2">
+      <div class="assinatura-linha">
+        <strong>Estagiário(a)</strong><br>
+        {{ d.est_nome }}<br>
+        CPF: {{ d.est_cpf }}
+      </div>
+    </div>
+    <div class="assinatura-bloco-2">
+      <div class="assinatura-linha">
+        <strong>Supervisor(a) de Estágio</strong><br>
+        {{ d.supervisor_nome or '___________________________' }}<br>
+        {{ d.supervisor_cargo or '' }}{% if d.supervisor_registro %} — Reg.: {{ d.supervisor_registro }}{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="rodape">
+    {{ agente.nome }} — CNPJ {{ agente.cnpj }} — {{ agente.endereco }}, {{ agente.cidade }} — {{ agente.email }}
+  </div>
+</div>
+</body>
+</html>
