@@ -123,6 +123,42 @@
       </div>
 
       <hr>
+      <h6 class="text-muted mb-3">Jornada / Horários</h6>
+      {% set jd = (c.jornada | from_json) if c and c.jornada else {} %}
+      <div class="table-responsive mb-3">
+        <table class="table table-sm table-bordered align-middle text-center" style="font-size:0.875rem">
+          <thead class="table-dark">
+            <tr>
+              <th rowspan="2" class="align-middle text-start" style="width:90px">Dia</th>
+              <th colspan="2">Matutino</th>
+              <th colspan="2">Vespertino</th>
+              <th colspan="2">Noturno</th>
+            </tr>
+            <tr>
+              <th style="width:90px">Início</th><th style="width:90px">Fim</th>
+              <th style="width:90px">Início</th><th style="width:90px">Fim</th>
+              <th style="width:90px">Início</th><th style="width:90px">Fim</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for dia_key, dia_nome in [('dom','Domingo'),('seg','Segunda'),('ter','Terça'),('qua','Quarta'),('qui','Quinta'),('sex','Sexta'),('sab','Sábado')] %}
+            {% set dd = jd.get(dia_key, {}) %}
+            <tr>
+              <td class="text-start fw-semibold">{{ dia_nome }}</td>
+              <td><input type="time" name="{{ dia_key }}_mat_ini" class="form-control form-control-sm p-1" value="{{ dd.get('mat_ini', '') }}"></td>
+              <td><input type="time" name="{{ dia_key }}_mat_fim" class="form-control form-control-sm p-1" value="{{ dd.get('mat_fim', '') }}"></td>
+              <td><input type="time" name="{{ dia_key }}_ves_ini" class="form-control form-control-sm p-1" value="{{ dd.get('ves_ini', '') }}"></td>
+              <td><input type="time" name="{{ dia_key }}_ves_fim" class="form-control form-control-sm p-1" value="{{ dd.get('ves_fim', '') }}"></td>
+              <td><input type="time" name="{{ dia_key }}_not_ini" class="form-control form-control-sm p-1" value="{{ dd.get('not_ini', '') }}"></td>
+              <td><input type="time" name="{{ dia_key }}_not_fim" class="form-control form-control-sm p-1" value="{{ dd.get('not_fim', '') }}"></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="text-muted small mb-3"><i class="bi bi-info-circle me-1"></i>Preencha apenas os turnos em que haverá atividade. Deixe em branco os dias/turnos sem atividade.</p>
+
+      <hr>
       <h6 class="text-muted mb-3">Valores</h6>
       <div class="row g-3 mb-4">
         <div class="col-md-4">
