@@ -870,8 +870,16 @@ def doc_aditivo(id):
         flash('Contrato não encontrado.', 'danger')
         return redirect(url_for('contratos'))
     ctx['nova_data_fim'] = request.args.get('nova_data_fim', '')
-    ctx['clausula_extra_titulo'] = request.args.get('clausula_extra_titulo', '')
-    ctx['clausula_extra_texto'] = request.args.get('clausula_extra_texto', '')
+    clausulas_extras = []
+    i = 1
+    while i <= 10:
+        titulo = request.args.get(f'clausula_{i}_titulo', '').strip()
+        texto = request.args.get(f'clausula_{i}_texto', '').strip()
+        if not titulo and not texto:
+            break
+        clausulas_extras.append({'titulo': titulo, 'texto': texto})
+        i += 1
+    ctx['clausulas_extras'] = clausulas_extras
     return render_template('docs/aditivo.html', **ctx)
 
 
