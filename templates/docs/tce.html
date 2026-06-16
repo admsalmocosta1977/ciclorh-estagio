@@ -163,6 +163,11 @@
 
   <div class="clausula">
     <p><strong>Cláusula 7ª — Da Jornada de Atividade em Estágio</strong> (art. 10, Lei n.º 11.788/2008). A jornada de atividade em estágio será de <strong>{{ d.ch_diaria or 6 }} horas diárias</strong> e <strong>{{ d.ch_semanal or 30 }} horas semanais</strong>, devendo ser cumprida de modo a não prejudicar as atividades escolares/acadêmicas do estagiário.</p>
+    {% if d.jornada_texto %}
+    <p class="par"><strong>Horário estipulado:</strong> {{ d.jornada_texto }}</p>
+    {% else %}
+    <p class="par"><strong>Horário estipulado:</strong> A ser definido entre as partes, em conformidade com o horário escolar/acadêmico do estagiário.</p>
+    {% endif %}
     <p class="par">Parágrafo único. Em caso de estágio obrigatório, a jornada poderá ser objeto de acordo entre as partes, ficando vedado que resulte em prejuízo ao cumprimento das disciplinas curriculares.</p>
   </div>
 
