@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Termo Aditivo – {{ d.est_nome }}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; background: #fff; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 22mm 15mm; }
+  h1 { font-size: 13pt; text-align: center; text-transform: uppercase; margin-bottom: 4px; font-weight: bold; }
+  .subtitulo { font-size: 10pt; text-align: center; font-weight: bold; font-style: italic; margin-bottom: 22px; }
+  p { margin-bottom: 10px; line-height: 1.65; text-align: justify; }
+  .clausula-titulo { font-weight: bold; margin-top: 18px; margin-bottom: 5px; }
+  .assinaturas { display: flex; justify-content: space-between; gap: 16px; margin-top: 50px; }
+  .assinaturas-2 { display: flex; justify-content: center; gap: 16px; margin-top: 30px; }
+  .assinatura-bloco { flex: 1; text-align: center; max-width: 200px; }
+  .assinatura-linha { border-top: 1px solid #000; padding-top: 5px; font-size: 9.5pt; line-height: 1.4; }
+  .assinatura-img { height: 58px; display: block; margin: 0 auto 2px; object-fit: contain; }
+  .rodape { font-size: 8pt; color: #555; text-align: center; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 5px; }
+  @media print {
+    body { print-color-adjust: exact; }
+    .no-print { display: none !important; }
+    .page { padding: 15mm 20mm 12mm; }
+  }
+</style>
+</head>
+<body>
+<div class="no-print" style="background:#1a2845;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center">
+  <span>Termo Aditivo — {{ d.est_nome }}</span>
+  <div>
+    <button onclick="window.print()" style="background:#fff;color:#1a2845;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;font-weight:bold">Imprimir / Salvar PDF</button>
+    <button onclick="window.close()" style="background:transparent;color:#aaa;border:none;padding:6px 12px;cursor:pointer">✕</button>
+  </div>
+</div>
+
+<div class="page">
+  <h1>Termo Aditivo</h1>
+  <div class="subtitulo">(Instrumento jurídico de que trata a Lei 11.788/08)</div>
+
+  <p>
+    A empresa <strong>{{ d.emp_nome }}</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob o n.º <strong>{{ d.emp_cnpj or '___________________________' }}</strong>, sediada na <strong>{{ d.emp_endereco or '___________________________' }}, {{ d.emp_cidade or 'Vitória da Conquista – BA' }}</strong>, doravante denominada <strong>CONCEDENTE</strong>, neste ato através do seu representante legal, o(a) Sr.(a) <strong>{{ d.emp_representante or '___________________________' }}</strong>{% if d.emp_cargo_rep %}, {{ d.emp_cargo_rep }}{% endif %}, e de outro lado, o(a) Sr.(a) <strong>{{ d.est_nome }}</strong>, estudante, regularmente matriculado(a) no curso de <strong>{{ d.curso }}</strong>, portador(a) do CPF n.º <strong>{{ d.est_cpf }}</strong>, doravante denominado(a) <strong>EDUCANDO(A)/ESTAGIÁRIO(A)</strong>, e como <strong>INSTITUIÇÃO DE ENSINO</strong>, <strong>{{ d.ie_nome }}</strong>{% if d.ie_coordenador %}, representada neste ato pelo(a) <strong>{{ d.ie_coordenador }}</strong>{% if d.ie_coord_cargo %}, {{ d.ie_coord_cargo }}{% endif %}{% endif %}, doravante denominada <strong>INSTITUIÇÃO DE ENSINO</strong>, resolvem firmar o presente <strong>TERMO ADITIVO</strong>, nos termos da Lei n.º 11.788/08, intermediados pelo <strong>AGENTE</strong>, a <strong>{{ agente.nome }}</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob o n.º <strong>{{ agente.cnpj }}</strong>, endereço eletrônico: <strong>{{ agente.email }}</strong>, situada à <strong>{{ agente.endereco }}, {{ agente.cidade }}</strong>, mediante as seguintes cláusulas:
+  </p>
+
+  <p class="clausula-titulo">CLÁUSULA PRIMEIRA: DA VIGÊNCIA:</p>
+  <p>Fica alterada a vigência do TCE original{% if nova_data_fim %} para a data <strong>{{ fmt_date(nova_data_fim) }}</strong>{% else %}: ___________________________{% endif %}.</p>
+
+  {% if clausula_extra_titulo and clausula_extra_texto %}
+  <p class="clausula-titulo">{{ clausula_extra_titulo | upper }}:</p>
+  <p>{{ clausula_extra_texto }}</p>
+  {% endif %}
+
+  <p class="clausula-titulo">CLÁUSULA {% if clausula_extra_titulo and clausula_extra_texto %}TERCEIRA{% else %}SEGUNDA{% endif %}: DAS DISPOSIÇÕES GERAIS</p>
+  <p>Permanecem inalteradas as demais cláusulas vigentes do Termo de Compromisso de Estágio que não colidirem com as disposições do presente instrumento.</p>
+
+  <p style="margin-top:18px; text-align:justify">E, por estarem justas e convencionadas, as partes assinam o presente TERMO ADITIVO, em 04 (quatro) vias de igual teor e forma, para que produza seus efeitos jurídicos e legais.</p>
+
+  <p style="text-align:center; margin-top:22px">Vitória da Conquista, {{ data_hoje }}</p>
+
+  <div class="assinaturas">
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Instituição de Ensino</strong><br>
+        <small>{{ d.ie_nome }}</small>
+      </div>
+    </div>
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <img src="{{ url_for('static', filename='assinatura_ciclorh.jpg') }}" class="assinatura-img">
+        <strong>{{ agente.nome }}</strong><br>
+        <small>{{ agente.representante }}</small>
+      </div>
+    </div>
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Concedente (carimbo)</strong><br>
+        <small>{{ d.emp_nome }}</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="assinaturas-2">
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Estagiário(a) / Educando(a)</strong><br>
+        <small>{{ d.est_nome }}</small><br>
+        <small>CPF: {{ d.est_cpf }}</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="rodape">
+    {{ agente.nome }} — CNPJ {{ agente.cnpj }} — {{ agente.endereco }}, {{ agente.cidade }} — {{ agente.email }}
+  </div>
+</div>
+</body>
+</html>
