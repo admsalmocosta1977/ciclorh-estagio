@@ -1,4 +1,4 @@
-import os, psycopg2, psycopg2.extras
+import os, json, psycopg2, psycopg2.extras
 from flask import Flask, render_template, request, redirect, url_for, flash, g, jsonify, abort
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -178,6 +178,7 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         ''')
+        cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS jornada TEXT;")
         cur.execute("SELECT id FROM usuario WHERE username = 'salmo'")
         if not cur.fetchone():
             cur.execute(
@@ -215,7 +216,95 @@ def calcular_status(data_fim_str):
         return 'ATIVO'
 
 
+def formatar_jornada(jornada_json):
+    if not jornada_json:
+        return ''
+    try:
+        j = json.loads(jornada_json)
+    except Exception:
+        return ''
+
+    DIAS_KEYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab']
+    DIAS_ACUS = {
+        'dom': 'aos domingos', 'seg': 'às segundas-feiras', 'ter': 'às terças-feiras',
+        'qua': 'às quartas-feiras', 'qui': 'às quintas-feiras', 'sex': 'às sextas-feiras',
+        'sab': 'aos sábados',
+    }
+    DIAS_DE = {
+        'dom': 'domingo', 'seg': 'segunda', 'ter': 'terça', 'qua': 'quarta',
+        'qui': 'quinta', 'sex': 'sexta', 'sab': 'sábado',
+    }
+    DIAS_ATE = {
+        'dom': 'domingo', 'seg': 'segunda-feira', 'ter': 'terça-feira', 'qua': 'quarta-feira',
+        'qui': 'quinta-feira', 'sex': 'sexta-feira', 'sab': 'sábado',
+    }
+
+    def dia_horarios(d):
+        h = []
+        for periodo in ['mat', 'ves', 'not']:
+            ini = d.get(f'{periodo}_ini', '').strip()
+            fim = d.get(f'{periodo}_fim', '').strip()
+            if ini and fim:
+                h.append((ini, fim))
+        return tuple(h)
+
+    schedule_groups = {}
+    for k in DIAS_KEYS:
+        if k not in j:
+            continue
+        h = dia_horarios(j[k])
+        if not h:
+            continue
+        if h not in schedule_groups:
+            schedule_groups[h] = []
+        schedule_groups[h].append(k)
+
+    if not schedule_groups:
+        return ''
+
+    parts = []
+    for horarios, dias in schedule_groups.items():
+        dias_sorted = sorted(dias, key=lambda d: DIAS_KEYS.index(d))
+        n = len(dias_sorted)
+        indices = [DIAS_KEYS.index(d) for d in dias_sorted]
+        is_consecutive = (n > 1 and indices[-1] - indices[0] == n - 1)
+
+        if is_consecutive and n >= 2:
+            dia_fmt = f'de {DIAS_DE[dias_sorted[0]]} a {DIAS_ATE[dias_sorted[-1]]}'
+        elif n == 1:
+            dia_fmt = DIAS_ACUS[dias_sorted[0]]
+        elif n == 2:
+            dia_fmt = f'{DIAS_ACUS[dias_sorted[0]]} e {DIAS_ACUS[dias_sorted[1]]}'
+        else:
+            dia_fmt = ', '.join(DIAS_ACUS[d] for d in dias_sorted[:-1]) + f' e {DIAS_ACUS[dias_sorted[-1]]}'
+
+        horario_fmt = ' e '.join(f'das {ini} às {fim}' for ini, fim in horarios)
+        parts.append(f'{dia_fmt} {horario_fmt}')
+
+    if not parts:
+        return ''
+    result = '; '.join(parts)
+    return result[0].upper() + result[1:] + '.'
+
+
+def _build_jornada_json():
+    dias = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab']
+    jornada = {}
+    for dia in dias:
+        dd = {}
+        for periodo in ['mat', 'ves', 'not']:
+            ini = request.form.get(f'{dia}_{periodo}_ini', '').strip()
+            fim = request.form.get(f'{dia}_{periodo}_fim', '').strip()
+            if ini or fim:
+                dd[f'{periodo}_ini'] = ini
+                dd[f'{periodo}_fim'] = fim
+        if dd:
+            jornada[dia] = dd
+    return json.dumps(jornada, ensure_ascii=False) if jornada else None
+
+
 app.jinja_env.globals.update(fmt_date=fmt_date, calcular_status=calcular_status)
+app.jinja_env.filters['from_json'] = lambda s: json.loads(s) if s else {}
 
 
 # ─── AUTH ─────────────────────────────────────────────────────────────────────
@@ -592,8 +681,8 @@ def contrato_novo():
                 (estagiario_id,empresa_id,ie_id,orientador,
                  supervisor_nome,supervisor_cargo,supervisor_registro,
                  curso,tipo_estagio,area_atuacao,ch_diaria,ch_semanal,
-                 data_inicio,data_fim,numero_contrato,bolsa,taxa,aux_transporte,atividades,obs)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                 data_inicio,data_fim,numero_contrato,bolsa,taxa,aux_transporte,atividades,obs,jornada)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['estagiario_id'], request.form['empresa_id'], request.form['ie_id'],
               request.form.get('orientador', 'Salmo Lima Costa'),
               request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
@@ -606,7 +695,7 @@ def contrato_novo():
               request.form.get('bolsa') or None,
               request.form.get('taxa') or None,
               request.form.get('aux_transporte') or None,
-              ats, request.form.get('obs')))
+              ats, request.form.get('obs'), _build_jornada_json()))
         flash('Contrato criado!', 'success')
         return redirect(url_for('contratos'))
     estagiarios = _q("SELECT * FROM estagiario ORDER BY nome")
@@ -629,7 +718,7 @@ def contrato_editar(id):
                 supervisor_nome=%s,supervisor_cargo=%s,supervisor_registro=%s,
                 curso=%s,tipo_estagio=%s,area_atuacao=%s,ch_diaria=%s,ch_semanal=%s,
                 data_inicio=%s,data_fim=%s,numero_contrato=%s,bolsa=%s,taxa=%s,
-                aux_transporte=%s,atividades=%s,obs=%s WHERE id=%s""",
+                aux_transporte=%s,atividades=%s,obs=%s,jornada=%s WHERE id=%s""",
              (request.form['estagiario_id'], request.form['empresa_id'], request.form['ie_id'],
               request.form.get('orientador'),
               request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
@@ -642,7 +731,7 @@ def contrato_editar(id):
               request.form.get('bolsa') or None,
               request.form.get('taxa') or None,
               request.form.get('aux_transporte') or None,
-              ats, request.form.get('obs'), id))
+              ats, request.form.get('obs'), _build_jornada_json(), id))
         flash('Contrato atualizado!', 'success')
         return redirect(url_for('contratos'))
     estagiarios = _q("SELECT * FROM estagiario ORDER BY nome")
@@ -697,6 +786,7 @@ def _doc_ctx(id):
         'supervisor_cargo': c['supervisor_cargo'],
         'supervisor_registro': c['supervisor_registro'],
         'num_relatorio': c['num_relatorio'] or 1,
+        'jornada_texto': formatar_jornada(c['jornada']),
         'est_nome': est['nome'] if est else '',
         'est_cpf': est['cpf'] if est else '',
         'est_rg': est['rg'] if est else '',
