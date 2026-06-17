@@ -231,6 +231,31 @@
     </form>
   </div>
 </div>
+{% if c and aditivos %}
+<div class="card mt-3">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-clock-history"></i> Histórico de Aditivos
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead class="table-light">
+        <tr><th>#</th><th>Registrado em</th><th>Nova Vigência</th><th>Cláusulas</th></tr>
+      </thead>
+      <tbody>
+        {% for ad in aditivos %}
+        {% set cls = (ad.clausulas | from_json) if ad.clausulas else [] %}
+        <tr>
+          <td>{{ loop.index }}º Aditivo</td>
+          <td>{{ fmt_date(ad.created_at) }}</td>
+          <td>{{ fmt_date(ad.nova_data_fim) if ad.nova_data_fim else '—' }}</td>
+          <td>{{ cls | length }} cláusula(s) adicional(is)</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
 {% if c %}
 <!-- Modal Aditivo -->
 <div class="modal fade" id="modal-aditivo" tabindex="-1">
@@ -296,20 +321,33 @@ document.getElementById('sel-empresa').addEventListener('change', function() {
 function gerarAditivo() {
   const data = document.getElementById('aditivo-data').value;
   const rows = document.querySelectorAll('#clausulas-container .clausula-extra-row');
-  const clausulas = Array.from(rows).filter(r =>
-    r.querySelector('.clausula-titulo').value.trim() || r.querySelector('.clausula-texto').value.trim()
-  );
+  const clausulas = Array.from(rows)
+    .map(r => ({titulo: r.querySelector('.clausula-titulo').value.trim(), texto: r.querySelector('.clausula-texto').value.trim()}))
+    .filter(cl => cl.titulo || cl.texto);
   if (!data && clausulas.length === 0) {
     alert('Informe a nova data de término ou pelo menos uma cláusula adicional.');
     return;
   }
-  const url = new URL('{{ url_for("doc_aditivo", id=c.id) }}', window.location.origin);
-  if (data) url.searchParams.set('nova_data_fim', data);
-  clausulas.forEach(function(row, i) {
-    url.searchParams.set('clausula_' + (i+1) + '_titulo', row.querySelector('.clausula-titulo').value.trim());
-    url.searchParams.set('clausula_' + (i+1) + '_texto', row.querySelector('.clausula-texto').value.trim());
-  });
-  window.open(url.toString(), '_blank');
+  const contratoId = {{ c.id }};
+  function abrirPDF(numero) {
+    const url = new URL('/contratos/' + contratoId + '/aditivo', window.location.origin);
+    if (data) url.searchParams.set('nova_data_fim', data);
+    clausulas.forEach((cl, i) => {
+      url.searchParams.set('clausula_' + (i+1) + '_titulo', cl.titulo);
+      url.searchParams.set('clausula_' + (i+1) + '_texto', cl.texto);
+    });
+    if (numero) url.searchParams.set('aditivo_num', numero);
+    window.open(url.toString(), '_blank');
+    bootstrap.Modal.getInstance(document.getElementById('modal-aditivo')).hide();
+  }
+  fetch('/contratos/' + contratoId + '/aditivo/registrar', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({nova_data_fim: data, clausulas: clausulas})
+  })
+  .then(r => r.json())
+  .then(d => abrirPDF(d.numero))
+  .catch(() => abrirPDF(null));
 }
 
 // Adicionar/remover cláusulas
