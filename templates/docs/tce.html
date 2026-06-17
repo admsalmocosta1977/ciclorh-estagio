@@ -175,11 +175,14 @@
     <p><strong>Cláusula 8ª — Da Bolsa-Auxílio e Outros Benefícios</strong> (art. 12, Lei n.º 11.788/2008). Fica estabelecida bolsa-auxílio mensal no valor de <strong>R$ {{ '%.2f'|format(d.bolsa or 0) }}</strong> ({{ d.bolsa_extenso or 'ver valor acima' }}), a ser paga pela Parte Concedente ao Estagiário, mensalmente, até o 5.º (quinto) dia útil do mês subsequente.</p>
     <p class="par">§ 1.º A concessão de bolsa-auxílio é obrigatória nos estágios não obrigatórios, nos termos do art. 12 da Lei n.º 11.788/2008.</p>
     <p class="par">§ 2.º O valor da bolsa não tem natureza salarial e não gera vínculo empregatício entre o estagiário e a Parte Concedente.</p>
-    {% if d.aux_transporte %}<p class="par">§ 3.º Será concedido auxílio-transporte no valor de R$ {{ '%.2f'|format(d.aux_transporte) }} por dia útil efetivamente trabalhado.</p>{% endif %}
+    {% if d.aux_transporte %}<p class="par">§ 3.º Será concedido auxílio-transporte no valor de R$ {{ '%.2f'|format(d.aux_transporte) }} mensais.</p>{% endif %}
   </div>
 
   <div class="clausula">
     <p><strong>Cláusula 9ª — Do Seguro contra Acidentes Pessoais</strong> (art. 9.º, IV, Lei n.º 11.788/2008). A Parte Concedente contratará, em favor do(a) Estagiário(a), seguro contra acidentes pessoais durante toda a vigência do presente Termo, com cobertura compatível com os valores de mercado.</p>
+    {% if d.seg_seguradora or d.seg_apolice %}
+    <p class="par">Seguradora: <strong>{{ d.seg_seguradora or '_______________' }}</strong> — Apólice n.º <strong>{{ d.seg_apolice or '_______________' }}</strong>{% if d.seg_coberturas %} — Coberturas: {{ d.seg_coberturas }}{% endif %}{% if d.seg_vigencia %} — Vigência da apólice: {{ d.seg_vigencia }}{% endif %}.</p>
+    {% endif %}
     <p class="par">Parágrafo único. A apólice de seguro deverá estar disponível para consulta pelo estagiário e pela Instituição de Ensino sempre que solicitada.</p>
   </div>
 
