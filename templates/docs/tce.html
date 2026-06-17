@@ -98,10 +98,8 @@
     <tr><td class="label">Tipo de Estágio:</td><td>{{ d.tipo_estagio or 'Não Obrigatório' }}</td></tr>
     <tr><td class="label">Data de Início:</td><td>{{ fmt_date(d.data_inicio) }}</td></tr>
     <tr><td class="label">Data de Término:</td><td>{{ fmt_date(d.data_fim) }}</td></tr>
-    <tr><td class="label">Carga Horária Diária:</td><td>{{ d.ch_diaria or 6 }} horas</td></tr>
-    <tr><td class="label">Carga Horária Semanal:</td><td>{{ d.ch_semanal or 30 }} horas</td></tr>
-    <tr><td class="label">Horário de Entrada:</td><td>{{ d.horario_entrada or '___________' }}</td></tr>
-    <tr><td class="label">Horário de Saída:</td><td>{{ d.horario_saida or '___________' }}</td></tr>
+    <tr><td class="label">Carga Horária Diária:</td><td>{{ d.ch_diaria_jornada or d.ch_diaria or 6 }} horas</td></tr>
+    <tr><td class="label">Carga Horária Semanal:</td><td>{{ d.ch_semanal_jornada or d.ch_semanal or 30 }} horas</td></tr>
     <tr><td class="label">Bolsa-Auxílio Mensal:</td><td>R$ {{ '%.2f'|format(d.bolsa or 0) }}</td></tr>
     {% if d.aux_transporte %}<tr><td class="label">Auxílio-Transporte:</td><td>R$ {{ '%.2f'|format(d.aux_transporte) }} por dia útil trabalhado</td></tr>{% endif %}
     <tr><td class="label">Taxa de Administração (Agente):</td><td>R$ {{ '%.2f'|format(d.taxa or 0) }}/mês — paga pela Parte Concedente</td></tr>
@@ -162,7 +160,7 @@
   </div>
 
   <div class="clausula">
-    <p><strong>Cláusula 7ª — Da Jornada de Atividade em Estágio</strong> (art. 10, Lei n.º 11.788/2008). A jornada de atividade em estágio será de <strong>{{ d.ch_diaria or 6 }} horas diárias</strong> e <strong>{{ d.ch_semanal or 30 }} horas semanais</strong>, devendo ser cumprida de modo a não prejudicar as atividades escolares/acadêmicas do estagiário.</p>
+    <p><strong>Cláusula 7ª — Da Jornada de Atividade em Estágio</strong> (art. 10, Lei n.º 11.788/2008). A jornada de atividade em estágio será de <strong>{{ d.ch_diaria_jornada or d.ch_diaria or 6 }} horas diárias</strong> e <strong>{{ d.ch_semanal_jornada or d.ch_semanal or 30 }} horas semanais</strong>, devendo ser cumprida de modo a não prejudicar as atividades escolares/acadêmicas do estagiário.</p>
     {% if d.jornada_texto %}
     <p class="par"><strong>Horário estipulado:</strong> {{ d.jornada_texto }}</p>
     {% else %}
