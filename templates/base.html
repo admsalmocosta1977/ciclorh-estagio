@@ -57,11 +57,14 @@
   </a>
 
   <div class="nav-section">Contratos</div>
-  <a href="{{ url_for('contratos') }}" class="nav-link {% if 'contrato' in request.endpoint %}active{% endif %}">
+  <a href="{{ url_for('contratos') }}" class="nav-link {% if request.endpoint in ['contratos','contrato_novo','contrato_editar'] %}active{% endif %}">
     <i class="bi bi-file-earmark-text"></i> Contratos
   </a>
   <a href="{{ url_for('contrato_novo') }}" class="nav-link">
     <i class="bi bi-plus-circle"></i> Novo Contrato
+  </a>
+  <a href="{{ url_for('relatorio_vencimentos') }}" class="nav-link {% if request.endpoint=='relatorio_vencimentos' %}active{% endif %}">
+    <i class="bi bi-calendar-x"></i> Vencimentos
   </a>
 
   {% if current_user.is_admin %}
@@ -71,6 +74,9 @@
   </a>
   <a href="{{ url_for('admin_importar') }}" class="nav-link {% if request.endpoint=='admin_importar' %}active{% endif %}">
     <i class="bi bi-upload"></i> Importar Planilha
+  </a>
+  <a href="{{ url_for('admin_config') }}" class="nav-link {% if request.endpoint=='admin_config' %}active{% endif %}">
+    <i class="bi bi-shield-check"></i> Config. Seguro
   </a>
   {% endif %}
 
