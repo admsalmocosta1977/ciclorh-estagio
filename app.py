@@ -179,6 +179,23 @@ def init_db():
         );
         ''')
         cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS jornada TEXT;")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS aditivo (
+            id SERIAL PRIMARY KEY,
+            contrato_id INTEGER NOT NULL REFERENCES contrato(id) ON DELETE CASCADE,
+            nova_data_fim TEXT,
+            clausulas TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS config (
+            chave TEXT PRIMARY KEY,
+            valor TEXT
+        )""")
+        for chave in ['seg_seguradora', 'seg_apolice', 'seg_coberturas', 'seg_vigencia']:
+            cur.execute(
+                "INSERT INTO config (chave, valor) VALUES (%s, '') ON CONFLICT (chave) DO NOTHING",
+                (chave,))
         cur.execute("SELECT id FROM usuario WHERE username = 'salmo'")
         if not cur.fetchone():
             cur.execute(
@@ -301,6 +318,14 @@ def _build_jornada_json():
         if dd:
             jornada[dia] = dd
     return json.dumps(jornada, ensure_ascii=False) if jornada else None
+
+
+def _get_config():
+    try:
+        rows = _q("SELECT chave, valor FROM config")
+        return {r['chave']: r['valor'] or '' for r in rows}
+    except Exception:
+        return {}
 
 
 app.jinja_env.globals.update(fmt_date=fmt_date, calcular_status=calcular_status)
@@ -647,7 +672,13 @@ def contratos():
     q = request.args.get('q', '')
     status = request.args.get('status', '')
     sql = """SELECT c.*, e.nome est_nome, emp.nome emp_nome,
-             ie.sigla ie_sigla, ie.nome ie_nome
+             ie.sigla ie_sigla, ie.nome ie_nome,
+             COALESCE(
+                 (SELECT nova_data_fim FROM aditivo
+                  WHERE contrato_id = c.id AND nova_data_fim IS NOT NULL AND nova_data_fim != ''
+                  ORDER BY created_at DESC LIMIT 1),
+                 c.data_fim
+             ) as effective_data_fim
              FROM contrato c
              JOIN estagiario e ON e.id = c.estagiario_id
              JOIN empresa emp ON emp.id = c.empresa_id
@@ -656,12 +687,12 @@ def contratos():
     if q:
         sql += " WHERE (e.nome ILIKE %s OR emp.nome ILIKE %s)"
         params += [f'%{q}%', f'%{q}%']
-    sql += ' ORDER BY c.data_fim'
+    sql += ' ORDER BY effective_data_fim'
     rows = _q(sql, params)
     if status:
         filtered = []
         for r in rows:
-            st = calcular_status(r['data_fim'])
+            st = calcular_status(r['effective_data_fim'])
             if status == 'ativo' and st == 'ATIVO':
                 filtered.append(r)
             elif status == 'vencendo' and 'DIAS' in st:
@@ -702,7 +733,8 @@ def contrato_novo():
     empresas_list = _q("SELECT * FROM empresa ORDER BY nome")
     ies_list = _q("SELECT * FROM ie ORDER BY nome")
     return render_template('contratos/form.html', c=None,
-                           estagiarios=estagiarios, empresas=empresas_list, ies=ies_list)
+                           estagiarios=estagiarios, empresas=empresas_list, ies=ies_list,
+                           aditivos=[])
 
 
 @app.route('/contratos/<int:id>/editar', methods=['GET', 'POST'])
@@ -737,8 +769,10 @@ def contrato_editar(id):
     estagiarios = _q("SELECT * FROM estagiario ORDER BY nome")
     empresas_list = _q("SELECT * FROM empresa ORDER BY nome")
     ies_list = _q("SELECT * FROM ie ORDER BY nome")
+    aditivos = _q("SELECT * FROM aditivo WHERE contrato_id = %s ORDER BY created_at", (id,))
     return render_template('contratos/form.html', c=c,
-                           estagiarios=estagiarios, empresas=empresas_list, ies=ies_list)
+                           estagiarios=estagiarios, empresas=empresas_list, ies=ies_list,
+                           aditivos=aditivos)
 
 
 @app.route('/contratos/<int:id>/excluir')
@@ -758,6 +792,8 @@ def _doc_ctx(id):
     est = _q("SELECT * FROM estagiario WHERE id = %s", (c['estagiario_id'],), one=True)
     emp = _q("SELECT * FROM empresa WHERE id = %s", (c['empresa_id'],), one=True)
     ie = _q("SELECT * FROM ie WHERE id = %s", (c['ie_id'],), one=True)
+    cfg = _get_config()
+    aditivos = _q("SELECT * FROM aditivo WHERE contrato_id = %s ORDER BY created_at", (id,))
 
     try:
         ini = datetime.strptime(str(c['data_inicio'])[:10], '%Y-%m-%d').date()
@@ -787,6 +823,10 @@ def _doc_ctx(id):
         'supervisor_registro': c['supervisor_registro'],
         'num_relatorio': c['num_relatorio'] or 1,
         'jornada_texto': formatar_jornada(c['jornada']),
+        'seg_seguradora': cfg.get('seg_seguradora', ''),
+        'seg_apolice': cfg.get('seg_apolice', ''),
+        'seg_coberturas': cfg.get('seg_coberturas', ''),
+        'seg_vigencia': cfg.get('seg_vigencia', ''),
         'est_nome': est['nome'] if est else '',
         'est_cpf': est['cpf'] if est else '',
         'est_rg': est['rg'] if est else '',
@@ -809,7 +849,8 @@ def _doc_ctx(id):
     })()
 
     return dict(d=d, agente=AGENTE, ch_total=ch_total,
-                data_hoje=fmt_date(date.today()), fmt_date=fmt_date)
+                data_hoje=fmt_date(date.today()), fmt_date=fmt_date,
+                aditivos=aditivos)
 
 
 @app.route('/contratos/<int:id>/tce')
@@ -870,6 +911,7 @@ def doc_aditivo(id):
         flash('Contrato não encontrado.', 'danger')
         return redirect(url_for('contratos'))
     ctx['nova_data_fim'] = request.args.get('nova_data_fim', '')
+    ctx['aditivo_num'] = request.args.get('aditivo_num', '')
     clausulas_extras = []
     i = 1
     while i <= 10:
@@ -881,6 +923,65 @@ def doc_aditivo(id):
         i += 1
     ctx['clausulas_extras'] = clausulas_extras
     return render_template('docs/aditivo.html', **ctx)
+
+
+@app.route('/contratos/<int:id>/aditivo/registrar', methods=['POST'])
+@login_required
+def doc_aditivo_registrar(id):
+    c = _q("SELECT id FROM contrato WHERE id = %s", (id,), one=True)
+    if not c:
+        return jsonify({'ok': False}), 404
+    data = request.get_json(silent=True) or {}
+    nova_data_fim = data.get('nova_data_fim') or None
+    clausulas = data.get('clausulas', [])
+    _ins("INSERT INTO aditivo (contrato_id, nova_data_fim, clausulas) VALUES (%s, %s, %s)",
+         (id, nova_data_fim, json.dumps(clausulas, ensure_ascii=False)))
+    numero = _q("SELECT COUNT(*) as n FROM aditivo WHERE contrato_id = %s", (id,), one=True)['n']
+    return jsonify({'ok': True, 'numero': numero})
+
+
+# ─── ADMIN — CONFIGURAÇÕES ────────────────────────────────────────────────────
+
+@app.route('/admin/config', methods=['GET', 'POST'])
+@admin_required
+def admin_config():
+    if request.method == 'POST':
+        for chave in ['seg_seguradora', 'seg_apolice', 'seg_coberturas', 'seg_vigencia']:
+            valor = request.form.get(chave, '').strip()
+            _run("INSERT INTO config (chave, valor) VALUES (%s, %s) ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor",
+                 (chave, valor))
+        flash('Configurações salvas!', 'success')
+        return redirect(url_for('admin_config'))
+    cfg = _get_config()
+    return render_template('admin/config.html', cfg=cfg)
+
+
+# ─── RELATÓRIO — VENCIMENTOS ──────────────────────────────────────────────────
+
+@app.route('/relatorio/vencimentos')
+@login_required
+def relatorio_vencimentos():
+    data_ate = request.args.get('data_ate', '')
+    base_sql = """
+        SELECT c.*, e.nome est_nome, emp.nome emp_nome, ie.sigla ie_sigla,
+               COALESCE(
+                   (SELECT nova_data_fim FROM aditivo
+                    WHERE contrato_id = c.id AND nova_data_fim IS NOT NULL AND nova_data_fim != ''
+                    ORDER BY created_at DESC LIMIT 1),
+                   c.data_fim
+               ) as effective_data_fim
+        FROM contrato c
+        JOIN estagiario e ON e.id = c.estagiario_id
+        JOIN empresa emp ON emp.id = c.empresa_id
+        JOIN ie ON ie.id = c.ie_id
+    """
+    if data_ate:
+        sql = f"WITH eff AS ({base_sql}) SELECT * FROM eff WHERE effective_data_fim <= %s ORDER BY effective_data_fim"
+        rows = _q(sql, (data_ate,))
+    else:
+        sql = f"WITH eff AS ({base_sql}) SELECT * FROM eff ORDER BY effective_data_fim"
+        rows = _q(sql)
+    return render_template('relatorio/vencimentos.html', contratos=rows, data_ate=data_ate)
 
 
 # ─── ERROS ────────────────────────────────────────────────────────────────────
