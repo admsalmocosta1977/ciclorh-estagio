@@ -1,0 +1,61 @@
+{% extends 'base_public.html' %}
+{% block title %}Cadastro de Estagiário — Ciclo RH{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header py-3">
+    <h5 class="mb-0"><i class="bi bi-person-plus me-2"></i>Cadastro de Estagiário</h5>
+  </div>
+  <div class="card-body">
+    <p class="text-muted small mb-4">
+      Preencha seus dados abaixo. Após o envio, o agente integrador <strong>Ciclo RH</strong> revisará
+      e aprovará seu cadastro antes de prosseguir com o contrato de estágio.
+    </p>
+    <form method="post">
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label fw-semibold">Nome Completo *</label>
+          <input type="text" name="nome" class="form-control" required autofocus>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">CPF *</label>
+          <input type="text" name="cpf" class="form-control" required placeholder="000.000.000-00">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">RG</label>
+          <input type="text" name="rg" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Data de Nascimento</label>
+          <input type="date" name="data_nascimento" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Telefone / WhatsApp</label>
+          <input type="text" name="telefone" class="form-control" placeholder="(77) 99999-9999">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">E-mail</label>
+          <input type="email" name="email" class="form-control">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Endereço Completo</label>
+          <input type="text" name="endereco" class="form-control" placeholder="Rua, número, bairro, cidade — CEP">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold">Observações</label>
+          <textarea name="obs" class="form-control" rows="3" placeholder="Informações adicionais relevantes..."></textarea>
+        </div>
+        <div class="col-12 mt-2">
+          <button type="submit" class="btn btn-primary w-100 py-2">
+            <i class="bi bi-send me-2"></i>Enviar Cadastro
+          </button>
+        </div>
+        <div class="col-12">
+          <p class="text-muted small text-center mb-0">
+            <i class="bi bi-lock me-1"></i>Seus dados são utilizados exclusivamente para fins de estágio.
+          </p>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
