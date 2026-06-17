@@ -184,6 +184,7 @@ def init_db():
         cur.execute("UPDATE estagiario SET status = 'ativo' WHERE status IS NULL;")
         cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ativo';")
         cur.execute("UPDATE empresa SET status = 'ativo' WHERE status IS NULL;")
+        cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS cpf_representante TEXT;")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS semestre INTEGER;")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS tipo_ensino TEXT DEFAULT 'superior';")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS matricula TEXT;")
@@ -310,6 +311,40 @@ def formatar_jornada(jornada_json):
         return ''
     result = '; '.join(parts)
     return result[0].upper() + result[1:] + '.'
+
+
+def calcular_ch_jornada(jornada_json):
+    if not jornada_json:
+        return None, None
+    try:
+        j = json.loads(jornada_json)
+    except Exception:
+        return None, None
+    dias_keys = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab']
+    total_semanal = 0.0
+    dias_horas = []
+    for dia in dias_keys:
+        if dia not in j:
+            continue
+        dd = j[dia]
+        horas_dia = 0.0
+        for periodo in ['mat', 'ves', 'not']:
+            ini = dd.get(f'{periodo}_ini', '').strip()
+            fim = dd.get(f'{periodo}_fim', '').strip()
+            if ini and fim:
+                try:
+                    hi = int(ini[:2]) + int(ini[3:5]) / 60
+                    hf = int(fim[:2]) + int(fim[3:5]) / 60
+                    if hf > hi:
+                        horas_dia += hf - hi
+                except Exception:
+                    pass
+        if horas_dia > 0:
+            dias_horas.append(horas_dia)
+            total_semanal += horas_dia
+    if not dias_horas:
+        return None, None
+    return round(max(dias_horas), 1), round(total_semanal, 1)
 
 
 def _build_jornada_json():
@@ -636,13 +671,14 @@ def empresa_nova():
     if request.method == 'POST':
         _ins("""INSERT INTO empresa
                 (nome,cnpj,endereco,cidade,telefone,email,ramo,
-                 representante,cargo_representante,supervisor_nome,supervisor_cargo,supervisor_registro)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                 representante,cargo_representante,cpf_representante,supervisor_nome,supervisor_cargo,supervisor_registro)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['nome'], request.form.get('cnpj'),
               request.form.get('endereco'), request.form.get('cidade', 'Vitória da Conquista'),
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('ramo'), request.form.get('representante'),
-              request.form.get('cargo_representante'), request.form.get('supervisor_nome'),
+              request.form.get('cargo_representante'), request.form.get('cpf_representante'),
+              request.form.get('supervisor_nome'),
               request.form.get('supervisor_cargo'), request.form.get('supervisor_registro')))
         flash('Empresa cadastrada!', 'success')
         return redirect(url_for('empresas'))
@@ -658,13 +694,14 @@ def empresa_editar(id):
     if request.method == 'POST':
         _run("""UPDATE empresa SET
                 nome=%s,cnpj=%s,endereco=%s,cidade=%s,telefone=%s,email=%s,ramo=%s,
-                representante=%s,cargo_representante=%s,supervisor_nome=%s,
+                representante=%s,cargo_representante=%s,cpf_representante=%s,supervisor_nome=%s,
                 supervisor_cargo=%s,supervisor_registro=%s WHERE id=%s""",
              (request.form['nome'], request.form.get('cnpj'),
               request.form.get('endereco'), request.form.get('cidade'),
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('ramo'), request.form.get('representante'),
-              request.form.get('cargo_representante'), request.form.get('supervisor_nome'),
+              request.form.get('cargo_representante'), request.form.get('cpf_representante'),
+              request.form.get('supervisor_nome'),
               request.form.get('supervisor_cargo'), request.form.get('supervisor_registro'), id))
         flash('Atualizada!', 'success')
         return redirect(url_for('empresas'))
@@ -891,6 +928,8 @@ def _doc_ctx(id):
     except Exception:
         ch_total_real = ch_total
 
+    ch_j_diaria, ch_j_semanal = calcular_ch_jornada(c.get('jornada'))
+
     d = type('D', (), {
         'id': c['id'],
         'curso': c['curso'],
@@ -912,6 +951,8 @@ def _doc_ctx(id):
         'supervisor_registro': c['supervisor_registro'],
         'num_relatorio': c['num_relatorio'] or 1,
         'jornada_texto': formatar_jornada(c['jornada']),
+        'ch_diaria_jornada': ch_j_diaria,
+        'ch_semanal_jornada': ch_j_semanal,
         'seg_seguradora': cfg.get('seg_seguradora', ''),
         'seg_apolice': cfg.get('seg_apolice', ''),
         'seg_coberturas': cfg.get('seg_coberturas', ''),
@@ -929,8 +970,11 @@ def _doc_ctx(id):
         'emp_cnpj': emp['cnpj'] if emp else '',
         'emp_endereco': emp['endereco'] if emp else '',
         'emp_cidade': emp['cidade'] if emp else 'Vitória da Conquista',
+        'emp_telefone': emp['telefone'] if emp else '',
+        'emp_email': emp['email'] if emp else '',
         'emp_representante': emp['representante'] if emp else '',
         'emp_cargo_rep': emp['cargo_representante'] if emp else '',
+        'emp_cpf_rep': emp.get('cpf_representante', '') if emp else '',
         'ie_nome': ie['nome'] if ie else '',
         'ie_sigla': ie['sigla'] if ie else '',
         'ie_endereco': ie['endereco'] if ie else '',
@@ -1167,14 +1211,14 @@ def cadastro_empresa():
     if request.method == 'POST':
         _ins("""INSERT INTO empresa
                 (nome,cnpj,endereco,cidade,telefone,email,ramo,
-                 representante,cargo_representante,supervisor_nome,supervisor_cargo,status)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pendente')""",
+                 representante,cargo_representante,cpf_representante,supervisor_nome,supervisor_cargo,status)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pendente')""",
              (request.form['nome'], request.form.get('cnpj'),
               request.form.get('endereco'), request.form.get('cidade', 'Vitória da Conquista'),
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('ramo'), request.form.get('representante'),
-              request.form.get('cargo_representante'), request.form.get('supervisor_nome'),
-              request.form.get('supervisor_cargo')))
+              request.form.get('cargo_representante'), request.form.get('cpf_representante'),
+              request.form.get('supervisor_nome'), request.form.get('supervisor_cargo')))
         return render_template('cadastro/sucesso.html', tipo='empresa')
     return render_template('cadastro/empresa.html')
 
