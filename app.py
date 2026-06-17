@@ -375,7 +375,7 @@ def _antes_da_requisicao():
     _atualizar_semestres_auto()
 
 
-app.jinja_env.globals.update(fmt_date=fmt_date, calcular_status=calcular_status)
+app.jinja_env.globals.update(fmt_date=fmt_date, calcular_status=calcular_status, fmt_semestre=_fmt_semestre)
 app.jinja_env.filters['from_json'] = lambda s: json.loads(s) if s else {}
 
 
@@ -1014,7 +1014,7 @@ def admin_config():
     return render_template('admin/config.html', cfg=cfg)
 
 
-# ─── RELATÓRIO — VENCIMENTOS ──────────────────────────────────────────────────
+# ─── RELATÓRIOS ───────────────────────────────────────────────────────────────
 
 @app.route('/relatorio/vencimentos')
 @login_required
@@ -1040,6 +1040,49 @@ def relatorio_vencimentos():
         sql = f"WITH eff AS ({base_sql}) SELECT * FROM eff ORDER BY effective_data_fim"
         rows = _q(sql)
     return render_template('relatorio/vencimentos.html', contratos=rows, data_ate=data_ate)
+
+
+@app.route('/relatorio/estagiarios')
+@login_required
+def relatorio_estagiarios():
+    empresa_id = request.args.get('empresa_id', '')
+    ie_id = request.args.get('ie_id', '')
+    curso = request.args.get('curso', '').strip()
+
+    sql = """
+        SELECT c.*, e.nome est_nome, e.cpf est_cpf, e.semestre est_semestre,
+               e.tipo_ensino est_tipo_ensino, e.matricula est_matricula,
+               emp.nome emp_nome, ie.nome ie_nome, ie.sigla ie_sigla
+        FROM contrato c
+        JOIN estagiario e ON e.id = c.estagiario_id
+        JOIN empresa emp ON emp.id = c.empresa_id
+        JOIN ie ON ie.id = c.ie_id
+        WHERE 1=1
+    """
+    params = []
+    if empresa_id:
+        sql += " AND c.empresa_id = %s"
+        params.append(empresa_id)
+    if ie_id:
+        sql += " AND c.ie_id = %s"
+        params.append(ie_id)
+    if curso:
+        sql += " AND c.curso ILIKE %s"
+        params.append(f'%{curso}%')
+    sql += " ORDER BY emp.nome, e.nome"
+
+    contratos = _q(sql, params)
+    empresas = _q("SELECT id, nome FROM empresa ORDER BY nome")
+    ies = _q("SELECT id, nome FROM ie ORDER BY nome")
+    total_taxa = sum(c['taxa'] or 0 for c in contratos)
+    total_bolsa = sum(c['bolsa'] or 0 for c in contratos)
+    empresa_sel = _q("SELECT nome FROM empresa WHERE id = %s", (empresa_id,), one=True) if empresa_id else None
+
+    return render_template('relatorio/estagiarios.html',
+                           contratos=contratos, empresas=empresas, ies=ies,
+                           empresa_id=empresa_id, ie_id=ie_id, curso=curso,
+                           total_taxa=total_taxa, total_bolsa=total_bolsa,
+                           empresa_sel=empresa_sel)
 
 
 # ─── ERROS ────────────────────────────────────────────────────────────────────
