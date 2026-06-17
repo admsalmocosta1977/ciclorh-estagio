@@ -180,6 +180,10 @@ def init_db():
         ''')
         cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS jornada TEXT;")
         cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS data_encerramento TEXT;")
+        cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ativo';")
+        cur.execute("UPDATE estagiario SET status = 'ativo' WHERE status IS NULL;")
+        cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ativo';")
+        cur.execute("UPDATE empresa SET status = 'ativo' WHERE status IS NULL;")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS semestre INTEGER;")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS tipo_ensino TEXT DEFAULT 'superior';")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS matricula TEXT;")
@@ -380,6 +384,19 @@ app.jinja_env.globals.update(fmt_date=fmt_date, calcular_status=calcular_status,
 app.jinja_env.filters['from_json'] = lambda s: json.loads(s) if s else {}
 
 
+@app.context_processor
+def inject_pending():
+    pending = 0
+    if current_user.is_authenticated and current_user.is_admin:
+        try:
+            r1 = _q("SELECT COUNT(*) n FROM estagiario WHERE status='pendente'", one=True)
+            r2 = _q("SELECT COUNT(*) n FROM empresa WHERE status='pendente'", one=True)
+            pending = (r1['n'] if r1 else 0) + (r2['n'] if r2 else 0)
+        except Exception:
+            pending = 0
+    return {'pending_count': pending}
+
+
 # ─── AUTH ─────────────────────────────────────────────────────────────────────
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -526,12 +543,12 @@ def estagiarios():
         rows = _q("""SELECT e.*,
                      (SELECT COUNT(*) FROM contrato WHERE estagiario_id = e.id) qtd_contratos
                      FROM estagiario e
-                     WHERE e.nome ILIKE %s OR e.cpf ILIKE %s ORDER BY e.nome""",
+                     WHERE (e.nome ILIKE %s OR e.cpf ILIKE %s) AND e.status = 'ativo' ORDER BY e.nome""",
                   (f'%{q}%', f'%{q}%'))
     else:
         rows = _q("""SELECT e.*,
                      (SELECT COUNT(*) FROM contrato WHERE estagiario_id = e.id) qtd_contratos
-                     FROM estagiario e ORDER BY e.nome""")
+                     FROM estagiario e WHERE e.status = 'ativo' ORDER BY e.nome""")
     return render_template('estagiarios/lista.html', estagiarios=rows, q=q)
 
 
@@ -604,12 +621,12 @@ def empresas():
         rows = _q("""SELECT emp.*,
                      (SELECT COUNT(*) FROM contrato WHERE empresa_id = emp.id) qtd_contratos
                      FROM empresa emp
-                     WHERE emp.nome ILIKE %s OR emp.cnpj ILIKE %s ORDER BY emp.nome""",
+                     WHERE (emp.nome ILIKE %s OR emp.cnpj ILIKE %s) AND emp.status = 'ativo' ORDER BY emp.nome""",
                   (f'%{q}%', f'%{q}%'))
     else:
         rows = _q("""SELECT emp.*,
                      (SELECT COUNT(*) FROM contrato WHERE empresa_id = emp.id) qtd_contratos
-                     FROM empresa emp ORDER BY emp.nome""")
+                     FROM empresa emp WHERE emp.status = 'ativo' ORDER BY emp.nome""")
     return render_template('empresas/lista.html', empresas=rows, q=q)
 
 
@@ -788,8 +805,8 @@ def contrato_novo():
               request.form.get('data_encerramento') or None))
         flash('Contrato criado!', 'success')
         return redirect(url_for('contratos'))
-    estagiarios = _q("SELECT * FROM estagiario ORDER BY nome")
-    empresas_list = _q("SELECT * FROM empresa ORDER BY nome")
+    estagiarios = _q("SELECT * FROM estagiario WHERE status='ativo' ORDER BY nome")
+    empresas_list = _q("SELECT * FROM empresa WHERE status='ativo' ORDER BY nome")
     ies_list = _q("SELECT * FROM ie ORDER BY nome")
     return render_template('contratos/form.html', c=None,
                            estagiarios=estagiarios, empresas=empresas_list, ies=ies_list,
@@ -826,8 +843,8 @@ def contrato_editar(id):
               request.form.get('data_encerramento') or None, id))
         flash('Contrato atualizado!', 'success')
         return redirect(url_for('contratos'))
-    estagiarios = _q("SELECT * FROM estagiario ORDER BY nome")
-    empresas_list = _q("SELECT * FROM empresa ORDER BY nome")
+    estagiarios = _q("SELECT * FROM estagiario WHERE status='ativo' ORDER BY nome")
+    empresas_list = _q("SELECT * FROM empresa WHERE status='ativo' ORDER BY nome")
     ies_list = _q("SELECT * FROM ie ORDER BY nome")
     aditivos = _q("SELECT * FROM aditivo WHERE contrato_id = %s ORDER BY created_at", (id,))
     return render_template('contratos/form.html', c=c,
@@ -1113,7 +1130,7 @@ def relatorio_estagiarios():
     sql += " ORDER BY emp.nome, e.nome"
 
     contratos = _q(sql, params)
-    empresas = _q("SELECT id, nome FROM empresa ORDER BY nome")
+    empresas = _q("SELECT id, nome FROM empresa WHERE status='ativo' ORDER BY nome")
     ies = _q("SELECT id, nome FROM ie ORDER BY nome")
     total_taxa = sum(c['taxa'] or 0 for c in contratos)
     total_bolsa = sum(c['bolsa'] or 0 for c in contratos)
@@ -1124,6 +1141,84 @@ def relatorio_estagiarios():
                            empresa_id=empresa_id, ie_id=ie_id, curso=curso,
                            total_taxa=total_taxa, total_bolsa=total_bolsa,
                            empresa_sel=empresa_sel)
+
+
+# ─── CADASTRO PÚBLICO ────────────────────────────────────────────────────────
+
+@app.route('/cadastro/estagiario', methods=['GET', 'POST'])
+def cadastro_estagiario():
+    if request.method == 'POST':
+        try:
+            _ins("""INSERT INTO estagiario
+                    (nome,cpf,rg,data_nascimento,telefone,email,endereco,obs,status)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'pendente')""",
+                 (request.form['nome'], request.form['cpf'],
+                  request.form.get('rg'), request.form.get('data_nascimento') or None,
+                  request.form.get('telefone'), request.form.get('email'),
+                  request.form.get('endereco'), request.form.get('obs')))
+            return render_template('cadastro/sucesso.html', tipo='estagiário')
+        except psycopg2.errors.UniqueViolation:
+            flash('Este CPF já está cadastrado no sistema.', 'danger')
+    return render_template('cadastro/estagiario.html')
+
+
+@app.route('/cadastro/empresa', methods=['GET', 'POST'])
+def cadastro_empresa():
+    if request.method == 'POST':
+        _ins("""INSERT INTO empresa
+                (nome,cnpj,endereco,cidade,telefone,email,ramo,
+                 representante,cargo_representante,supervisor_nome,supervisor_cargo,status)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pendente')""",
+             (request.form['nome'], request.form.get('cnpj'),
+              request.form.get('endereco'), request.form.get('cidade', 'Vitória da Conquista'),
+              request.form.get('telefone'), request.form.get('email'),
+              request.form.get('ramo'), request.form.get('representante'),
+              request.form.get('cargo_representante'), request.form.get('supervisor_nome'),
+              request.form.get('supervisor_cargo')))
+        return render_template('cadastro/sucesso.html', tipo='empresa')
+    return render_template('cadastro/empresa.html')
+
+
+# ─── ADMIN — PENDENTES ────────────────────────────────────────────────────────
+
+@app.route('/admin/pendentes')
+@admin_required
+def admin_pendentes():
+    estagiarios_p = _q("SELECT * FROM estagiario WHERE status='pendente' ORDER BY nome")
+    empresas_p = _q("SELECT * FROM empresa WHERE status='pendente' ORDER BY nome")
+    return render_template('admin/pendentes.html', estagiarios=estagiarios_p, empresas=empresas_p)
+
+
+@app.route('/admin/pendentes/estagiario/<int:id>/aprovar')
+@admin_required
+def aprovar_estagiario(id):
+    _run("UPDATE estagiario SET status='ativo' WHERE id=%s", (id,))
+    flash('Estagiário aprovado com sucesso!', 'success')
+    return redirect(url_for('admin_pendentes'))
+
+
+@app.route('/admin/pendentes/empresa/<int:id>/aprovar')
+@admin_required
+def aprovar_empresa(id):
+    _run("UPDATE empresa SET status='ativo' WHERE id=%s", (id,))
+    flash('Empresa aprovada com sucesso!', 'success')
+    return redirect(url_for('admin_pendentes'))
+
+
+@app.route('/admin/pendentes/estagiario/<int:id>/rejeitar')
+@admin_required
+def rejeitar_estagiario(id):
+    _run("DELETE FROM estagiario WHERE id=%s AND status='pendente'", (id,))
+    flash('Cadastro rejeitado e removido.', 'warning')
+    return redirect(url_for('admin_pendentes'))
+
+
+@app.route('/admin/pendentes/empresa/<int:id>/rejeitar')
+@admin_required
+def rejeitar_empresa(id):
+    _run("DELETE FROM empresa WHERE id=%s AND status='pendente'", (id,))
+    flash('Cadastro rejeitado e removido.', 'warning')
+    return redirect(url_for('admin_pendentes'))
 
 
 # ─── ERROS ────────────────────────────────────────────────────────────────────
