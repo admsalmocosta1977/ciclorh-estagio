@@ -49,11 +49,13 @@
         <td class="text-nowrap">
           <small>{{ fmt_date(c.data_inicio) }}</small><br>
           <small>{{ fmt_date(c.effective_data_fim) }}</small>
-          {% if c.effective_data_fim != c.data_fim %}<br><small class="text-muted fst-italic">c/ aditivo</small>{% endif %}
+          {% if c.data_encerramento %}<br><small class="text-danger fst-italic">enc. antecipado</small>
+          {% elif c.effective_data_fim != c.data_fim %}<br><small class="text-muted fst-italic">c/ aditivo</small>{% endif %}
         </td>
         <td>R$ {{ '%.2f'|format(c.bolsa or 0) }}</td>
         <td>
-          {% if 'DIAS' in st %}<span class="badge badge-vencendo">{{ st }}</span>
+          {% if c.data_encerramento %}<span class="badge bg-secondary">ENCERRADO</span>
+          {% elif 'DIAS' in st %}<span class="badge badge-vencendo">{{ st }}</span>
           {% elif st == 'VENCIDO' %}<span class="badge badge-vencido">VENCIDO</span>
           {% else %}<span class="badge badge-ativo">ATIVO</span>{% endif %}
         </td>
