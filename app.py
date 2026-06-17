@@ -242,6 +242,68 @@ def calcular_status(data_fim_str):
         return 'ATIVO'
 
 
+def br_currency(valor):
+    try:
+        v = float(valor or 0)
+    except (TypeError, ValueError):
+        return '0,00'
+    s = '{:,.2f}'.format(v)
+    return s.replace(',', 'X').replace('.', ',').replace('X', '.')
+
+
+def num_extenso(valor):
+    try:
+        valor = round(float(valor), 2)
+    except (TypeError, ValueError):
+        return ''
+    inteiro = int(valor)
+    centavos = round((valor - inteiro) * 100)
+    _un = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove',
+           'dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove']
+    _dez = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa']
+    _cent = ['', 'cem', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos',
+             'seiscentos', 'setecentos', 'oitocentos', 'novecentos']
+
+    def dez(n):
+        if n < 20:
+            return _un[n]
+        d, u = _dez[n // 10], _un[n % 10]
+        return d + (' e ' + u if u else '')
+
+    def cent(n):
+        c, r = n // 100, n % 100
+        if c == 1 and r == 0:
+            return 'cem'
+        base = 'cento' if c == 1 else _cent[c]
+        return base + (' e ' + dez(r) if r else '')
+
+    def grupo(n):
+        return cent(n) if n >= 100 else dez(n)
+
+    def por_extenso(n):
+        if n == 0:
+            return 'zero'
+        partes = []
+        if n >= 1000000:
+            m = n // 1000000
+            partes.append(grupo(m) + (' milhão' if m == 1 else ' milhões'))
+            n %= 1000000
+        if n >= 1000:
+            m = n // 1000
+            partes.append(('um' if m == 1 else grupo(m)) + ' mil')
+            n %= 1000
+        if n > 0:
+            partes.append(grupo(n))
+        return ' e '.join(partes)
+
+    partes = []
+    if inteiro > 0:
+        partes.append(por_extenso(inteiro) + (' real' if inteiro == 1 else ' reais'))
+    if centavos > 0:
+        partes.append(dez(centavos) + (' centavo' if centavos == 1 else ' centavos'))
+    return ' e '.join(partes) if partes else 'zero reais'
+
+
 def formatar_jornada(jornada_json):
     if not jornada_json:
         return ''
@@ -942,8 +1004,10 @@ def _doc_ctx(id):
         'data_encerramento': enc_str,
         'numero_contrato': c['numero_contrato'],
         'bolsa': c['bolsa'],
+        'bolsa_extenso': num_extenso(c['bolsa']) if c['bolsa'] else '',
         'taxa': c['taxa'],
         'aux_transporte': c['aux_transporte'],
+        'aux_transporte_extenso': num_extenso(c['aux_transporte']) if c['aux_transporte'] else '',
         'atividades': c['atividades'],
         'orientador': c['orientador'],
         'supervisor_nome': c['supervisor_nome'],
@@ -985,7 +1049,7 @@ def _doc_ctx(id):
 
     return dict(d=d, agente=AGENTE, ch_total=ch_total, ch_total_real=ch_total_real,
                 data_hoje=fmt_date(date.today()), fmt_date=fmt_date,
-                aditivos=aditivos)
+                br_currency=br_currency, aditivos=aditivos)
 
 
 @app.route('/contratos/<int:id>/tce')
