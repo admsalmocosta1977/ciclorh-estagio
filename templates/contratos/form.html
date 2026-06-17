@@ -74,6 +74,9 @@
           <input type="text" name="orientador" class="form-control"
                  value="{{ c.orientador if c else 'Salmo Lima Costa' }}">
         </div>
+        <div class="col-12" id="div-aviso-vinculo" style="display:none">
+          <div id="aviso-vinculo" class="alert mb-0 py-2"></div>
+        </div>
       </div>
 
       <hr>
@@ -119,6 +122,14 @@
         <div class="col-md-4">
           <label class="form-label fw-semibold">Número do Contrato</label>
           <input type="text" name="numero_contrato" class="form-control" value="{{ c.numero_contrato if c else '' }}" placeholder="Ex: 001/2025">
+        </div>
+        <div class="col-md-8">
+          <label class="form-label fw-semibold">
+            Data de Encerramento Real
+            <span class="badge bg-warning text-dark ms-1" style="font-size:.7rem">Opcional</span>
+          </label>
+          <input type="date" name="data_encerramento" class="form-control" value="{{ c.data_encerramento if c else '' }}">
+          <div class="form-text">Preencher somente quando o estágio encerrar antes do prazo. Controla limite de 2 anos CPF+CNPJ (Lei 11.788/2008, art. 11).</div>
         </div>
       </div>
 
@@ -315,7 +326,39 @@ document.getElementById('sel-empresa').addEventListener('change', function() {
       document.getElementById('sup-cargo').value = d.supervisor_cargo || '';
       document.getElementById('sup-reg').value = d.supervisor_registro || '';
     });
+  checkVinculo();
 });
+
+// Verificar limite de 2 anos CPF+CNPJ (Lei 11.788/2008, art. 11)
+function checkVinculo() {
+  const estId = document.getElementById('sel-estagiario').value;
+  const empId = document.getElementById('sel-empresa').value;
+  const divWrap = document.getElementById('div-aviso-vinculo');
+  const el = document.getElementById('aviso-vinculo');
+  if (!estId || !empId) { divWrap.style.display = 'none'; return; }
+  const excludeId = {{ c.id if c else 'null' }};
+  let url = '/api/check-vinculo/' + estId + '/' + empId;
+  if (excludeId) url += '?exclude=' + excludeId;
+  fetch(url).then(r => r.json()).then(d => {
+    if (d.limite_atingido) {
+      el.className = 'alert alert-danger mb-0 py-2';
+      el.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i><strong>Limite de 2 anos atingido!</strong> Este CPF já acumulou ' + d.total_dias + ' dias (' + d.anos + ' anos) com esta empresa. Novo vínculo não permitido pela Lei 11.788/2008, art. 11.';
+      divWrap.style.display = '';
+    } else if (d.aviso) {
+      el.className = 'alert alert-warning mb-0 py-2';
+      el.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i><strong>Atenção:</strong> ' + d.total_dias + ' dias (' + d.anos + ' anos) já acumulados neste vínculo CPF+CNPJ. Limite legal: 2 anos.';
+      divWrap.style.display = '';
+    } else if (d.total_dias > 0) {
+      el.className = 'alert alert-info mb-0 py-2';
+      el.innerHTML = '<i class="bi bi-info-circle me-1"></i>Histórico de vínculo: ' + d.total_dias + ' dias (' + d.anos + ' anos acumulados neste CPF+CNPJ).';
+      divWrap.style.display = '';
+    } else {
+      divWrap.style.display = 'none';
+    }
+  }).catch(() => { divWrap.style.display = 'none'; });
+}
+document.getElementById('sel-estagiario').addEventListener('change', checkVinculo);
+if (document.getElementById('sel-estagiario').value && document.getElementById('sel-empresa').value) checkVinculo();
 
 // Gerar aditivo
 function gerarAditivo() {
