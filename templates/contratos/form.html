@@ -336,6 +336,31 @@
     </div>
   </div>
 </div>
+<!-- Modal: jornada máxima excedida -->
+<div class="modal fade" id="modal-jornada-maxima" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-danger">
+      <div class="modal-header bg-danger text-white border-0">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>Jornada Excedida
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <i class="bi bi-clock-fill text-danger" style="font-size:3.5rem"></i>
+        <h5 class="mt-3 fw-bold">TCE ULTRAPASSA JORNADA MÁXIMA PERMITIDA</h5>
+        <p class="text-muted mt-2 mb-1" id="modal-jornada-detalhe"></p>
+        <p class="text-muted small">Limite: 6 horas diárias e 30 horas semanais<br>(art. 10, Lei 11.788/2008)</p>
+      </div>
+      <div class="modal-footer justify-content-center border-0 pt-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x me-1"></i>Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -459,6 +484,37 @@ document.getElementById('btn-add-at').addEventListener('click', function() {
     visibleAts++;
   }
   if (visibleAts >= rows.length) this.style.display = 'none';
+});
+
+// Verificar jornada máxima (art. 10, Lei 11.788/2008)
+function verificarJornada() {
+  const dias = ['dom','seg','ter','qua','qui','sex','sab'];
+  const periodos = ['mat','ves','not'];
+  let totalSemanal = 0;
+  let maxDiario = 0;
+  dias.forEach(dia => {
+    let horasDia = 0;
+    periodos.forEach(per => {
+      const ini = document.querySelector('[name="' + dia + '_' + per + '_ini"]');
+      const fim = document.querySelector('[name="' + dia + '_' + per + '_fim"]');
+      if (ini && fim && ini.value && fim.value) {
+        const [hi, mi] = ini.value.split(':').map(Number);
+        const [hf, mf] = fim.value.split(':').map(Number);
+        const diff = (hf * 60 + mf) - (hi * 60 + mi);
+        if (diff > 0) horasDia += diff / 60;
+      }
+    });
+    if (horasDia > maxDiario) maxDiario = horasDia;
+    totalSemanal += horasDia;
+  });
+  if (maxDiario > 6 || totalSemanal > 30) {
+    const det = 'Máximo diário calculado: ' + maxDiario.toFixed(1) + 'h — Total semanal: ' + totalSemanal.toFixed(1) + 'h';
+    document.getElementById('modal-jornada-detalhe').textContent = det;
+    new bootstrap.Modal(document.getElementById('modal-jornada-maxima')).show();
+  }
+}
+document.querySelectorAll('input[type="time"]').forEach(el => {
+  el.addEventListener('change', verificarJornada);
 });
 </script>
 {% endblock %}
