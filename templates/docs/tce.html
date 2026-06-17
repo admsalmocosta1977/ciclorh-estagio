@@ -100,8 +100,8 @@
     <tr><td class="label">Data de Término:</td><td>{{ fmt_date(d.data_fim) }}</td></tr>
     <tr><td class="label">Carga Horária Diária:</td><td>{{ d.ch_diaria_jornada or d.ch_diaria or 6 }} horas</td></tr>
     <tr><td class="label">Carga Horária Semanal:</td><td>{{ d.ch_semanal_jornada or d.ch_semanal or 30 }} horas</td></tr>
-    <tr><td class="label">Bolsa-Auxílio Mensal:</td><td>R$ {{ '%.2f'|format(d.bolsa or 0) }}</td></tr>
-    <tr><td class="label">Auxílio-Transporte:</td><td>{% if d.aux_transporte %}R$ {{ '%.2f'|format(d.aux_transporte) }} por dia útil trabalhado{% else %}Não concedido{% endif %}</td></tr>
+    <tr><td class="label">Bolsa-Auxílio Mensal:</td><td>R$ {{ br_currency(d.bolsa or 0) }}{% if d.bolsa_extenso %} ({{ d.bolsa_extenso }}){% endif %}</td></tr>
+    <tr><td class="label">Auxílio-Transporte:</td><td>{% if d.aux_transporte %}R$ {{ br_currency(d.aux_transporte) }}{% if d.aux_transporte_extenso %} ({{ d.aux_transporte_extenso }}){% endif %} por mês{% else %}Não concedido{% endif %}</td></tr>
   </table>
 
   <!-- CLÁUSULAS -->
@@ -169,10 +169,10 @@
   </div>
 
   <div class="clausula">
-    <p><strong>Cláusula 8ª — Da Bolsa-Auxílio e Outros Benefícios</strong> (art. 12, Lei n.º 11.788/2008). Fica estabelecida bolsa-auxílio mensal no valor de <strong>R$ {{ '%.2f'|format(d.bolsa or 0) }}</strong> ({{ d.bolsa_extenso or 'ver valor acima' }}), a ser paga pela Parte Concedente ao Estagiário, mensalmente, até o 5.º (quinto) dia útil do mês subsequente.</p>
+    <p><strong>Cláusula 8ª — Da Bolsa-Auxílio e Outros Benefícios</strong> (art. 12, Lei n.º 11.788/2008). Fica estabelecida bolsa-auxílio mensal no valor de <strong>R$ {{ br_currency(d.bolsa or 0) }}</strong>{% if d.bolsa_extenso %} ({{ d.bolsa_extenso }}){% endif %}, a ser paga pela Parte Concedente ao Estagiário, mensalmente, até o 5.º (quinto) dia útil do mês subsequente.</p>
     <p class="par">§ 1.º A concessão de bolsa-auxílio é obrigatória nos estágios não obrigatórios, nos termos do art. 12 da Lei n.º 11.788/2008.</p>
     <p class="par">§ 2.º O valor da bolsa não tem natureza salarial e não gera vínculo empregatício entre o estagiário e a Parte Concedente.</p>
-    {% if d.aux_transporte %}<p class="par">§ 3.º Será concedido auxílio-transporte no valor de R$ {{ '%.2f'|format(d.aux_transporte) }} mensais.</p>{% endif %}
+    {% if d.aux_transporte %}<p class="par">§ 3.º Será concedido auxílio-transporte no valor de R$ {{ br_currency(d.aux_transporte) }}{% if d.aux_transporte_extenso %} ({{ d.aux_transporte_extenso }}){% endif %} mensais.</p>{% endif %}
   </div>
 
   <div class="clausula">
