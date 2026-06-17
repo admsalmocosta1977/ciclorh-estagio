@@ -101,8 +101,7 @@
     <tr><td class="label">Carga Horária Diária:</td><td>{{ d.ch_diaria_jornada or d.ch_diaria or 6 }} horas</td></tr>
     <tr><td class="label">Carga Horária Semanal:</td><td>{{ d.ch_semanal_jornada or d.ch_semanal or 30 }} horas</td></tr>
     <tr><td class="label">Bolsa-Auxílio Mensal:</td><td>R$ {{ '%.2f'|format(d.bolsa or 0) }}</td></tr>
-    {% if d.aux_transporte %}<tr><td class="label">Auxílio-Transporte:</td><td>R$ {{ '%.2f'|format(d.aux_transporte) }} por dia útil trabalhado</td></tr>{% endif %}
-    <tr><td class="label">Taxa de Administração (Agente):</td><td>R$ {{ '%.2f'|format(d.taxa or 0) }}/mês — paga pela Parte Concedente</td></tr>
+    <tr><td class="label">Auxílio-Transporte:</td><td>{% if d.aux_transporte %}R$ {{ '%.2f'|format(d.aux_transporte) }} por dia útil trabalhado{% else %}Não concedido{% endif %}</td></tr>
   </table>
 
   <!-- CLÁUSULAS -->
