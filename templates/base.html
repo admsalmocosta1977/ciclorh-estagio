@@ -64,7 +64,10 @@
     <i class="bi bi-plus-circle"></i> Novo Contrato
   </a>
   <a href="{{ url_for('relatorio_vencimentos') }}" class="nav-link {% if request.endpoint=='relatorio_vencimentos' %}active{% endif %}">
-    <i class="bi bi-calendar-x"></i> Vencimentos
+    <i class="bi bi-calendar-x"></i> TCE a Vencer
+  </a>
+  <a href="{{ url_for('relatorio_estagiarios') }}" class="nav-link {% if request.endpoint=='relatorio_estagiarios' %}active{% endif %}">
+    <i class="bi bi-people"></i> Rel. Estagiários
   </a>
 
   {% if current_user.is_admin %}
