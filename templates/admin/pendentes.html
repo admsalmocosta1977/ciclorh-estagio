@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% block title %}Aprovações Pendentes{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-clipboard-check me-2"></i>Aprovações Pendentes
+    {% if estagiarios|length + empresas|length > 0 %}
+    <span class="badge bg-danger ms-1">{{ estagiarios|length + empresas|length }}</span>
+    {% endif %}
+  </h4>
+</div>
+
+<!-- Links de cadastro -->
+<div class="card mb-4">
+  <div class="card-header py-2">
+    <span class="fw-semibold"><i class="bi bi-link-45deg me-1"></i>Links para Compartilhar</span>
+  </div>
+  <div class="card-body py-3">
+    <p class="text-muted small mb-3">Envie estes links para que estagiários e empresas preencham os próprios dados:</p>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label fw-semibold small">Cadastro de Estagiário</label>
+        <div class="input-group input-group-sm">
+          <input type="text" class="form-control font-monospace" id="link-est"
+                 value="{{ request.host_url }}cadastro/estagiario" readonly>
+          <button class="btn btn-outline-secondary" title="Copiar"
+                  onclick="navigator.clipboard.writeText(document.getElementById('link-est').value);this.innerHTML='<i class=\'bi bi-check\'></i>'">
+            <i class="bi bi-clipboard"></i>
+          </button>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold small">Cadastro de Empresa</label>
+        <div class="input-group input-group-sm">
+          <input type="text" class="form-control font-monospace" id="link-emp"
+                 value="{{ request.host_url }}cadastro/empresa" readonly>
+          <button class="btn btn-outline-secondary" title="Copiar"
+                  onclick="navigator.clipboard.writeText(document.getElementById('link-emp').value);this.innerHTML='<i class=\'bi bi-check\'></i>'">
+            <i class="bi bi-clipboard"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if not estagiarios and not empresas %}
+<div class="card">
+  <div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-check2-circle" style="font-size:3rem;opacity:.4"></i>
+    <p class="mt-3 mb-0">Nenhum cadastro pendente de aprovação.</p>
+  </div>
+</div>
+{% endif %}
+
+{% if estagiarios %}
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-person-badge me-2"></i>Estagiários</span>
+    <span class="badge bg-warning text-dark">{{ estagiarios|length }} pendente(s)</span>
+  </div>
+  <div class="card-body p-0">
+    {% for e in estagiarios %}
+    <div class="p-3 {% if not loop.last %}border-bottom{% endif %}">
+      <div class="row align-items-start g-2">
+        <div class="col-md-8">
+          <div class="fw-bold">{{ e.nome }}</div>
+          <div class="small text-muted mt-1">
+            <span class="me-3"><i class="bi bi-person-vcard me-1"></i>CPF: <code>{{ e.cpf }}</code></span>
+            {% if e.rg %}<span class="me-3">RG: {{ e.rg }}</span>{% endif %}
+          </div>
+          <div class="small text-muted">
+            {% if e.telefone %}<span class="me-3"><i class="bi bi-telephone me-1"></i>{{ e.telefone }}</span>{% endif %}
+            {% if e.email %}<span class="me-3"><i class="bi bi-envelope me-1"></i>{{ e.email }}</span>{% endif %}
+            {% if e.data_nascimento %}<span class="me-3"><i class="bi bi-calendar me-1"></i>{{ fmt_date(e.data_nascimento) }}</span>{% endif %}
+          </div>
+          {% if e.endereco %}<div class="small text-muted"><i class="bi bi-geo-alt me-1"></i>{{ e.endereco }}</div>{% endif %}
+          {% if e.obs %}<div class="small text-muted mt-1 fst-italic"><i class="bi bi-chat-text me-1"></i>{{ e.obs }}</div>{% endif %}
+        </div>
+        <div class="col-md-4 d-flex gap-2 justify-content-md-end mt-2 mt-md-0 flex-wrap">
+          <a href="{{ url_for('aprovar_estagiario', id=e.id) }}" class="btn btn-sm btn-success">
+            <i class="bi bi-check-lg me-1"></i>Aprovar
+          </a>
+          <a href="{{ url_for('estagiario_editar', id=e.id) }}" class="btn btn-sm btn-outline-secondary" target="_blank">
+            <i class="bi bi-pencil me-1"></i>Editar
+          </a>
+          <a href="{{ url_for('rejeitar_estagiario', id=e.id) }}" class="btn btn-sm btn-outline-danger"
+             onclick="return confirm('Rejeitar e excluir este cadastro permanentemente?')">
+            <i class="bi bi-x-lg me-1"></i>Rejeitar
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if empresas %}
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-building me-2"></i>Empresas</span>
+    <span class="badge bg-warning text-dark">{{ empresas|length }} pendente(s)</span>
+  </div>
+  <div class="card-body p-0">
+    {% for emp in empresas %}
+    <div class="p-3 {% if not loop.last %}border-bottom{% endif %}">
+      <div class="row align-items-start g-2">
+        <div class="col-md-8">
+          <div class="fw-bold">{{ emp.nome }}</div>
+          <div class="small text-muted mt-1">
+            {% if emp.cnpj %}<span class="me-3"><i class="bi bi-building me-1"></i>CNPJ: <code>{{ emp.cnpj }}</code></span>{% endif %}
+            {% if emp.ramo %}<span class="me-3 fst-italic">{{ emp.ramo }}</span>{% endif %}
+          </div>
+          <div class="small text-muted">
+            {% if emp.telefone %}<span class="me-3"><i class="bi bi-telephone me-1"></i>{{ emp.telefone }}</span>{% endif %}
+            {% if emp.email %}<span class="me-3"><i class="bi bi-envelope me-1"></i>{{ emp.email }}</span>{% endif %}
+          </div>
+          {% if emp.endereco %}<div class="small text-muted"><i class="bi bi-geo-alt me-1"></i>{{ emp.endereco }}{% if emp.cidade %}, {{ emp.cidade }}{% endif %}</div>{% endif %}
+          {% if emp.representante %}<div class="small text-muted mt-1"><i class="bi bi-person me-1"></i>Rep.: <strong>{{ emp.representante }}</strong>{% if emp.cargo_representante %} — {{ emp.cargo_representante }}{% endif %}</div>{% endif %}
+          {% if emp.supervisor_nome %}<div class="small text-muted"><i class="bi bi-person-check me-1"></i>Supervisor: {{ emp.supervisor_nome }}{% if emp.supervisor_cargo %} — {{ emp.supervisor_cargo }}{% endif %}</div>{% endif %}
+        </div>
+        <div class="col-md-4 d-flex gap-2 justify-content-md-end mt-2 mt-md-0 flex-wrap">
+          <a href="{{ url_for('aprovar_empresa', id=emp.id) }}" class="btn btn-sm btn-success">
+            <i class="bi bi-check-lg me-1"></i>Aprovar
+          </a>
+          <a href="{{ url_for('empresa_editar', id=emp.id) }}" class="btn btn-sm btn-outline-secondary" target="_blank">
+            <i class="bi bi-pencil me-1"></i>Editar
+          </a>
+          <a href="{{ url_for('rejeitar_empresa', id=emp.id) }}" class="btn btn-sm btn-outline-danger"
+             onclick="return confirm('Rejeitar e excluir este cadastro permanentemente?')">
+            <i class="bi bi-x-lg me-1"></i>Rejeitar
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
