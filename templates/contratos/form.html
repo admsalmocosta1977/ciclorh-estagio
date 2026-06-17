@@ -311,6 +311,31 @@
   </div>
 </div>
 {% endif %}
+
+<!-- Modal: limite de 2 anos CPF+CNPJ -->
+<div class="modal fade" id="modal-limite-2anos" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-danger">
+      <div class="modal-header bg-danger text-white border-0">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>Limite Legal Excedido
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <i class="bi bi-x-circle-fill text-danger" style="font-size:3.5rem"></i>
+        <h5 class="mt-3 fw-bold">Estágio excede o período de 2 anos</h5>
+        <p class="text-muted mt-2 mb-1">Vínculo CPF+CNPJ acumulado: <strong id="modal-limite-total"></strong></p>
+        <p class="text-muted small">Limite de 2 anos estabelecido pelo art. 11 da Lei 11.788/2008.<br>Este contrato não pode ser celebrado.</p>
+      </div>
+      <div class="modal-footer justify-content-center border-0 pt-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x me-1"></i>Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -340,17 +365,27 @@ function checkVinculo() {
   let url = '/api/check-vinculo/' + estId + '/' + empId;
   if (excludeId) url += '?exclude=' + excludeId;
   fetch(url).then(r => r.json()).then(d => {
-    if (d.limite_atingido) {
+    const dIni = document.querySelector('[name="data_inicio"]').value;
+    const dFim = document.querySelector('[name="data_fim"]').value;
+    let propostaDias = 0;
+    if (dIni && dFim) {
+      propostaDias = Math.max(0, Math.round((new Date(dFim) - new Date(dIni)) / 86400000));
+    }
+    const total = d.total_dias + propostaDias;
+    const anos = (total / 365.25).toFixed(2);
+    if (total >= 730) {
+      document.getElementById('modal-limite-total').textContent = total + ' dias (' + anos + ' anos)';
+      new bootstrap.Modal(document.getElementById('modal-limite-2anos')).show();
       el.className = 'alert alert-danger mb-0 py-2';
-      el.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i><strong>Limite de 2 anos atingido!</strong> Este CPF já acumulou ' + d.total_dias + ' dias (' + d.anos + ' anos) com esta empresa. Novo vínculo não permitido pela Lei 11.788/2008, art. 11.';
+      el.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i><strong>Estágio excede o período de 2 anos!</strong> Total acumulado: ' + total + ' dias (' + anos + ' anos).';
       divWrap.style.display = '';
-    } else if (d.aviso) {
+    } else if (total >= 600) {
       el.className = 'alert alert-warning mb-0 py-2';
-      el.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i><strong>Atenção:</strong> ' + d.total_dias + ' dias (' + d.anos + ' anos) já acumulados neste vínculo CPF+CNPJ. Limite legal: 2 anos.';
+      el.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i><strong>Atenção:</strong> Total acumulado será de ' + total + ' dias (' + anos + ' anos). Limite legal: 2 anos.';
       divWrap.style.display = '';
     } else if (d.total_dias > 0) {
       el.className = 'alert alert-info mb-0 py-2';
-      el.innerHTML = '<i class="bi bi-info-circle me-1"></i>Histórico de vínculo: ' + d.total_dias + ' dias (' + d.anos + ' anos acumulados neste CPF+CNPJ).';
+      el.innerHTML = '<i class="bi bi-info-circle me-1"></i>Histórico: ' + d.total_dias + ' dias (' + d.anos + ' anos) neste vínculo CPF+CNPJ.';
       divWrap.style.display = '';
     } else {
       divWrap.style.display = 'none';
@@ -358,6 +393,8 @@ function checkVinculo() {
   }).catch(() => { divWrap.style.display = 'none'; });
 }
 document.getElementById('sel-estagiario').addEventListener('change', checkVinculo);
+document.querySelector('[name="data_inicio"]').addEventListener('change', checkVinculo);
+document.querySelector('[name="data_fim"]').addEventListener('change', checkVinculo);
 if (document.getElementById('sel-estagiario').value && document.getElementById('sel-empresa').value) checkVinculo();
 
 // Gerar aditivo
