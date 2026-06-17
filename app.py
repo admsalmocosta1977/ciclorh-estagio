@@ -179,6 +179,7 @@ def init_db():
         );
         ''')
         cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS jornada TEXT;")
+        cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS data_encerramento TEXT;")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS semestre INTEGER;")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS tipo_ensino TEXT DEFAULT 'superior';")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS matricula TEXT;")
@@ -730,6 +731,7 @@ def contratos():
     sql = """SELECT c.*, e.nome est_nome, emp.nome emp_nome,
              ie.sigla ie_sigla, ie.nome ie_nome,
              COALESCE(
+                 c.data_encerramento,
                  (SELECT nova_data_fim FROM aditivo
                   WHERE contrato_id = c.id AND nova_data_fim IS NOT NULL AND nova_data_fim != ''
                   ORDER BY created_at DESC LIMIT 1),
@@ -768,8 +770,8 @@ def contrato_novo():
                 (estagiario_id,empresa_id,ie_id,orientador,
                  supervisor_nome,supervisor_cargo,supervisor_registro,
                  curso,tipo_estagio,area_atuacao,ch_diaria,ch_semanal,
-                 data_inicio,data_fim,numero_contrato,bolsa,taxa,aux_transporte,atividades,obs,jornada)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                 data_inicio,data_fim,numero_contrato,bolsa,taxa,aux_transporte,atividades,obs,jornada,data_encerramento)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['estagiario_id'], request.form['empresa_id'], request.form['ie_id'],
               request.form.get('orientador', 'Salmo Lima Costa'),
               request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
@@ -782,7 +784,8 @@ def contrato_novo():
               request.form.get('bolsa') or None,
               request.form.get('taxa') or None,
               request.form.get('aux_transporte') or None,
-              ats, request.form.get('obs'), _build_jornada_json()))
+              ats, request.form.get('obs'), _build_jornada_json(),
+              request.form.get('data_encerramento') or None))
         flash('Contrato criado!', 'success')
         return redirect(url_for('contratos'))
     estagiarios = _q("SELECT * FROM estagiario ORDER BY nome")
@@ -806,7 +809,7 @@ def contrato_editar(id):
                 supervisor_nome=%s,supervisor_cargo=%s,supervisor_registro=%s,
                 curso=%s,tipo_estagio=%s,area_atuacao=%s,ch_diaria=%s,ch_semanal=%s,
                 data_inicio=%s,data_fim=%s,numero_contrato=%s,bolsa=%s,taxa=%s,
-                aux_transporte=%s,atividades=%s,obs=%s,jornada=%s WHERE id=%s""",
+                aux_transporte=%s,atividades=%s,obs=%s,jornada=%s,data_encerramento=%s WHERE id=%s""",
              (request.form['estagiario_id'], request.form['empresa_id'], request.form['ie_id'],
               request.form.get('orientador'),
               request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
@@ -819,7 +822,8 @@ def contrato_editar(id):
               request.form.get('bolsa') or None,
               request.form.get('taxa') or None,
               request.form.get('aux_transporte') or None,
-              ats, request.form.get('obs'), _build_jornada_json(), id))
+              ats, request.form.get('obs'), _build_jornada_json(),
+              request.form.get('data_encerramento') or None, id))
         flash('Contrato atualizado!', 'success')
         return redirect(url_for('contratos'))
     estagiarios = _q("SELECT * FROM estagiario ORDER BY nome")
@@ -859,6 +863,17 @@ def _doc_ctx(id):
     except Exception:
         ch_total = 0
 
+    enc_str = c.get('data_encerramento')
+    try:
+        if enc_str:
+            enc = datetime.strptime(str(enc_str)[:10], '%Y-%m-%d').date()
+            meses_real = (enc.year - ini.year) * 12 + enc.month - ini.month + 1
+            ch_total_real = meses_real * 4 * (c['ch_semanal'] or 30)
+        else:
+            ch_total_real = ch_total
+    except Exception:
+        ch_total_real = ch_total
+
     d = type('D', (), {
         'id': c['id'],
         'curso': c['curso'],
@@ -868,6 +883,7 @@ def _doc_ctx(id):
         'ch_semanal': c['ch_semanal'] or 30,
         'data_inicio': c['data_inicio'],
         'data_fim': c['data_fim'],
+        'data_encerramento': enc_str,
         'numero_contrato': c['numero_contrato'],
         'bolsa': c['bolsa'],
         'taxa': c['taxa'],
@@ -906,7 +922,7 @@ def _doc_ctx(id):
         'ie_coord_cargo': ie['coordenador_cargo'] if ie else '',
     })()
 
-    return dict(d=d, agente=AGENTE, ch_total=ch_total,
+    return dict(d=d, agente=AGENTE, ch_total=ch_total, ch_total_real=ch_total_real,
                 data_hoje=fmt_date(date.today()), fmt_date=fmt_date,
                 aditivos=aditivos)
 
@@ -998,6 +1014,30 @@ def doc_aditivo_registrar(id):
     return jsonify({'ok': True, 'numero': numero})
 
 
+@app.route('/api/check-vinculo/<int:est_id>/<int:emp_id>')
+@login_required
+def api_check_vinculo(est_id, emp_id):
+    exclude_id = request.args.get('exclude', type=int)
+    sql = "SELECT data_inicio, data_encerramento, data_fim FROM contrato WHERE estagiario_id = %s AND empresa_id = %s"
+    params = [est_id, emp_id]
+    if exclude_id:
+        sql += " AND id != %s"
+        params.append(exclude_id)
+    cts = _q(sql, params)
+    total_dias = 0
+    for ct in cts:
+        try:
+            ini = datetime.strptime(str(ct['data_inicio'])[:10], '%Y-%m-%d').date()
+            fim_str = ct['data_encerramento'] or ct['data_fim']
+            fim = datetime.strptime(str(fim_str)[:10], '%Y-%m-%d').date()
+            total_dias += (fim - ini).days
+        except Exception:
+            pass
+    anos = round(total_dias / 365.25, 2)
+    return jsonify({'total_dias': total_dias, 'anos': anos,
+                    'limite_atingido': total_dias >= 730, 'aviso': total_dias >= 600})
+
+
 # ─── ADMIN — CONFIGURAÇÕES ────────────────────────────────────────────────────
 
 @app.route('/admin/config', methods=['GET', 'POST'])
@@ -1023,6 +1063,7 @@ def relatorio_vencimentos():
     base_sql = """
         SELECT c.*, e.nome est_nome, emp.nome emp_nome, ie.sigla ie_sigla,
                COALESCE(
+                   c.data_encerramento,
                    (SELECT nova_data_fim FROM aditivo
                     WHERE contrato_id = c.id AND nova_data_fim IS NOT NULL AND nova_data_fim != ''
                     ORDER BY created_at DESC LIMIT 1),
