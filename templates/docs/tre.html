@@ -88,10 +88,10 @@
     <tr><td class="label">Área de Atuação:</td><td>{{ d.area_atuacao or d.curso }}</td></tr>
     <tr><td class="label">Tipo de Estágio:</td><td>{{ d.tipo_estagio or 'Não Obrigatório' }}</td></tr>
     <tr><td class="label">Data de Início:</td><td>{{ fmt_date(d.data_inicio) }}</td></tr>
-    <tr><td class="label">Data de Encerramento:</td><td>{{ fmt_date(d.data_fim) }}</td></tr>
+    <tr><td class="label">Data de Encerramento:</td><td>{{ fmt_date(d.data_encerramento or d.data_fim) }}{% if d.data_encerramento and d.data_encerramento != d.data_fim %} <em style="font-size:.85em;color:#666">(previsto: {{ fmt_date(d.data_fim) }})</em>{% endif %}</td></tr>
     <tr><td class="label">Carga Horária Diária:</td><td>{{ d.ch_diaria or 6 }} horas</td></tr>
     <tr><td class="label">Carga Horária Semanal:</td><td>{{ d.ch_semanal or 30 }} horas</td></tr>
-    <tr><td class="label">Carga Horária Total Cumprida:</td><td><strong>{{ ch_total }} horas</strong></td></tr>
+    <tr><td class="label">Carga Horária Total Cumprida:</td><td><strong>{{ ch_total_real }} horas</strong></td></tr>
     <tr><td class="label">Bolsa-Auxílio Mensal:</td><td>R$ {{ '%.2f'|format(d.bolsa or 0) }}</td></tr>
   </table>
 
@@ -127,7 +127,7 @@
   <div class="secao">{% if d.atividades %}V{% else %}IV{% endif %} — Declaração de Realização</div>
 
   <div class="caixa-destaque">
-    <p>O Agente de Integração <strong>{{ agente.nome }}</strong>, CNPJ {{ agente.cnpj }}, por meio deste instrumento, declara que o(a) estudante <strong>{{ d.est_nome }}</strong>, CPF n.º <strong>{{ d.est_cpf }}</strong>, matriculado(a) no curso de <strong>{{ d.curso }}</strong> na <strong>{{ d.ie_nome }}</strong>, realizou estágio curricular {{ (d.tipo_estagio or 'não obrigatório').lower() }} junto à empresa <strong>{{ d.emp_nome }}</strong>, no período de <strong>{{ fmt_date(d.data_inicio) }}</strong> a <strong>{{ fmt_date(d.data_fim) }}</strong>, na área de <strong>{{ d.area_atuacao or d.curso }}</strong>, sob a supervisão de <strong>{{ d.supervisor_nome or '___________________________' }}</strong>{% if d.supervisor_cargo %} ({{ d.supervisor_cargo }}){% endif %}, cumprindo carga horária total de <strong>{{ ch_total }} horas</strong>.</p>
+    <p>O Agente de Integração <strong>{{ agente.nome }}</strong>, CNPJ {{ agente.cnpj }}, por meio deste instrumento, declara que o(a) estudante <strong>{{ d.est_nome }}</strong>, CPF n.º <strong>{{ d.est_cpf }}</strong>, matriculado(a) no curso de <strong>{{ d.curso }}</strong> na <strong>{{ d.ie_nome }}</strong>, realizou estágio curricular {{ (d.tipo_estagio or 'não obrigatório').lower() }} junto à empresa <strong>{{ d.emp_nome }}</strong>, no período de <strong>{{ fmt_date(d.data_inicio) }}</strong> a <strong>{{ fmt_date(d.data_encerramento or d.data_fim) }}</strong>, na área de <strong>{{ d.area_atuacao or d.curso }}</strong>, sob a supervisão de <strong>{{ d.supervisor_nome or '___________________________' }}</strong>{% if d.supervisor_cargo %} ({{ d.supervisor_cargo }}){% endif %}, cumprindo carga horária total de <strong>{{ ch_total_real }} horas</strong>.</p>
   </div>
 
   <!-- CLÁUSULAS -->
