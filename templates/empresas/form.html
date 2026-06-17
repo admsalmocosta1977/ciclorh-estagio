@@ -47,6 +47,10 @@
           <label class="form-label fw-semibold">Cargo do Representante</label>
           <input type="text" name="cargo_representante" class="form-control" value="{{ emp.cargo_representante if emp else '' }}">
         </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">CPF do Representante</label>
+          <input type="text" name="cpf_representante" class="form-control" value="{{ emp.cpf_representante if emp else '' }}" placeholder="000.000.000-00">
+        </div>
       </div>
 
       <hr class="my-4">
