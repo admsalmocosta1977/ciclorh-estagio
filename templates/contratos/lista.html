@@ -38,7 +38,7 @@
       </thead>
       <tbody>
       {% for c in contratos %}
-      {% set st = calcular_status(c.data_fim) %}
+      {% set st = calcular_status(c.effective_data_fim) %}
       <tr>
         <td class="fw-semibold">{{ c.est_nome }}</td>
         <td>{{ c.emp_nome }}</td>
@@ -48,7 +48,8 @@
         </td>
         <td class="text-nowrap">
           <small>{{ fmt_date(c.data_inicio) }}</small><br>
-          <small>{{ fmt_date(c.data_fim) }}</small>
+          <small>{{ fmt_date(c.effective_data_fim) }}</small>
+          {% if c.effective_data_fim != c.data_fim %}<br><small class="text-muted fst-italic">c/ aditivo</small>{% endif %}
         </td>
         <td>R$ {{ '%.2f'|format(c.bolsa or 0) }}</td>
         <td>
@@ -168,20 +169,32 @@ document.addEventListener('click', function(e) {
 document.getElementById('lista-btn-gerar-aditivo').addEventListener('click', function() {
   const data = document.getElementById('lista-aditivo-data').value;
   const rows = document.querySelectorAll('#lista-clausulas-container .clausula-extra-row');
-  const clausulas = Array.from(rows).filter(function(r) {
-    return r.querySelector('.clausula-titulo').value.trim() || r.querySelector('.clausula-texto').value.trim();
-  });
+  const clausulas = Array.from(rows)
+    .map(function(r) { return {titulo: r.querySelector('.clausula-titulo').value.trim(), texto: r.querySelector('.clausula-texto').value.trim()}; })
+    .filter(function(cl) { return cl.titulo || cl.texto; });
   if (!data && clausulas.length === 0) {
     alert('Informe a nova data de término ou pelo menos uma cláusula adicional.');
     return;
   }
-  const url = new URL('/contratos/' + aditivoContratoId + '/aditivo', window.location.origin);
-  if (data) url.searchParams.set('nova_data_fim', data);
-  clausulas.forEach(function(row, i) {
-    url.searchParams.set('clausula_' + (i+1) + '_titulo', row.querySelector('.clausula-titulo').value.trim());
-    url.searchParams.set('clausula_' + (i+1) + '_texto', row.querySelector('.clausula-texto').value.trim());
-  });
-  window.open(url.toString(), '_blank');
+  function abrirPDF(numero) {
+    const url = new URL('/contratos/' + aditivoContratoId + '/aditivo', window.location.origin);
+    if (data) url.searchParams.set('nova_data_fim', data);
+    clausulas.forEach(function(cl, i) {
+      url.searchParams.set('clausula_' + (i+1) + '_titulo', cl.titulo);
+      url.searchParams.set('clausula_' + (i+1) + '_texto', cl.texto);
+    });
+    if (numero) url.searchParams.set('aditivo_num', numero);
+    window.open(url.toString(), '_blank');
+    bootstrap.Modal.getInstance(document.getElementById('modal-aditivo-lista')).hide();
+  }
+  fetch('/contratos/' + aditivoContratoId + '/aditivo/registrar', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({nova_data_fim: data, clausulas: clausulas})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) { abrirPDF(d.numero); })
+  .catch(function() { abrirPDF(null); });
 });
 </script>
 {% endblock %}
