@@ -179,6 +179,9 @@ def init_db():
         );
         ''')
         cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS jornada TEXT;")
+        cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS semestre INTEGER;")
+        cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS tipo_ensino TEXT DEFAULT 'superior';")
+        cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS matricula TEXT;")
         cur.execute("""
         CREATE TABLE IF NOT EXISTS aditivo (
             id SERIAL PRIMARY KEY,
@@ -326,6 +329,50 @@ def _get_config():
         return {r['chave']: r['valor'] or '' for r in rows}
     except Exception:
         return {}
+
+
+def _fmt_semestre(semestre, tipo_ensino):
+    if not semestre:
+        return ''
+    if tipo_ensino == 'medio':
+        return f'{semestre}º Ano'
+    return f'{semestre}º Semestre'
+
+
+_semestre_atualizado = set()
+
+
+def _atualizar_semestres_auto():
+    hoje = date.today()
+    if hoje.month not in (1, 7):
+        return
+    key = (hoje.year, hoje.month)
+    if key in _semestre_atualizado:
+        return
+    _semestre_atualizado.add(key)
+    chave_cfg = f'sem_upd_{hoje.year}_{hoje.month:02d}'
+    try:
+        cfg = _get_config()
+        if cfg.get(chave_cfg):
+            return
+        if hoje.month == 7:
+            _run("""UPDATE estagiario SET semestre = LEAST(semestre + 1, 10)
+                    WHERE tipo_ensino IN ('superior', 'tecnico')
+                    AND semestre IS NOT NULL AND semestre < 10""")
+        else:
+            _run("""UPDATE estagiario SET semestre = CASE
+                        WHEN tipo_ensino = 'medio' THEN LEAST(semestre + 1, 3)
+                        ELSE LEAST(semestre + 1, 10)
+                    END WHERE semestre IS NOT NULL""")
+        _run("INSERT INTO config (chave, valor) VALUES (%s, %s) ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor",
+             (chave_cfg, hoje.isoformat()))
+    except Exception:
+        pass
+
+
+@app.before_request
+def _antes_da_requisicao():
+    _atualizar_semestres_auto()
 
 
 app.jinja_env.globals.update(fmt_date=fmt_date, calcular_status=calcular_status)
@@ -493,14 +540,18 @@ def estagiario_novo():
     if request.method == 'POST':
         try:
             _ins("""INSERT INTO estagiario
-                    (nome,cpf,rg,data_nascimento,telefone,email,endereco,banco,agencia,conta,obs)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    (nome,cpf,rg,data_nascimento,telefone,email,endereco,banco,agencia,conta,obs,
+                     tipo_ensino,semestre,matricula)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                  (request.form['nome'], request.form['cpf'],
                   request.form.get('rg'), request.form.get('data_nascimento') or None,
                   request.form.get('telefone'), request.form.get('email'),
                   request.form.get('endereco'), request.form.get('banco'),
                   request.form.get('agencia'), request.form.get('conta'),
-                  request.form.get('obs')))
+                  request.form.get('obs'),
+                  request.form.get('tipo_ensino', 'superior'),
+                  request.form.get('semestre') or None,
+                  request.form.get('matricula') or None))
             flash('Estagiário cadastrado!', 'success')
             return redirect(url_for('estagiarios'))
         except psycopg2.errors.UniqueViolation:
@@ -517,13 +568,18 @@ def estagiario_editar(id):
     if request.method == 'POST':
         _run("""UPDATE estagiario SET
                 nome=%s,cpf=%s,rg=%s,data_nascimento=%s,telefone=%s,email=%s,
-                endereco=%s,banco=%s,agencia=%s,conta=%s,obs=%s WHERE id=%s""",
+                endereco=%s,banco=%s,agencia=%s,conta=%s,obs=%s,
+                tipo_ensino=%s,semestre=%s,matricula=%s WHERE id=%s""",
              (request.form['nome'], request.form['cpf'],
               request.form.get('rg'), request.form.get('data_nascimento') or None,
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('endereco'), request.form.get('banco'),
               request.form.get('agencia'), request.form.get('conta'),
-              request.form.get('obs'), id))
+              request.form.get('obs'),
+              request.form.get('tipo_ensino', 'superior'),
+              request.form.get('semestre') or None,
+              request.form.get('matricula') or None,
+              id))
         flash('Atualizado!', 'success')
         return redirect(url_for('estagiarios'))
     return render_template('estagiarios/form.html', e=e)
@@ -834,6 +890,8 @@ def _doc_ctx(id):
         'est_telefone': est['telefone'] if est else '',
         'est_email': est['email'] if est else '',
         'est_endereco': est['endereco'] if est else '',
+        'est_semestre': _fmt_semestre(est['semestre'], est['tipo_ensino']) if est else '',
+        'est_matricula': est['matricula'] if est else '',
         'emp_nome': emp['nome'] if emp else '',
         'emp_cnpj': emp['cnpj'] if emp else '',
         'emp_endereco': emp['endereco'] if emp else '',
