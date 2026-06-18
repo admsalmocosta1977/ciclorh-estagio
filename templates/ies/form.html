@@ -6,55 +6,201 @@
   <h4 class="fw-bold mb-0">{{ 'Editar' if ie else 'Nova' }} Instituição de Ensino</h4>
 </div>
 
-<div class="card">
+<form method="post">
+<div class="card mb-3">
+  <div class="card-header fw-semibold"><i class="bi bi-building me-2"></i>Dados Gerais</div>
   <div class="card-body">
-    <form method="post">
-      <div class="row g-3">
-        <div class="col-md-8">
-          <label class="form-label fw-semibold">Nome da Instituição *</label>
-          <input type="text" name="nome" class="form-control" value="{{ ie.nome if ie else '' }}" required>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label fw-semibold">Sigla</label>
-          <input type="text" name="sigla" class="form-control" value="{{ ie.sigla if ie else '' }}" placeholder="ex: UESB, UFBA">
-        </div>
-        <div class="col-md-8">
-          <label class="form-label fw-semibold">Endereço</label>
-          <input type="text" name="endereco" class="form-control" value="{{ ie.endereco if ie else '' }}">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label fw-semibold">Cidade</label>
-          <input type="text" name="cidade" class="form-control" value="{{ ie.cidade if ie else 'Vitória da Conquista' }}">
-        </div>
-        <div class="col-md-6">
-          <label class="form-label fw-semibold">Coordenador(a) de Estágio</label>
-          <input type="text" name="coordenador" class="form-control" value="{{ ie.coordenador if ie else '' }}">
-        </div>
-        <div class="col-md-6">
-          <label class="form-label fw-semibold">Cargo/Função</label>
-          <input type="text" name="coordenador_cargo" class="form-control" value="{{ ie.coordenador_cargo if ie else '' }}" placeholder="ex: Coordenador de Estágios">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label fw-semibold">Telefone</label>
-          <input type="text" name="telefone" class="form-control" value="{{ ie.telefone if ie else '' }}">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label fw-semibold">E-mail</label>
-          <input type="email" name="email" class="form-control" value="{{ ie.email if ie else '' }}">
-        </div>
+    <div class="row g-3">
+      <div class="col-md-8">
+        <label class="form-label fw-semibold">Nome da Instituição *</label>
+        <input type="text" name="nome" class="form-control" value="{{ ie.nome if ie else '' }}" required>
       </div>
-      <hr>
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar</button>
-        <a href="{{ url_for('ies') }}" class="btn btn-outline-secondary">Cancelar</a>
-        {% if ie %}
-        <a href="{{ url_for('ie_excluir', id=ie.id) }}" class="btn btn-outline-danger ms-auto"
-           onclick="return confirm('Excluir esta instituição?')">
-          <i class="bi bi-trash me-1"></i>Excluir
-        </a>
-        {% endif %}
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Sigla</label>
+        <input type="text" name="sigla" class="form-control" value="{{ ie.sigla if ie else '' }}" placeholder="ex: UESB, UFBA">
       </div>
-    </form>
+      <div class="col-md-8">
+        <label class="form-label fw-semibold">Endereço</label>
+        <input type="text" name="endereco" class="form-control" value="{{ ie.endereco if ie else '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Cidade</label>
+        <input type="text" name="cidade" class="form-control" value="{{ ie.cidade if ie else 'Vitória da Conquista' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Telefone</label>
+        <input type="text" name="telefone" class="form-control" value="{{ ie.telefone if ie else '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">E-mail</label>
+        <input type="email" name="email" class="form-control" value="{{ ie.email if ie else '' }}">
+      </div>
+    </div>
   </div>
 </div>
+
+<!-- Representante Legal -->
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="fw-semibold"><i class="bi bi-person-badge me-2"></i>Representante Legal</span>
+    <div>
+      <input type="radio" class="btn-check" name="signatario_tce" id="sig_rep" value="representante"
+             {% if ie and ie.signatario_tce == 'representante' %}checked{% endif %}>
+      <label class="btn btn-sm btn-outline-primary" for="sig_rep">
+        <i class="bi bi-pen me-1"></i>Assina o TCE
+      </label>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-7">
+        <label class="form-label fw-semibold">Nome Completo</label>
+        <input type="text" name="representante_legal" class="form-control"
+               value="{{ ie.representante_legal if ie else '' }}" placeholder="Nome do representante legal">
+      </div>
+      <div class="col-md-5">
+        <label class="form-label fw-semibold">Cargo / Função</label>
+        <input type="text" name="cargo_representante_legal" class="form-control"
+               value="{{ ie.cargo_representante_legal if ie else '' }}" placeholder="ex: Diretora, Reitor">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Coordenador de Estágio -->
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="fw-semibold"><i class="bi bi-person-check me-2"></i>Coordenador(a) de Estágio</span>
+    <div>
+      <input type="radio" class="btn-check" name="signatario_tce" id="sig_coord" value="coordenador"
+             {% if not ie or not ie.signatario_tce or ie.signatario_tce == 'coordenador' %}checked{% endif %}>
+      <label class="btn btn-sm btn-outline-primary" for="sig_coord">
+        <i class="bi bi-pen me-1"></i>Assina o TCE
+      </label>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-7">
+        <label class="form-label fw-semibold">Nome Completo</label>
+        <input type="text" name="coordenador" class="form-control"
+               value="{{ ie.coordenador if ie else '' }}" placeholder="Nome do coordenador de estágio">
+      </div>
+      <div class="col-md-5">
+        <label class="form-label fw-semibold">Cargo / Função</label>
+        <input type="text" name="coordenador_cargo" class="form-control"
+               value="{{ ie.coordenador_cargo if ie else '' }}" placeholder="ex: Coordenador de Estágios">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Professores Orientadores -->
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span class="fw-semibold"><i class="bi bi-mortarboard me-2"></i>Professores Orientadores</span>
+    <div>
+      <input type="radio" class="btn-check" name="signatario_tce" id="sig_prof" value="professor"
+             {% if ie and ie.signatario_tce == 'professor' %}checked{% endif %}>
+      <label class="btn btn-sm btn-outline-primary" for="sig_prof">
+        <i class="bi bi-pen me-1"></i>Assina o TCE
+      </label>
+    </div>
+  </div>
+  <div class="card-body">
+    <p class="text-muted small mb-3">
+      <i class="bi bi-info-circle me-1"></i>
+      Cadastre todos os professores orientadores desta IE. Ao criar um contrato, será possível escolher qual professor orienta cada estagiário.
+    </p>
+    <div id="lista-professores">
+      {% if professores %}
+        {% for p in professores %}
+        <div class="professor-row border rounded p-2 mb-2">
+          <div class="row g-2 align-items-center">
+            <div class="col-md-5">
+              <input type="text" name="prof_nome[]" class="form-control form-control-sm"
+                     placeholder="Nome do professor" value="{{ p.nome }}">
+            </div>
+            <div class="col-md-5">
+              <input type="text" name="prof_cargo[]" class="form-control form-control-sm"
+                     placeholder="Cargo / Área" value="{{ p.cargo or '' }}">
+            </div>
+            <div class="col-auto">
+              <button type="button" class="btn btn-sm btn-outline-danger remover-prof" title="Remover">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="professor-row border rounded p-2 mb-2">
+          <div class="row g-2 align-items-center">
+            <div class="col-md-5">
+              <input type="text" name="prof_nome[]" class="form-control form-control-sm" placeholder="Nome do professor">
+            </div>
+            <div class="col-md-5">
+              <input type="text" name="prof_cargo[]" class="form-control form-control-sm" placeholder="Cargo / Área">
+            </div>
+            <div class="col-auto">
+              <button type="button" class="btn btn-sm btn-outline-danger remover-prof" title="Remover">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+    <button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="btn-add-prof">
+      <i class="bi bi-plus me-1"></i>Adicionar Professor
+    </button>
+  </div>
+</div>
+
+<div class="d-flex gap-2">
+  <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar</button>
+  <a href="{{ url_for('ies') }}" class="btn btn-outline-secondary">Cancelar</a>
+  {% if ie %}
+  <a href="{{ url_for('ie_excluir', id=ie.id) }}" class="btn btn-outline-danger ms-auto"
+     onclick="return confirm('Excluir esta instituição?')">
+    <i class="bi bi-trash me-1"></i>Excluir
+  </a>
+  {% endif %}
+</div>
+</form>
+
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('btn-add-prof').addEventListener('click', function() {
+  const row = document.createElement('div');
+  row.className = 'professor-row border rounded p-2 mb-2';
+  row.innerHTML = `
+    <div class="row g-2 align-items-center">
+      <div class="col-md-5">
+        <input type="text" name="prof_nome[]" class="form-control form-control-sm" placeholder="Nome do professor">
+      </div>
+      <div class="col-md-5">
+        <input type="text" name="prof_cargo[]" class="form-control form-control-sm" placeholder="Cargo / Área">
+      </div>
+      <div class="col-auto">
+        <button type="button" class="btn btn-sm btn-outline-danger remover-prof" title="Remover">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>`;
+  document.getElementById('lista-professores').appendChild(row);
+  row.querySelector('.remover-prof').addEventListener('click', function() { row.remove(); });
+});
+
+document.querySelectorAll('.remover-prof').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const rows = document.querySelectorAll('.professor-row');
+    if (rows.length > 1) this.closest('.professor-row').remove();
+    else {
+      this.closest('.professor-row').querySelectorAll('input').forEach(i => i.value = '');
+    }
+  });
+});
+</script>
 {% endblock %}
