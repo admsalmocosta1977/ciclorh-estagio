@@ -947,8 +947,10 @@ def contrato_novo():
               request.form.get('aux_transporte') or None,
               ats, request.form.get('obs'), _build_jornada_json(),
               request.form.get('data_encerramento') or None))
+        _est = _q("SELECT nome FROM estagiario WHERE id=%s", (request.form['estagiario_id'],), one=True)
+        _emp = _q("SELECT nome FROM empresa WHERE id=%s", (request.form['empresa_id'],), one=True)
         _log('criar', 'contrato', None,
-             f'Criou contrato: estagiário {request.form["estagiario_id"]} / empresa {request.form["empresa_id"]}'
+             f'Criou contrato: {_est["nome"] if _est else "?"} @ {_emp["nome"] if _emp else "?"}'
              f' ({request.form["data_inicio"]} a {request.form["data_fim"]})')
         flash('Contrato criado!', 'success')
         return redirect(url_for('contratos'))
@@ -988,7 +990,10 @@ def contrato_editar(id):
               request.form.get('aux_transporte') or None,
               ats, request.form.get('obs'), _build_jornada_json(),
               request.form.get('data_encerramento') or None, id))
-        _log('editar', 'contrato', id, f'Editou contrato ID {id}')
+        _est2 = _q("SELECT nome FROM estagiario WHERE id=%s", (request.form['estagiario_id'],), one=True)
+        _emp2 = _q("SELECT nome FROM empresa WHERE id=%s", (request.form['empresa_id'],), one=True)
+        _log('editar', 'contrato', id,
+             f'Editou contrato: {_est2["nome"] if _est2 else "?"} @ {_emp2["nome"] if _emp2 else "?"}')
         flash('Contrato atualizado!', 'success')
         return redirect(url_for('contratos'))
     estagiarios = _q("SELECT * FROM estagiario WHERE status='ativo' ORDER BY nome")
@@ -1190,7 +1195,12 @@ def doc_aditivo_registrar(id):
     _ins("INSERT INTO aditivo (contrato_id, nova_data_fim, clausulas) VALUES (%s, %s, %s)",
          (id, nova_data_fim, json.dumps(clausulas, ensure_ascii=False)))
     numero = _q("SELECT COUNT(*) as n FROM aditivo WHERE contrato_id = %s", (id,), one=True)['n']
-    _log('criar', 'aditivo', id, f'Gerou {numero}º aditivo do contrato ID {id}')
+    _info_adi = _q("""SELECT e.nome est, emp.nome emp FROM contrato ct
+                      JOIN estagiario e ON e.id=ct.estagiario_id
+                      JOIN empresa emp ON emp.id=ct.empresa_id WHERE ct.id=%s""", (id,), one=True)
+    _log('criar', 'aditivo', id,
+         f'Gerou {numero}º aditivo: {_info_adi["est"]} @ {_info_adi["emp"]}' if _info_adi
+         else f'Gerou {numero}º aditivo do contrato ID {id}')
     return jsonify({'ok': True, 'numero': numero})
 
 
