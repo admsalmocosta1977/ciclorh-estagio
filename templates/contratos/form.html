@@ -54,6 +54,13 @@
             </a>
           </div>
         </div>
+        <div class="col-md-6" id="div-professor" style="display:none">
+          <label class="form-label fw-semibold">Professor Orientador (IE)</label>
+          <select name="ie_professor_id" class="form-select" id="sel-professor">
+            <option value="">Selecione o professor...</option>
+          </select>
+          <div class="form-text">Professores cadastrados na instituição selecionada.</div>
+        </div>
         <div class="col-md-6">
           <label class="form-label fw-semibold">Supervisor na Empresa</label>
           <input type="text" name="supervisor_nome" class="form-control" id="sup-nome"
@@ -516,5 +523,35 @@ function verificarJornada() {
 document.querySelectorAll('input[type="time"]').forEach(el => {
   el.addEventListener('change', verificarJornada);
 });
+
+// Carregar professores ao selecionar IE
+const selIe = document.getElementById('sel-ie');
+const selProf = document.getElementById('sel-professor');
+const divProf = document.getElementById('div-professor');
+const profAtual = {{ c.ie_professor_id if c and c.ie_professor_id else 'null' }};
+
+function carregarProfessores(ieId, selecionarId) {
+  if (!ieId) { divProf.style.display = 'none'; return; }
+  fetch('/api/ie_professores/' + ieId)
+    .then(r => r.json())
+    .then(profs => {
+      selProf.innerHTML = '<option value="">— nenhum / não se aplica —</option>';
+      if (profs.length > 0) {
+        profs.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.nome + (p.cargo ? ' — ' + p.cargo : '');
+          if (selecionarId && p.id == selecionarId) opt.selected = true;
+          selProf.appendChild(opt);
+        });
+        divProf.style.display = '';
+      } else {
+        divProf.style.display = 'none';
+      }
+    });
+}
+
+selIe.addEventListener('change', function() { carregarProfessores(this.value, null); });
+if (selIe.value) carregarProfessores(selIe.value, profAtual);
 </script>
 {% endblock %}
