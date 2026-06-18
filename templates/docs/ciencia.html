@@ -19,6 +19,7 @@
   .rodape { font-size: 8pt; color: #555; text-align: center; margin-top: 30px; border-top: 1px solid #ccc; padding-top: 6px; position: absolute; bottom: 15mm; left: 20mm; right: 20mm; }
   @media print { .no-print { display: none !important; } .page { padding: 15mm 18mm 12mm; } }
 </style>
+<link rel="stylesheet" href="{{ url_for('static', filename='ciclorh_doc.css') }}">
 </head>
 <body>
 <div class="no-print" style="background:#1a2845;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center">
@@ -30,6 +31,7 @@
 </div>
 
 <div class="page">
+{% include 'docs/_cabecalho.html' %}
   <h1>Termo de Ciência do Estagiário</h1>
   <div class="subtitulo">Ciclo RH – Agente de Integração de Estágio</div>
 
