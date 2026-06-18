@@ -206,6 +206,7 @@ def init_db():
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS semestre INTEGER;")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS tipo_ensino TEXT DEFAULT 'superior';")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS matricula TEXT;")
+        cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS cnpj TEXT;")
         cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS representante_legal TEXT;")
         cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS cargo_representante_legal TEXT;")
         cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS signatario_tce TEXT DEFAULT 'coordenador';")
@@ -908,10 +909,11 @@ def ies():
 def ie_nova():
     if request.method == 'POST':
         ie_id = _ins("""INSERT INTO ie
-                (nome,sigla,endereco,cidade,telefone,email,coordenador,coordenador_cargo,
+                (nome,sigla,cnpj,endereco,cidade,telefone,email,coordenador,coordenador_cargo,
                  representante_legal,cargo_representante_legal,signatario_tce)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['nome'], request.form.get('sigla'),
+              request.form.get('cnpj') or None,
               request.form.get('endereco'), request.form.get('cidade', 'Vitória da Conquista'),
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('coordenador'), request.form.get('coordenador_cargo'),
@@ -937,10 +939,11 @@ def ie_editar(id):
     if not ie:
         abort(404)
     if request.method == 'POST':
-        _run("""UPDATE ie SET nome=%s,sigla=%s,endereco=%s,cidade=%s,telefone=%s,email=%s,
+        _run("""UPDATE ie SET nome=%s,sigla=%s,cnpj=%s,endereco=%s,cidade=%s,telefone=%s,email=%s,
                 coordenador=%s,coordenador_cargo=%s,representante_legal=%s,
                 cargo_representante_legal=%s,signatario_tce=%s WHERE id=%s""",
              (request.form['nome'], request.form.get('sigla'),
+              request.form.get('cnpj') or None,
               request.form.get('endereco'), request.form.get('cidade'),
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('coordenador'), request.form.get('coordenador_cargo'),
@@ -1216,6 +1219,7 @@ def _doc_ctx(id):
         'emp_cpf_rep': emp.get('cpf_representante', '') if emp else '',
         'ie_nome': ie['nome'] if ie else '',
         'ie_sigla': ie['sigla'] if ie else '',
+        'ie_cnpj': ie.get('cnpj', '') if ie else '',
         'ie_endereco': ie['endereco'] if ie else '',
         'ie_cidade': ie['cidade'] if ie else 'Vitória da Conquista',
         'ie_coordenador': ie['coordenador'] if ie else '',
