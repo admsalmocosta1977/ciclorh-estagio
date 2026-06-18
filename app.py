@@ -199,6 +199,9 @@ def init_db():
         cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ativo';")
         cur.execute("UPDATE empresa SET status = 'ativo' WHERE status IS NULL;")
         cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS cpf_representante TEXT;")
+        cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS bolsa_padrao REAL;")
+        cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS aux_transporte_padrao REAL;")
+        cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS bolsa_tipo TEXT DEFAULT 'mensal';")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS semestre INTEGER;")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS tipo_ensino TEXT DEFAULT 'superior';")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS matricula TEXT;")
@@ -797,13 +800,16 @@ def empresa_nova():
     if request.method == 'POST':
         emp_id = _ins("""INSERT INTO empresa
                 (nome,cnpj,endereco,cidade,telefone,email,ramo,
-                 representante,cargo_representante,cpf_representante)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                 representante,cargo_representante,cpf_representante,
+                 bolsa_padrao,aux_transporte_padrao)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['nome'], request.form.get('cnpj'),
               request.form.get('endereco'), request.form.get('cidade', 'Vitória da Conquista'),
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('ramo'), request.form.get('representante'),
-              request.form.get('cargo_representante'), request.form.get('cpf_representante')))
+              request.form.get('cargo_representante'), request.form.get('cpf_representante'),
+              request.form.get('bolsa_padrao') or None,
+              request.form.get('aux_transporte_padrao') or None))
         for i, nome_sup in enumerate(request.form.getlist('sup_nome[]')):
             if nome_sup.strip():
                 cargos = request.form.getlist('sup_cargo[]')
@@ -827,12 +833,15 @@ def empresa_editar(id):
     if request.method == 'POST':
         _run("""UPDATE empresa SET
                 nome=%s,cnpj=%s,endereco=%s,cidade=%s,telefone=%s,email=%s,ramo=%s,
-                representante=%s,cargo_representante=%s,cpf_representante=%s WHERE id=%s""",
+                representante=%s,cargo_representante=%s,cpf_representante=%s,
+                bolsa_padrao=%s,aux_transporte_padrao=%s WHERE id=%s""",
              (request.form['nome'], request.form.get('cnpj'),
               request.form.get('endereco'), request.form.get('cidade'),
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('ramo'), request.form.get('representante'),
-              request.form.get('cargo_representante'), request.form.get('cpf_representante'), id))
+              request.form.get('cargo_representante'), request.form.get('cpf_representante'),
+              request.form.get('bolsa_padrao') or None,
+              request.form.get('aux_transporte_padrao') or None, id))
         _run("DELETE FROM empresa_supervisor WHERE empresa_id = %s", (id,))
         for i, nome_sup in enumerate(request.form.getlist('sup_nome[]')):
             if nome_sup.strip():
@@ -1010,9 +1019,9 @@ def contrato_novo():
                 (estagiario_id,empresa_id,ie_id,orientador,
                  supervisor_nome,supervisor_cargo,supervisor_registro,
                  curso,tipo_estagio,area_atuacao,ch_diaria,ch_semanal,
-                 data_inicio,data_fim,numero_contrato,bolsa,taxa,aux_transporte,atividades,obs,
-                 jornada,data_encerramento,ie_professor_id)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                 data_inicio,data_fim,numero_contrato,bolsa,bolsa_tipo,taxa,aux_transporte,
+                 atividades,obs,jornada,data_encerramento,ie_professor_id)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['estagiario_id'], request.form['empresa_id'], request.form['ie_id'],
               request.form.get('orientador', 'Salmo Lima Costa'),
               request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
@@ -1023,6 +1032,7 @@ def contrato_novo():
               request.form['data_inicio'], request.form['data_fim'],
               request.form.get('numero_contrato'),
               request.form.get('bolsa') or None,
+              request.form.get('bolsa_tipo', 'mensal'),
               request.form.get('taxa') or None,
               request.form.get('aux_transporte') or None,
               ats, request.form.get('obs'), _build_jornada_json(),
@@ -1055,9 +1065,9 @@ def contrato_editar(id):
                 estagiario_id=%s,empresa_id=%s,ie_id=%s,orientador=%s,
                 supervisor_nome=%s,supervisor_cargo=%s,supervisor_registro=%s,
                 curso=%s,tipo_estagio=%s,area_atuacao=%s,ch_diaria=%s,ch_semanal=%s,
-                data_inicio=%s,data_fim=%s,numero_contrato=%s,bolsa=%s,taxa=%s,
-                aux_transporte=%s,atividades=%s,obs=%s,jornada=%s,data_encerramento=%s,
-                ie_professor_id=%s WHERE id=%s""",
+                data_inicio=%s,data_fim=%s,numero_contrato=%s,bolsa=%s,bolsa_tipo=%s,
+                taxa=%s,aux_transporte=%s,atividades=%s,obs=%s,jornada=%s,
+                data_encerramento=%s,ie_professor_id=%s WHERE id=%s""",
              (request.form['estagiario_id'], request.form['empresa_id'], request.form['ie_id'],
               request.form.get('orientador'),
               request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
@@ -1068,6 +1078,7 @@ def contrato_editar(id):
               request.form['data_inicio'], request.form['data_fim'],
               request.form.get('numero_contrato'),
               request.form.get('bolsa') or None,
+              request.form.get('bolsa_tipo', 'mensal'),
               request.form.get('taxa') or None,
               request.form.get('aux_transporte') or None,
               ats, request.form.get('obs'), _build_jornada_json(),
@@ -1164,6 +1175,7 @@ def _doc_ctx(id):
         'data_encerramento': enc_str,
         'numero_contrato': c['numero_contrato'],
         'bolsa': c['bolsa'],
+        'bolsa_tipo': c.get('bolsa_tipo') or 'mensal',
         'bolsa_extenso': num_extenso(c['bolsa']) if c['bolsa'] else '',
         'taxa': c['taxa'],
         'aux_transporte': c['aux_transporte'],
