@@ -199,6 +199,7 @@ def init_db():
         cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ativo';")
         cur.execute("UPDATE empresa SET status = 'ativo' WHERE status IS NULL;")
         cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS cpf_representante TEXT;")
+        cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS nome_fantasia TEXT;")
         cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS bolsa_padrao REAL;")
         cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS aux_transporte_padrao REAL;")
         cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS bolsa_tipo TEXT DEFAULT 'mensal';")
@@ -781,16 +782,16 @@ def estagiario_excluir(id):
 @login_required
 def empresas():
     q = request.args.get('q', '')
+    base_sql = """SELECT emp.*,
+                 (SELECT COUNT(*) FROM contrato WHERE empresa_id = emp.id) qtd_contratos,
+                 (SELECT COUNT(*) FROM empresa_supervisor WHERE empresa_id = emp.id) qtd_supervisores,
+                 (SELECT nome FROM empresa_supervisor WHERE empresa_id = emp.id ORDER BY ordem, id LIMIT 1) primeiro_supervisor
+                 FROM empresa emp WHERE emp.status = 'ativo'"""
     if q:
-        rows = _q("""SELECT emp.*,
-                     (SELECT COUNT(*) FROM contrato WHERE empresa_id = emp.id) qtd_contratos
-                     FROM empresa emp
-                     WHERE (emp.nome ILIKE %s OR emp.cnpj ILIKE %s) AND emp.status = 'ativo' ORDER BY emp.nome""",
-                  (f'%{q}%', f'%{q}%'))
+        rows = _q(base_sql + " AND (emp.nome ILIKE %s OR emp.cnpj ILIKE %s OR emp.nome_fantasia ILIKE %s) ORDER BY emp.nome",
+                  (f'%{q}%', f'%{q}%', f'%{q}%'))
     else:
-        rows = _q("""SELECT emp.*,
-                     (SELECT COUNT(*) FROM contrato WHERE empresa_id = emp.id) qtd_contratos
-                     FROM empresa emp WHERE emp.status = 'ativo' ORDER BY emp.nome""")
+        rows = _q(base_sql + " ORDER BY emp.nome")
     return render_template('empresas/lista.html', empresas=rows, q=q)
 
 
@@ -799,11 +800,12 @@ def empresas():
 def empresa_nova():
     if request.method == 'POST':
         emp_id = _ins("""INSERT INTO empresa
-                (nome,cnpj,endereco,cidade,telefone,email,ramo,
+                (nome,nome_fantasia,cnpj,endereco,cidade,telefone,email,ramo,
                  representante,cargo_representante,cpf_representante,
                  bolsa_padrao,aux_transporte_padrao)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-             (request.form['nome'], request.form.get('cnpj'),
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+             (request.form['nome'], request.form.get('nome_fantasia') or None,
+              request.form.get('cnpj'),
               request.form.get('endereco'), request.form.get('cidade', 'Vitória da Conquista'),
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('ramo'), request.form.get('representante'),
@@ -832,10 +834,11 @@ def empresa_editar(id):
         abort(404)
     if request.method == 'POST':
         _run("""UPDATE empresa SET
-                nome=%s,cnpj=%s,endereco=%s,cidade=%s,telefone=%s,email=%s,ramo=%s,
+                nome=%s,nome_fantasia=%s,cnpj=%s,endereco=%s,cidade=%s,telefone=%s,email=%s,ramo=%s,
                 representante=%s,cargo_representante=%s,cpf_representante=%s,
                 bolsa_padrao=%s,aux_transporte_padrao=%s WHERE id=%s""",
-             (request.form['nome'], request.form.get('cnpj'),
+             (request.form['nome'], request.form.get('nome_fantasia') or None,
+              request.form.get('cnpj'),
               request.form.get('endereco'), request.form.get('cidade'),
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('ramo'), request.form.get('representante'),
