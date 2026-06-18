@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% block title %}Contratos{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold mb-0"><i class="bi bi-file-earmark-text me-2"></i>Contratos</h4>
-  <a href="{{ url_for('contrato_novo') }}" class="btn btn-primary">
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-bold mb-0"><i class="bi bi-file-earmark-text me-2"></i>Contratos</h5>
+  <a href="{{ url_for('contrato_novo') }}" class="btn btn-sm btn-primary">
     <i class="bi bi-plus-lg me-1"></i>Novo Contrato
   </a>
 </div>
@@ -33,52 +33,52 @@
 
 <div class="card">
   <div class="card-body p-0">
-    <table class="table table-hover mb-0">
-      <thead class="table-light">
+    <table class="table table-hover table-sm mb-0" style="font-size:0.76rem">
+      <thead class="table-light" style="font-size:0.71rem">
         <tr><th>Estagiário</th><th>Empresa</th><th>Curso/IE</th><th>Vigência</th><th>Bolsa</th><th>Situação</th><th>Docs</th><th></th></tr>
       </thead>
       <tbody>
       {% for c in contratos %}
       {% set st = calcular_status(c.effective_data_fim) %}
       <tr>
-        <td class="fw-semibold">{{ c.est_nome }}</td>
-        <td>{{ c.emp_nome }}</td>
-        <td>
-          <small class="text-muted">{{ c.curso or '' }}</small><br>
-          <small>{{ c.ie_sigla or c.ie_nome or '—' }}</small>
+        <td class="fw-semibold align-middle">{{ c.est_nome }}</td>
+        <td class="align-middle">{{ c.emp_nome }}</td>
+        <td class="align-middle">
+          <span class="text-muted">{{ c.curso or '' }}</span><br>
+          <span>{{ c.ie_sigla or c.ie_nome or '—' }}</span>
         </td>
-        <td class="text-nowrap">
-          <small>{{ fmt_date(c.data_inicio) }}</small><br>
-          <small>{{ fmt_date(c.effective_data_fim) }}</small>
-          {% if c.data_encerramento %}<br><small class="text-danger fst-italic">enc. antecipado</small>
-          {% elif c.effective_data_fim != c.data_fim %}<br><small class="text-muted fst-italic">c/ aditivo</small>{% endif %}
+        <td class="text-nowrap align-middle">
+          {{ fmt_date(c.data_inicio) }}<br>
+          {{ fmt_date(c.effective_data_fim) }}
+          {% if c.data_encerramento %}<br><span class="text-danger fst-italic">enc. antecipado</span>
+          {% elif c.effective_data_fim != c.data_fim %}<br><span class="text-muted fst-italic">c/ aditivo</span>{% endif %}
         </td>
-        <td>R$ {{ '%.2f'|format(c.bolsa or 0) }}</td>
-        <td>
-          {% if c.data_encerramento %}<span class="badge bg-secondary">ENCERRADO</span>
-          {% elif 'DIAS' in st %}<span class="badge badge-vencendo">{{ st }}</span>
-          {% elif st == 'VENCIDO' %}<span class="badge badge-vencido">VENCIDO</span>
-          {% else %}<span class="badge badge-ativo">ATIVO</span>{% endif %}
+        <td class="align-middle text-nowrap">R$ {{ '%.2f'|format(c.bolsa or 0) }}</td>
+        <td class="align-middle">
+          {% if c.data_encerramento %}<span class="badge bg-secondary" style="font-size:.65rem">ENCERRADO</span>
+          {% elif 'DIAS' in st %}<span class="badge badge-vencendo" style="font-size:.65rem">{{ st }}</span>
+          {% elif st == 'VENCIDO' %}<span class="badge badge-vencido" style="font-size:.65rem">VENCIDO</span>
+          {% else %}<span class="badge badge-ativo" style="font-size:.65rem">ATIVO</span>{% endif %}
         </td>
-        <td>
+        <td class="align-middle">
           <div class="d-flex gap-1 flex-wrap">
-            <a href="{{ url_for('doc_tce', id=c.id) }}" class="btn btn-sm btn-outline-primary btn-doc" target="_blank">TCE</a>
-            <a href="{{ url_for('doc_plano', id=c.id) }}" class="btn btn-sm btn-outline-success btn-doc" target="_blank">Plano</a>
-            <a href="{{ url_for('doc_ciencia', id=c.id) }}" class="btn btn-sm btn-outline-info btn-doc" target="_blank">Ciência</a>
-            <a href="{{ url_for('doc_tre', id=c.id) }}" class="btn btn-sm btn-outline-warning btn-doc" target="_blank">TRE</a>
-            <a href="{{ url_for('doc_relatorio', id=c.id) }}" class="btn btn-sm btn-outline-secondary btn-doc" target="_blank">Rel.</a>
-            <button class="btn btn-sm btn-outline-dark btn-doc btn-aditivo"
+            <a href="{{ url_for('doc_tce', id=c.id) }}" class="btn btn-outline-primary btn-doc" style="font-size:.68rem;padding:2px 6px" target="_blank">TCE</a>
+            <a href="{{ url_for('doc_plano', id=c.id) }}" class="btn btn-outline-success btn-doc" style="font-size:.68rem;padding:2px 6px" target="_blank">Plano</a>
+            <a href="{{ url_for('doc_ciencia', id=c.id) }}" class="btn btn-outline-info btn-doc" style="font-size:.68rem;padding:2px 6px" target="_blank">Ciência</a>
+            <a href="{{ url_for('doc_tre', id=c.id) }}" class="btn btn-outline-warning btn-doc" style="font-size:.68rem;padding:2px 6px" target="_blank">TRE</a>
+            <a href="{{ url_for('doc_relatorio', id=c.id) }}" class="btn btn-outline-secondary btn-doc" style="font-size:.68rem;padding:2px 6px" target="_blank">Rel.</a>
+            <button class="btn btn-outline-dark btn-doc btn-aditivo" style="font-size:.68rem;padding:2px 6px"
                     data-id="{{ c.id }}" data-bs-toggle="modal" data-bs-target="#modal-aditivo-lista">Adi.</button>
           </div>
         </td>
-        <td>
-          <a href="{{ url_for('contrato_editar', id=c.id) }}" class="btn btn-sm btn-outline-secondary">
+        <td class="align-middle">
+          <a href="{{ url_for('contrato_editar', id=c.id) }}" class="btn btn-outline-secondary" style="font-size:.68rem;padding:2px 6px">
             <i class="bi bi-pencil"></i>
           </a>
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="8" class="text-center text-muted py-5">
+      <tr><td colspan="8" class="text-center text-muted py-4" style="font-size:0.8rem">
         {% if q or status %}Nenhum contrato encontrado com os filtros aplicados.
         {% else %}Nenhum contrato cadastrado. <a href="{{ url_for('contrato_novo') }}">Criar o primeiro</a>{% endif %}
       </td></tr>
