@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
 {% block title %}Empresas{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold mb-0"><i class="bi bi-building me-2"></i>Empresas</h4>
-  <a href="{{ url_for('empresa_nova') }}" class="btn btn-primary">
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-bold mb-0"><i class="bi bi-building me-2"></i>Empresas</h5>
+  <a href="{{ url_for('empresa_nova') }}" class="btn btn-sm btn-primary">
     <i class="bi bi-plus-lg me-1"></i>Nova Empresa
   </a>
 </div>
 
-<div class="card mb-3">
+<div class="card mb-2">
   <div class="card-body py-2">
     <form method="get" class="row g-2 align-items-center">
       <div class="col-md-6">
-        <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Buscar por nome ou CNPJ...">
+        <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Buscar por razão social, nome fantasia ou CNPJ...">
       </div>
       <div class="col-auto">
         <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-search me-1"></i>Buscar</button>
@@ -24,26 +24,46 @@
 
 <div class="card">
   <div class="card-body p-0">
-    <table class="table table-hover mb-0">
-      <thead class="table-light">
-        <tr><th>Razão Social</th><th>CNPJ</th><th>Cidade</th><th>Supervisor Padrão</th><th>Contratos</th><th></th></tr>
+    <table class="table table-hover table-sm mb-0" style="font-size:0.78rem">
+      <thead class="table-light" style="font-size:0.73rem">
+        <tr>
+          <th style="width:28%">Razão Social</th>
+          <th style="width:16%">Nome Fantasia</th>
+          <th style="width:14%">CNPJ</th>
+          <th style="width:12%">Cidade</th>
+          <th style="width:18%">Supervisores</th>
+          <th style="width:5%" class="text-center">TCEs</th>
+          <th style="width:7%"></th>
+        </tr>
       </thead>
       <tbody>
       {% for emp in empresas %}
       <tr>
-        <td class="fw-semibold">{{ emp.nome }}</td>
-        <td><code>{{ emp.cnpj or '—' }}</code></td>
-        <td>{{ emp.cidade or '—' }}</td>
-        <td>{{ emp.supervisor_nome or '—' }}</td>
-        <td><span class="badge bg-light text-dark border">{{ emp.qtd_contratos }}</span></td>
-        <td class="text-end">
-          <a href="{{ url_for('empresa_editar', id=emp.id) }}" class="btn btn-sm btn-outline-secondary">
+        <td class="fw-semibold align-middle">{{ emp.nome }}</td>
+        <td class="text-muted align-middle">{{ emp.nome_fantasia or '—' }}</td>
+        <td class="align-middle"><code style="font-size:0.72rem">{{ emp.cnpj or '—' }}</code></td>
+        <td class="align-middle">{{ emp.cidade or '—' }}</td>
+        <td class="align-middle">
+          {% if emp.qtd_supervisores and emp.qtd_supervisores > 0 %}
+            {{ emp.primeiro_supervisor }}
+            {% if emp.qtd_supervisores > 1 %}
+              <span class="badge bg-secondary ms-1" style="font-size:0.65rem">+{{ emp.qtd_supervisores - 1 }}</span>
+            {% endif %}
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td class="text-center align-middle">
+          <span class="badge bg-light text-dark border">{{ emp.qtd_contratos }}</span>
+        </td>
+        <td class="text-end align-middle">
+          <a href="{{ url_for('empresa_editar', id=emp.id) }}" class="btn btn-xs btn-outline-secondary" style="padding:2px 7px;font-size:0.72rem">
             <i class="bi bi-pencil"></i>
           </a>
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="6" class="text-center text-muted py-5">
+      <tr><td colspan="7" class="text-center text-muted py-4" style="font-size:0.8rem">
         {% if q %}Nenhum resultado para "{{ q }}".{% else %}Nenhuma empresa cadastrada ainda.{% endif %}
       </td></tr>
       {% endfor %}
@@ -51,4 +71,5 @@
     </table>
   </div>
 </div>
+<div class="text-muted mt-2" style="font-size:0.72rem">{{ empresas|length }} empresa(s) encontrada(s)</div>
 {% endblock %}
