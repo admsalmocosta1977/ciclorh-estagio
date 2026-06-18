@@ -47,6 +47,8 @@
     {% if d.aux_transporte %}<tr><td class="label">Auxílio Transporte:</td><td>R$ {{ '%.2f'|format(d.aux_transporte) }} / dia</td></tr>{% endif %}
   </table>
 
+  <p>Declaro ainda ter recebido, nesta data, os documentos de estágio devidamente assinados pela Parte Concedente — <span class="destaque">{{ d.emp_nome }}</span> — e estar ciente de que é de minha exclusiva responsabilidade apresentar a via correspondente à <span class="destaque">{{ d.ie_nome }}</span> para coleta das assinaturas da Instituição de Ensino, no prazo adequado ao início do estágio.</p>
+
   <p>Declaro ainda estar ciente de que:</p>
   <p>I — O estágio não cria vínculo empregatício de qualquer natureza, nos termos do art. 3.º da Lei n.º 11.788/2008;</p>
   <p>II — Devo cumprir as normas internas da Parte Concedente e manter sigilo sobre informações confidenciais a que tiver acesso;</p>
