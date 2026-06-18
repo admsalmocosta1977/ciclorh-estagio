@@ -20,6 +20,8 @@
   .assinaturas { display: flex; justify-content: space-between; gap: 12px; margin-top: 28px; }
   .assinatura-bloco { flex: 1; text-align: center; }
   .assinatura-linha { border-top: 1px solid #000; padding-top: 4px; }
+  .assinatura-img { height: 80px; display: block; margin: 0 auto 4px; object-fit: contain; }
+  .assinatura-agente { text-align: center; margin-top: 18px; }
   .rodape { font-size: 8pt; color: #555; text-align: center; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 6px; }
   @media print { .no-print { display: none !important; } .page { padding: 15mm 18mm 12mm; } }
 </style>
@@ -78,14 +80,15 @@
       <div class="assinatura-linha">
         <strong>Parte Concedente</strong><br>
         <small>{{ d.emp_nome }}</small><br>
-        <small>{{ d.emp_representante or '' }}</small>
+        <small>{{ d.emp_representante or '' }}{% if d.emp_cargo_rep %} — {{ d.emp_cargo_rep }}{% endif %}</small>
       </div>
     </div>
     <div class="assinatura-bloco">
       <div class="assinatura-linha">
         <strong>Instituição de Ensino</strong><br>
         <small>{{ d.ie_nome }}</small><br>
-        <small>{{ d.ie_coordenador or '' }}</small>
+        <small>{{ d.ie_signatario_nome or '' }}{% if d.ie_signatario_cargo %} — {{ d.ie_signatario_cargo }}{% endif %}</small>
+        {% if d.ie_signatario_tipo %}<br><em style="font-size:7.5pt">{{ d.ie_signatario_tipo }}</em>{% endif %}
       </div>
     </div>
     <div class="assinatura-bloco">
@@ -95,6 +98,12 @@
         <small>CPF: {{ d.est_cpf }}</small>
       </div>
     </div>
+  </div>
+
+  <div class="assinatura-agente">
+    <img src="{{ url_for('static', filename='assinatura_ciclorh.jpg') }}" class="assinatura-img">
+    <strong>{{ agente.nome }}</strong><br>
+    <small>{{ agente.representante }} — {{ agente.cargo }} — CNPJ: {{ agente.cnpj }}</small>
   </div>
 
   <div class="rodape">
