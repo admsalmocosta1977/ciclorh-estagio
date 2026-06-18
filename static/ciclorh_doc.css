@@ -1,0 +1,57 @@
+/* ── Identidade Visual Ciclo RH — Documentos ───────────────────────────── */
+
+/* Cabeçalho com logo */
+.doc-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 6px;
+}
+.doc-logo {
+  height: 54px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.doc-cab-info {
+  flex: 1;
+  text-align: right;
+}
+.doc-cab-nome {
+  display: block;
+  font-size: 11pt;
+  font-weight: bold;
+  color: #0d1f3c;
+  letter-spacing: 0.2px;
+}
+.doc-cab-sub {
+  display: block;
+  font-size: 7.5pt;
+  color: #555;
+  margin-top: 2px;
+  font-style: italic;
+}
+.doc-cab-contato {
+  display: block;
+  font-size: 7.5pt;
+  color: #888;
+  margin-top: 1px;
+}
+
+/* Faixa gradiente de identidade */
+.doc-stripe {
+  height: 3px;
+  background: linear-gradient(90deg, #0d1f3c 0%, #1565d8 52%, #7b2ff7 100%);
+  border-radius: 2px;
+  margin-bottom: 16px;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Garante que a faixa imprima com cor */
+@media print {
+  .doc-stripe {
+    background: linear-gradient(90deg, #0d1f3c 0%, #1565d8 52%, #7b2ff7 100%) !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
