@@ -97,6 +97,20 @@ def _ins(sql, params=()):
         return cur.fetchone()['id']
 
 
+def _log(acao, entidade, entidade_id=None, descricao=''):
+    try:
+        uid = current_user.id if current_user.is_authenticated else None
+        unome = (current_user.nome or current_user.username) if current_user.is_authenticated else 'Sistema'
+        _run(
+            "INSERT INTO log_auditoria (usuario_id, usuario_nome, acao, entidade, entidade_id, descricao)"
+            " VALUES (%s, %s, %s, %s, %s, %s)",
+            (uid, unome, acao, entidade, entidade_id, descricao)
+        )
+        _run("DELETE FROM log_auditoria WHERE created_at < NOW() - INTERVAL '365 days'")
+    except Exception:
+        pass
+
+
 def init_db():
     url = DATABASE_URL
     if url.startswith('postgres://'):
@@ -200,6 +214,17 @@ def init_db():
         CREATE TABLE IF NOT EXISTS config (
             chave TEXT PRIMARY KEY,
             valor TEXT
+        )""")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS log_auditoria (
+            id SERIAL PRIMARY KEY,
+            created_at TIMESTAMP DEFAULT NOW(),
+            usuario_id INTEGER,
+            usuario_nome TEXT,
+            acao TEXT NOT NULL,
+            entidade TEXT NOT NULL,
+            entidade_id INTEGER,
+            descricao TEXT
         )""")
         for chave in ['seg_seguradora', 'seg_apolice', 'seg_coberturas', 'seg_vigencia']:
             cur.execute(
@@ -507,6 +532,7 @@ def login():
         if row and check_password_hash(row['password_hash'], senha):
             user = User(row['id'], row['username'], row['nome'], row['role'])
             login_user(user, remember=True)
+            _log('login', 'sistema', None, f'Login: {username}')
             return redirect(request.args.get('next') or url_for('index'))
         flash('Usuário ou senha incorretos.', 'danger')
     return render_template('auth/login.html')
@@ -515,6 +541,7 @@ def login():
 @app.route('/logout')
 @login_required
 def logout():
+    _log('logout', 'sistema', None, f'Logout: {current_user.username}')
     logout_user()
     return redirect(url_for('login'))
 
@@ -542,6 +569,7 @@ def admin_usuario_novo():
             try:
                 _ins("INSERT INTO usuario (username, password_hash, nome, role) VALUES (%s, %s, %s, %s)",
                      (username, generate_password_hash(senha), nome, role))
+                _log('criar', 'usuario', None, f'Criou usuário: {username} ({role})')
                 flash(f'Usuário "{username}" criado!', 'success')
                 return redirect(url_for('admin_usuarios'))
             except psycopg2.errors.UniqueViolation:
@@ -566,6 +594,7 @@ def admin_usuario_editar(id):
                 return render_template('admin/usuario_form.html', u=u)
             _run("UPDATE usuario SET password_hash = %s WHERE id = %s",
                  (generate_password_hash(senha), id))
+        _log('editar', 'usuario', id, f'Editou usuário ID {id} ({u["username"]})')
         flash('Usuário atualizado!', 'success')
         return redirect(url_for('admin_usuarios'))
     return render_template('admin/usuario_form.html', u=u)
@@ -577,7 +606,9 @@ def admin_usuario_excluir(id):
     if str(id) == current_user.id:
         flash('Você não pode excluir sua própria conta.', 'danger')
         return redirect(url_for('admin_usuarios'))
+    reg = _q("SELECT username FROM usuario WHERE id = %s", (id,), one=True)
     _run("DELETE FROM usuario WHERE id = %s", (id,))
+    _log('excluir', 'usuario', id, f'Excluiu usuário: {reg["username"] if reg else id}')
     flash('Usuário excluído.', 'warning')
     return redirect(url_for('admin_usuarios'))
 
@@ -667,6 +698,7 @@ def estagiario_novo():
                   request.form.get('tipo_ensino', 'superior'),
                   request.form.get('semestre') or None,
                   request.form.get('matricula') or None))
+            _log('criar', 'estagiario', None, f'Criou estagiário: {request.form["nome"]} (CPF: {request.form["cpf"]})')
             flash('Estagiário cadastrado!', 'success')
             return redirect(url_for('estagiarios'))
         except psycopg2.errors.UniqueViolation:
@@ -695,6 +727,7 @@ def estagiario_editar(id):
               request.form.get('semestre') or None,
               request.form.get('matricula') or None,
               id))
+        _log('editar', 'estagiario', id, f'Editou estagiário: {request.form["nome"]}')
         flash('Atualizado!', 'success')
         return redirect(url_for('estagiarios'))
     return render_template('estagiarios/form.html', e=e)
@@ -703,7 +736,9 @@ def estagiario_editar(id):
 @app.route('/estagiarios/<int:id>/excluir')
 @login_required
 def estagiario_excluir(id):
+    reg = _q("SELECT nome FROM estagiario WHERE id = %s", (id,), one=True)
     _run("DELETE FROM estagiario WHERE id = %s", (id,))
+    _log('excluir', 'estagiario', id, f'Excluiu estagiário: {reg["nome"] if reg else id}')
     flash('Excluído.', 'warning')
     return redirect(url_for('estagiarios'))
 
@@ -742,6 +777,7 @@ def empresa_nova():
               request.form.get('cargo_representante'), request.form.get('cpf_representante'),
               request.form.get('supervisor_nome'),
               request.form.get('supervisor_cargo'), request.form.get('supervisor_registro')))
+        _log('criar', 'empresa', None, f'Criou empresa: {request.form["nome"]}')
         flash('Empresa cadastrada!', 'success')
         return redirect(url_for('empresas'))
     return render_template('empresas/form.html', emp=None)
@@ -765,6 +801,7 @@ def empresa_editar(id):
               request.form.get('cargo_representante'), request.form.get('cpf_representante'),
               request.form.get('supervisor_nome'),
               request.form.get('supervisor_cargo'), request.form.get('supervisor_registro'), id))
+        _log('editar', 'empresa', id, f'Editou empresa: {request.form["nome"]}')
         flash('Atualizada!', 'success')
         return redirect(url_for('empresas'))
     return render_template('empresas/form.html', emp=emp)
@@ -773,7 +810,9 @@ def empresa_editar(id):
 @app.route('/empresas/<int:id>/excluir')
 @login_required
 def empresa_excluir(id):
+    reg = _q("SELECT nome FROM empresa WHERE id = %s", (id,), one=True)
     _run("DELETE FROM empresa WHERE id = %s", (id,))
+    _log('excluir', 'empresa', id, f'Excluiu empresa: {reg["nome"] if reg else id}')
     flash('Excluída.', 'warning')
     return redirect(url_for('empresas'))
 
@@ -806,6 +845,7 @@ def ie_nova():
               request.form.get('endereco'), request.form.get('cidade', 'Vitória da Conquista'),
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('coordenador'), request.form.get('coordenador_cargo')))
+        _log('criar', 'ie', None, f'Criou instituição: {request.form["nome"]}')
         flash('Instituição cadastrada!', 'success')
         return redirect(url_for('ies'))
     return render_template('ies/form.html', ie=None)
@@ -824,6 +864,7 @@ def ie_editar(id):
               request.form.get('endereco'), request.form.get('cidade'),
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('coordenador'), request.form.get('coordenador_cargo'), id))
+        _log('editar', 'ie', id, f'Editou instituição: {request.form["nome"]}')
         flash('Atualizada!', 'success')
         return redirect(url_for('ies'))
     return render_template('ies/form.html', ie=ie)
@@ -832,7 +873,9 @@ def ie_editar(id):
 @app.route('/ies/<int:id>/excluir')
 @login_required
 def ie_excluir(id):
+    reg = _q("SELECT nome FROM ie WHERE id = %s", (id,), one=True)
     _run("DELETE FROM ie WHERE id = %s", (id,))
+    _log('excluir', 'ie', id, f'Excluiu instituição: {reg["nome"] if reg else id}')
     flash('Excluída.', 'warning')
     return redirect(url_for('ies'))
 
@@ -904,6 +947,9 @@ def contrato_novo():
               request.form.get('aux_transporte') or None,
               ats, request.form.get('obs'), _build_jornada_json(),
               request.form.get('data_encerramento') or None))
+        _log('criar', 'contrato', None,
+             f'Criou contrato: estagiário {request.form["estagiario_id"]} / empresa {request.form["empresa_id"]}'
+             f' ({request.form["data_inicio"]} a {request.form["data_fim"]})')
         flash('Contrato criado!', 'success')
         return redirect(url_for('contratos'))
     estagiarios = _q("SELECT * FROM estagiario WHERE status='ativo' ORDER BY nome")
@@ -942,6 +988,7 @@ def contrato_editar(id):
               request.form.get('aux_transporte') or None,
               ats, request.form.get('obs'), _build_jornada_json(),
               request.form.get('data_encerramento') or None, id))
+        _log('editar', 'contrato', id, f'Editou contrato ID {id}')
         flash('Contrato atualizado!', 'success')
         return redirect(url_for('contratos'))
     estagiarios = _q("SELECT * FROM estagiario WHERE status='ativo' ORDER BY nome")
@@ -956,7 +1003,12 @@ def contrato_editar(id):
 @app.route('/contratos/<int:id>/excluir')
 @login_required
 def contrato_excluir(id):
+    info = _q("""SELECT e.nome est, emp.nome emp FROM contrato c
+                 JOIN estagiario e ON e.id = c.estagiario_id
+                 JOIN empresa emp ON emp.id = c.empresa_id WHERE c.id = %s""", (id,), one=True)
     _run("DELETE FROM contrato WHERE id = %s", (id,))
+    desc = f'Excluiu contrato: {info["est"]} @ {info["emp"]}' if info else f'Excluiu contrato ID {id}'
+    _log('excluir', 'contrato', id, desc)
     flash('Excluído.', 'warning')
     return redirect(url_for('contratos'))
 
@@ -1138,6 +1190,7 @@ def doc_aditivo_registrar(id):
     _ins("INSERT INTO aditivo (contrato_id, nova_data_fim, clausulas) VALUES (%s, %s, %s)",
          (id, nova_data_fim, json.dumps(clausulas, ensure_ascii=False)))
     numero = _q("SELECT COUNT(*) as n FROM aditivo WHERE contrato_id = %s", (id,), one=True)['n']
+    _log('criar', 'aditivo', id, f'Gerou {numero}º aditivo do contrato ID {id}')
     return jsonify({'ok': True, 'numero': numero})
 
 
@@ -1175,6 +1228,7 @@ def admin_config():
             valor = request.form.get(chave, '').strip()
             _run("INSERT INTO config (chave, valor) VALUES (%s, %s) ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor",
                  (chave, valor))
+        _log('editar', 'config', None, 'Editou configurações de seguro')
         flash('Configurações salvas!', 'success')
         return redirect(url_for('admin_config'))
     cfg = _get_config()
@@ -1303,7 +1357,9 @@ def admin_pendentes():
 @app.route('/admin/pendentes/estagiario/<int:id>/aprovar')
 @admin_required
 def aprovar_estagiario(id):
+    reg = _q("SELECT nome FROM estagiario WHERE id = %s", (id,), one=True)
     _run("UPDATE estagiario SET status='ativo' WHERE id=%s", (id,))
+    _log('aprovar', 'estagiario', id, f'Aprovou estagiário: {reg["nome"] if reg else id}')
     flash('Estagiário aprovado com sucesso!', 'success')
     return redirect(url_for('admin_pendentes'))
 
@@ -1311,7 +1367,9 @@ def aprovar_estagiario(id):
 @app.route('/admin/pendentes/empresa/<int:id>/aprovar')
 @admin_required
 def aprovar_empresa(id):
+    reg = _q("SELECT nome FROM empresa WHERE id = %s", (id,), one=True)
     _run("UPDATE empresa SET status='ativo' WHERE id=%s", (id,))
+    _log('aprovar', 'empresa', id, f'Aprovou empresa: {reg["nome"] if reg else id}')
     flash('Empresa aprovada com sucesso!', 'success')
     return redirect(url_for('admin_pendentes'))
 
@@ -1319,7 +1377,9 @@ def aprovar_empresa(id):
 @app.route('/admin/pendentes/estagiario/<int:id>/rejeitar')
 @admin_required
 def rejeitar_estagiario(id):
+    reg = _q("SELECT nome FROM estagiario WHERE id = %s AND status='pendente'", (id,), one=True)
     _run("DELETE FROM estagiario WHERE id=%s AND status='pendente'", (id,))
+    _log('rejeitar', 'estagiario', id, f'Rejeitou estagiário: {reg["nome"] if reg else id}')
     flash('Cadastro rejeitado e removido.', 'warning')
     return redirect(url_for('admin_pendentes'))
 
@@ -1327,9 +1387,40 @@ def rejeitar_estagiario(id):
 @app.route('/admin/pendentes/empresa/<int:id>/rejeitar')
 @admin_required
 def rejeitar_empresa(id):
+    reg = _q("SELECT nome FROM empresa WHERE id = %s AND status='pendente'", (id,), one=True)
     _run("DELETE FROM empresa WHERE id=%s AND status='pendente'", (id,))
+    _log('rejeitar', 'empresa', id, f'Rejeitou empresa: {reg["nome"] if reg else id}')
     flash('Cadastro rejeitado e removido.', 'warning')
     return redirect(url_for('admin_pendentes'))
+
+
+# ─── ADMIN — LOG DE AUDITORIA ─────────────────────────────────────────────────
+
+@app.route('/admin/log')
+@admin_required
+def admin_log():
+    periodo = request.args.get('periodo', '30')
+    entidade = request.args.get('entidade', '')
+    uid_filtro = request.args.get('usuario_id', '')
+    try:
+        dias = int(periodo)
+    except ValueError:
+        dias = 30
+    dt_from = datetime.now() - timedelta(days=dias)
+    sql = """SELECT l.*, TO_CHAR(l.created_at, 'DD/MM/YYYY HH24:MI:SS') as dt_fmt
+             FROM log_auditoria l WHERE l.created_at >= %s"""
+    params = [dt_from]
+    if entidade:
+        sql += " AND l.entidade = %s"
+        params.append(entidade)
+    if uid_filtro:
+        sql += " AND l.usuario_id = %s"
+        params.append(uid_filtro)
+    sql += " ORDER BY l.created_at DESC LIMIT 500"
+    logs = _q(sql, params)
+    usuarios = _q("SELECT id, COALESCE(nome, username) as nome FROM usuario ORDER BY nome")
+    return render_template('admin/log.html', logs=logs, periodo=periodo,
+                           entidade=entidade, usuario_id=uid_filtro, usuarios=usuarios)
 
 
 # ─── ERROS ────────────────────────────────────────────────────────────────────
