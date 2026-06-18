@@ -873,6 +873,8 @@ def contratos():
                 filtered.append(r)
             elif status == 'vencido' and st == 'VENCIDO':
                 filtered.append(r)
+            elif status == 'encerrado' and r.get('data_encerramento'):
+                filtered.append(r)
         rows = filtered
     return render_template('contratos/lista.html', contratos=rows, q=q, status=status)
 
