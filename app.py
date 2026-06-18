@@ -1053,7 +1053,7 @@ def contrato_novo():
         return redirect(url_for('contratos'))
     estagiarios = _q("SELECT * FROM estagiario WHERE status='ativo' ORDER BY nome")
     empresas_list = _q("SELECT * FROM empresa WHERE status='ativo' ORDER BY nome")
-    ies_list = _q("SELECT * FROM ie ORDER BY nome")
+    ies_list = _q("SELECT * FROM ie ORDER BY COALESCE(NULLIF(TRIM(sigla),''), nome)")
     return render_template('contratos/form.html', c=None,
                            estagiarios=estagiarios, empresas=empresas_list, ies=ies_list,
                            aditivos=[])
@@ -1098,7 +1098,7 @@ def contrato_editar(id):
         return redirect(url_for('contratos'))
     estagiarios = _q("SELECT * FROM estagiario WHERE status='ativo' ORDER BY nome")
     empresas_list = _q("SELECT * FROM empresa WHERE status='ativo' ORDER BY nome")
-    ies_list = _q("SELECT * FROM ie ORDER BY nome")
+    ies_list = _q("SELECT * FROM ie ORDER BY COALESCE(NULLIF(TRIM(sigla),''), nome)")
     aditivos = _q("SELECT * FROM aditivo WHERE contrato_id = %s ORDER BY created_at", (id,))
     return render_template('contratos/form.html', c=c,
                            estagiarios=estagiarios, empresas=empresas_list, ies=ies_list,
