@@ -15,7 +15,8 @@
   .assinaturas-2 { display: flex; justify-content: center; gap: 16px; margin-top: 30px; }
   .assinatura-bloco { flex: 1; text-align: center; max-width: 200px; }
   .assinatura-linha { border-top: 1px solid #000; padding-top: 5px; font-size: 9.5pt; line-height: 1.4; }
-  .assinatura-img { height: 58px; display: block; margin: 0 auto 2px; object-fit: contain; }
+  .assinatura-img { height: 80px; display: block; margin: 0 auto 4px; object-fit: contain; }
+  .assinatura-agente { text-align: center; margin-top: 18px; }
   .rodape { font-size: 8pt; color: #555; text-align: center; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 5px; }
   @media print {
     body { print-color-adjust: exact; }
@@ -69,33 +70,32 @@
   <div class="assinaturas">
     <div class="assinatura-bloco">
       <div class="assinatura-linha">
+        <strong>Parte Concedente</strong><br>
+        <small>{{ d.emp_nome }}</small><br>
+        <small>{{ d.emp_representante or '' }}{% if d.emp_cargo_rep %} — {{ d.emp_cargo_rep }}{% endif %}</small>
+      </div>
+    </div>
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
         <strong>Instituição de Ensino</strong><br>
-        <small>{{ d.ie_nome }}</small>
+        <small>{{ d.ie_nome }}</small><br>
+        <small>{{ d.ie_signatario_nome or '' }}{% if d.ie_signatario_cargo %} — {{ d.ie_signatario_cargo }}{% endif %}</small>
+        {% if d.ie_signatario_tipo %}<br><em style="font-size:7.5pt">{{ d.ie_signatario_tipo }}</em>{% endif %}
       </div>
     </div>
     <div class="assinatura-bloco">
       <div class="assinatura-linha">
-        <img src="{{ url_for('static', filename='assinatura_ciclorh.jpg') }}" class="assinatura-img">
-        <strong>{{ agente.nome }}</strong><br>
-        <small>{{ agente.representante }}</small>
-      </div>
-    </div>
-    <div class="assinatura-bloco">
-      <div class="assinatura-linha">
-        <strong>Concedente (carimbo)</strong><br>
-        <small>{{ d.emp_nome }}</small>
-      </div>
-    </div>
-  </div>
-
-  <div class="assinaturas-2">
-    <div class="assinatura-bloco">
-      <div class="assinatura-linha">
-        <strong>Estagiário(a) / Educando(a)</strong><br>
+        <strong>Estagiário(a)</strong><br>
         <small>{{ d.est_nome }}</small><br>
         <small>CPF: {{ d.est_cpf }}</small>
       </div>
     </div>
+  </div>
+
+  <div class="assinatura-agente">
+    <img src="{{ url_for('static', filename='assinatura_ciclorh.jpg') }}" class="assinatura-img">
+    <strong>{{ agente.nome }}</strong><br>
+    <small>{{ agente.representante }} — {{ agente.cargo }} — CNPJ: {{ agente.cnpj }}</small>
   </div>
 
   <div class="rodape">
