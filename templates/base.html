@@ -76,48 +76,48 @@
       <div class="text-white fw-bold">Ciclo RH</div>
       <small style="color:#8fa8cc;font-size:.7rem">Sistema de Estágio</small>
     </div>
-    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    <button type="button" class="btn-close btn-close-white"></button>
   </div>
   <div class="offcanvas-body p-0 offcanvas-nav" style="overflow-y:auto">
     <div class="nav-section">Principal</div>
-    <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint=='index' %}active{% endif %}" data-bs-dismiss="offcanvas">
+    <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint=='index' %}active{% endif %}">
       <i class="bi bi-speedometer2"></i> Dashboard
     </a>
     <div class="nav-section">Cadastros</div>
-    <a href="{{ url_for('estagiarios') }}" class="nav-link {% if 'estagi' in request.endpoint %}active{% endif %}" data-bs-dismiss="offcanvas">
+    <a href="{{ url_for('estagiarios') }}" class="nav-link {% if 'estagi' in request.endpoint %}active{% endif %}">
       <i class="bi bi-person-badge"></i> Estagiários
     </a>
-    <a href="{{ url_for('empresas') }}" class="nav-link {% if 'empresa' in request.endpoint %}active{% endif %}" data-bs-dismiss="offcanvas">
+    <a href="{{ url_for('empresas') }}" class="nav-link {% if 'empresa' in request.endpoint %}active{% endif %}">
       <i class="bi bi-building"></i> Empresas
     </a>
-    <a href="{{ url_for('ies') }}" class="nav-link {% if request.endpoint in ['ies','ie_nova','ie_editar'] %}active{% endif %}" data-bs-dismiss="offcanvas">
+    <a href="{{ url_for('ies') }}" class="nav-link {% if request.endpoint in ['ies','ie_nova','ie_editar'] %}active{% endif %}">
       <i class="bi bi-mortarboard"></i> Instituições
     </a>
     <div class="nav-section">Contratos</div>
-    <a href="{{ url_for('contratos') }}" class="nav-link {% if request.endpoint in ['contratos','contrato_novo','contrato_editar'] %}active{% endif %}" data-bs-dismiss="offcanvas">
+    <a href="{{ url_for('contratos') }}" class="nav-link {% if request.endpoint in ['contratos','contrato_novo','contrato_editar'] %}active{% endif %}">
       <i class="bi bi-file-earmark-text"></i> Contratos
     </a>
-    <a href="{{ url_for('contrato_novo') }}" class="nav-link" data-bs-dismiss="offcanvas">
+    <a href="{{ url_for('contrato_novo') }}" class="nav-link">
       <i class="bi bi-plus-circle"></i> Novo Contrato
     </a>
-    <a href="{{ url_for('relatorio_vencimentos') }}" class="nav-link {% if request.endpoint=='relatorio_vencimentos' %}active{% endif %}" data-bs-dismiss="offcanvas">
+    <a href="{{ url_for('relatorio_vencimentos') }}" class="nav-link {% if request.endpoint=='relatorio_vencimentos' %}active{% endif %}">
       <i class="bi bi-calendar-x"></i> TCE a Vencer
     </a>
-    <a href="{{ url_for('relatorio_estagiarios') }}" class="nav-link {% if request.endpoint=='relatorio_estagiarios' %}active{% endif %}" data-bs-dismiss="offcanvas">
+    <a href="{{ url_for('relatorio_estagiarios') }}" class="nav-link {% if request.endpoint=='relatorio_estagiarios' %}active{% endif %}">
       <i class="bi bi-people"></i> Rel. Estagiários
     </a>
     {% if current_user.is_admin %}
     <div class="nav-section">Administração</div>
-    <a href="{{ url_for('admin_usuarios') }}" class="nav-link {% if 'admin_usuario' in request.endpoint %}active{% endif %}" data-bs-dismiss="offcanvas">
+    <a href="{{ url_for('admin_usuarios') }}" class="nav-link {% if 'admin_usuario' in request.endpoint %}active{% endif %}">
       <i class="bi bi-people"></i> Usuários
     </a>
-    <a href="{{ url_for('admin_importar') }}" class="nav-link {% if request.endpoint=='admin_importar' %}active{% endif %}" data-bs-dismiss="offcanvas">
+    <a href="{{ url_for('admin_importar') }}" class="nav-link {% if request.endpoint=='admin_importar' %}active{% endif %}">
       <i class="bi bi-upload"></i> Importar Planilha
     </a>
-    <a href="{{ url_for('admin_config') }}" class="nav-link {% if request.endpoint=='admin_config' %}active{% endif %}" data-bs-dismiss="offcanvas">
+    <a href="{{ url_for('admin_config') }}" class="nav-link {% if request.endpoint=='admin_config' %}active{% endif %}">
       <i class="bi bi-shield-check"></i> Config. Seguro
     </a>
-    <a href="{{ url_for('admin_pendentes') }}" class="nav-link {% if request.endpoint=='admin_pendentes' %}active{% endif %}" data-bs-dismiss="offcanvas">
+    <a href="{{ url_for('admin_pendentes') }}" class="nav-link {% if request.endpoint=='admin_pendentes' %}active{% endif %}">
       <i class="bi bi-clipboard-check"></i> Aprovações
       {% if pending_count > 0 %}<span class="badge bg-danger ms-auto" style="font-size:.65rem;padding:3px 6px">{{ pending_count }}</span>{% endif %}
     </a>
