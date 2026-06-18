@@ -188,11 +188,30 @@
       <hr>
       <h6 class="text-muted mb-3">Valores</h6>
       <div class="row g-3 mb-4">
+        <div class="col-12">
+          <label class="form-label fw-semibold d-block">Tipo de Bolsa</label>
+          <div class="btn-group" role="group">
+            <input type="radio" class="btn-check" name="bolsa_tipo" id="bolsa-mensal" value="mensal"
+                   {% if not c or (c.bolsa_tipo or 'mensal') == 'mensal' %}checked{% endif %}>
+            <label class="btn btn-outline-primary btn-sm" for="bolsa-mensal">
+              <i class="bi bi-calendar-month me-1"></i>Mensal
+            </label>
+            <input type="radio" class="btn-check" name="bolsa_tipo" id="bolsa-diaria" value="diaria"
+                   {% if c and c.bolsa_tipo == 'diaria' %}checked{% endif %}>
+            <label class="btn btn-outline-primary btn-sm" for="bolsa-diaria">
+              <i class="bi bi-calendar-day me-1"></i>Por dia trabalhado
+            </label>
+          </div>
+        </div>
         <div class="col-md-4">
-          <label class="form-label fw-semibold">Bolsa Mensal (R$)</label>
+          <label class="form-label fw-semibold" id="label-bolsa">Bolsa <span id="span-bolsa-tipo">Mensal</span> (R$)</label>
           <div class="input-group">
             <span class="input-group-text">R$</span>
-            <input type="number" name="bolsa" step="0.01" class="form-control" value="{{ c.bolsa if c else '' }}">
+            <input type="number" name="bolsa" id="inp-bolsa" step="0.01" min="0" class="form-control"
+                   value="{{ c.bolsa if c else '' }}">
+          </div>
+          <div class="form-text" id="hint-bolsa-diaria" style="display:none">
+            Valor por dia × dias úteis do mês = bolsa mensal estimada.
           </div>
         </div>
         <div class="col-md-4">
@@ -203,10 +222,11 @@
           </div>
         </div>
         <div class="col-md-4">
-          <label class="form-label fw-semibold">Auxílio Transporte (R$)</label>
+          <label class="form-label fw-semibold">Auxílio Transporte <span class="text-muted small">(mensal)</span> (R$)</label>
           <div class="input-group">
             <span class="input-group-text">R$</span>
-            <input type="number" name="aux_transporte" step="0.01" class="form-control" value="{{ c.aux_transporte if c else 0 }}">
+            <input type="number" name="aux_transporte" id="inp-aux" step="0.01" min="0" class="form-control"
+                   value="{{ c.aux_transporte if c else '' }}">
           </div>
         </div>
       </div>
@@ -428,11 +448,33 @@ selSup.addEventListener('change', function() {
 });
 
 selEmp.addEventListener('change', function() {
-  carregarSupervisores(this.value, null);
+  const id = this.value;
+  carregarSupervisores(id, null);
   checkVinculo();
+  // Sugerir valores padrão da empresa (só preenche se campos estiverem vazios)
+  if (id) {
+    fetch('/api/empresa/' + id)
+      .then(r => r.json())
+      .then(d => {
+        const inpBolsa = document.getElementById('inp-bolsa');
+        const inpAux = document.getElementById('inp-aux');
+        if (!inpBolsa.value && d.bolsa_padrao) inpBolsa.value = parseFloat(d.bolsa_padrao).toFixed(2);
+        if (!inpAux.value && d.aux_transporte_padrao) inpAux.value = parseFloat(d.aux_transporte_padrao).toFixed(2);
+      });
+  }
 });
 
 if (selEmp.value) carregarSupervisores(selEmp.value, supAtual);
+
+// Toggle label bolsa mensal/diária
+function atualizarLabelBolsa() {
+  const diaria = document.getElementById('bolsa-diaria').checked;
+  document.getElementById('span-bolsa-tipo').textContent = diaria ? 'por dia' : 'Mensal';
+  document.getElementById('hint-bolsa-diaria').style.display = diaria ? '' : 'none';
+}
+document.getElementById('bolsa-mensal').addEventListener('change', atualizarLabelBolsa);
+document.getElementById('bolsa-diaria').addEventListener('change', atualizarLabelBolsa);
+atualizarLabelBolsa();
 
 // Verificar limite de 2 anos CPF+CNPJ (Lei 11.788/2008, art. 11)
 function checkVinculo() {
