@@ -19,6 +19,10 @@
           <label class="form-label fw-semibold">CNPJ</label>
           <input type="text" name="cnpj" class="form-control" value="{{ emp.cnpj if emp else '' }}" placeholder="00.000.000/0000-00">
         </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Nome Fantasia</label>
+          <input type="text" name="nome_fantasia" class="form-control" value="{{ emp.nome_fantasia if emp and emp.nome_fantasia else '' }}" placeholder="Como é conhecida (opcional)">
+        </div>
         <div class="col-md-8">
           <label class="form-label fw-semibold">Endereço</label>
           <input type="text" name="endereco" class="form-control" value="{{ emp.endereco if emp else '' }}">
