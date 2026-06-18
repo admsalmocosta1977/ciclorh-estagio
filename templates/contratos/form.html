@@ -45,7 +45,9 @@
           <select name="ie_id" class="form-select" required id="sel-ie">
             <option value="">Selecione...</option>
             {% for ie in ies %}
-            <option value="{{ ie.id }}" {% if c and c.ie_id==ie.id %}selected{% endif %}>{{ ie.nome }}</option>
+            <option value="{{ ie.id }}" {% if c and c.ie_id==ie.id %}selected{% endif %}>
+              {% if ie.sigla %}{{ ie.sigla }} — {% endif %}{{ ie.nome }}
+            </option>
             {% endfor %}
           </select>
           <div class="mt-1">
