@@ -31,6 +31,7 @@
     .page { padding: 14mm 18mm 12mm; }
   }
 </style>
+<link rel="stylesheet" href="{{ url_for('static', filename='ciclorh_doc.css') }}">
 </head>
 <body>
 <div class="no-print" style="background:#1a2845;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center">
@@ -44,6 +45,7 @@
 </div>
 
 <div class="page">
+{% include 'docs/_cabecalho.html' %}
   <h1>Termo de Compromisso de Estágio — TCE</h1>
   <div class="subtitulo">Lei Federal n.º 11.788, de 25 de setembro de 2008</div>
   <div class="subtitulo2">Estágio {{ d.tipo_estagio or 'Não Obrigatório' }} — {{ d.curso }}</div>
