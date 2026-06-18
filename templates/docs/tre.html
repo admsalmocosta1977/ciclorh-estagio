@@ -73,6 +73,7 @@
   <p style="margin-top:7px"><strong>INSTITUIÇÃO DE ENSINO:</strong></p>
   <table class="dados">
     <tr><td class="label">Nome:</td><td>{{ d.ie_nome }}</td></tr>
+    {% if d.ie_cnpj %}<tr><td class="label">CNPJ:</td><td>{{ d.ie_cnpj }}</td></tr>{% endif %}
     <tr><td class="label">Coordenador(a) de Estágio:</td><td>{{ d.ie_coordenador or '___________________________' }}{% if d.ie_coord_cargo %} — {{ d.ie_coord_cargo }}{% endif %}</td></tr>
   </table>
 
