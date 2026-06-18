@@ -76,7 +76,9 @@
   <table class="dados">
     <tr><td class="label">Nome:</td><td>{{ d.ie_nome }}</td></tr>
     <tr><td class="label">Endereço:</td><td>{{ d.ie_endereco or '___________________________' }}, {{ d.ie_cidade or 'Vitória da Conquista – BA' }}</td></tr>
+    <tr><td class="label">Representante Legal:</td><td>{{ d.ie_representante_legal or '___________________________' }}{% if d.ie_cargo_rep_legal %} — {{ d.ie_cargo_rep_legal }}{% endif %}</td></tr>
     <tr><td class="label">Coordenador(a) de Estágio:</td><td>{{ d.ie_coordenador or '___________________________' }}{% if d.ie_coord_cargo %} — {{ d.ie_coord_cargo }}{% endif %}</td></tr>
+    <tr><td class="label">Professor Orientador:</td><td>{{ d.ie_professor_nome or '___________________________' }}{% if d.ie_professor_cargo %} — {{ d.ie_professor_cargo }}{% endif %}</td></tr>
   </table>
 
   <p style="margin-top:7px"><strong>ESTAGIÁRIO(A):</strong></p>
@@ -243,7 +245,9 @@
       <div class="assinatura-linha">
         <strong>Instituição de Ensino</strong><br>
         {{ d.ie_nome }}<br>
-        {{ d.ie_coordenador or '' }}{% if d.ie_coord_cargo %}<br>{{ d.ie_coord_cargo }}{% endif %}
+        {{ d.ie_signatario_nome or '___________________________' }}
+        {% if d.ie_signatario_cargo %}<br>{{ d.ie_signatario_cargo }}{% endif %}
+        {% if d.ie_signatario_tipo %}<br><em style="font-size:8pt">{{ d.ie_signatario_tipo }}</em>{% endif %}
       </div>
     </div>
     <div class="assinatura-bloco">
