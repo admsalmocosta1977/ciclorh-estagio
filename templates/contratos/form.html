@@ -519,6 +519,7 @@ document.querySelector('[name="data_inicio"]').addEventListener('change', checkV
 document.querySelector('[name="data_fim"]').addEventListener('change', checkVinculo);
 if (document.getElementById('sel-estagiario').value && document.getElementById('sel-empresa').value) checkVinculo();
 
+{% if c %}
 // Gerar aditivo
 function gerarAditivo() {
   const data = document.getElementById('aditivo-data').value;
@@ -571,6 +572,7 @@ document.addEventListener('click', function(e) {
     e.target.closest('.clausula-extra-row').remove();
   }
 });
+{% endif %}
 
 // Mostrar próxima linha de atividade
 let visibleAts = document.querySelectorAll('.atividade-row:not([style*="none"])').length;
