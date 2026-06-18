@@ -215,6 +215,23 @@ def init_db():
         )""")
         cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS ie_professor_id INTEGER;")
         cur.execute("""
+        CREATE TABLE IF NOT EXISTS empresa_supervisor (
+            id SERIAL PRIMARY KEY,
+            empresa_id INTEGER NOT NULL REFERENCES empresa(id) ON DELETE CASCADE,
+            nome TEXT NOT NULL,
+            cargo TEXT,
+            registro TEXT,
+            ordem INTEGER DEFAULT 0
+        )""")
+        # Migra supervisores antigos (campo único) para a nova tabela
+        cur.execute("""
+            INSERT INTO empresa_supervisor (empresa_id, nome, cargo, registro, ordem)
+            SELECT id, supervisor_nome, supervisor_cargo, supervisor_registro, 0
+            FROM empresa
+            WHERE supervisor_nome IS NOT NULL AND supervisor_nome <> ''
+              AND id NOT IN (SELECT empresa_id FROM empresa_supervisor)
+        """)
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS aditivo (
             id SERIAL PRIMARY KEY,
             contrato_id INTEGER NOT NULL REFERENCES contrato(id) ON DELETE CASCADE,
@@ -778,21 +795,27 @@ def empresas():
 @login_required
 def empresa_nova():
     if request.method == 'POST':
-        _ins("""INSERT INTO empresa
+        emp_id = _ins("""INSERT INTO empresa
                 (nome,cnpj,endereco,cidade,telefone,email,ramo,
-                 representante,cargo_representante,cpf_representante,supervisor_nome,supervisor_cargo,supervisor_registro)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                 representante,cargo_representante,cpf_representante)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['nome'], request.form.get('cnpj'),
               request.form.get('endereco'), request.form.get('cidade', 'Vitória da Conquista'),
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('ramo'), request.form.get('representante'),
-              request.form.get('cargo_representante'), request.form.get('cpf_representante'),
-              request.form.get('supervisor_nome'),
-              request.form.get('supervisor_cargo'), request.form.get('supervisor_registro')))
-        _log('criar', 'empresa', None, f'Criou empresa: {request.form["nome"]}')
+              request.form.get('cargo_representante'), request.form.get('cpf_representante')))
+        for i, nome_sup in enumerate(request.form.getlist('sup_nome[]')):
+            if nome_sup.strip():
+                cargos = request.form.getlist('sup_cargo[]')
+                regs = request.form.getlist('sup_registro[]')
+                _run("INSERT INTO empresa_supervisor (empresa_id,nome,cargo,registro,ordem) VALUES (%s,%s,%s,%s,%s)",
+                     (emp_id, nome_sup.strip(),
+                      cargos[i].strip() if i < len(cargos) else None,
+                      regs[i].strip() if i < len(regs) else None, i))
+        _log('criar', 'empresa', emp_id, f'Criou empresa: {request.form["nome"]}')
         flash('Empresa cadastrada!', 'success')
         return redirect(url_for('empresas'))
-    return render_template('empresas/form.html', emp=None)
+    return render_template('empresas/form.html', emp=None, supervisores=[])
 
 
 @app.route('/empresas/<int:id>/editar', methods=['GET', 'POST'])
@@ -804,19 +827,26 @@ def empresa_editar(id):
     if request.method == 'POST':
         _run("""UPDATE empresa SET
                 nome=%s,cnpj=%s,endereco=%s,cidade=%s,telefone=%s,email=%s,ramo=%s,
-                representante=%s,cargo_representante=%s,cpf_representante=%s,supervisor_nome=%s,
-                supervisor_cargo=%s,supervisor_registro=%s WHERE id=%s""",
+                representante=%s,cargo_representante=%s,cpf_representante=%s WHERE id=%s""",
              (request.form['nome'], request.form.get('cnpj'),
               request.form.get('endereco'), request.form.get('cidade'),
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('ramo'), request.form.get('representante'),
-              request.form.get('cargo_representante'), request.form.get('cpf_representante'),
-              request.form.get('supervisor_nome'),
-              request.form.get('supervisor_cargo'), request.form.get('supervisor_registro'), id))
+              request.form.get('cargo_representante'), request.form.get('cpf_representante'), id))
+        _run("DELETE FROM empresa_supervisor WHERE empresa_id = %s", (id,))
+        for i, nome_sup in enumerate(request.form.getlist('sup_nome[]')):
+            if nome_sup.strip():
+                cargos = request.form.getlist('sup_cargo[]')
+                regs = request.form.getlist('sup_registro[]')
+                _run("INSERT INTO empresa_supervisor (empresa_id,nome,cargo,registro,ordem) VALUES (%s,%s,%s,%s,%s)",
+                     (id, nome_sup.strip(),
+                      cargos[i].strip() if i < len(cargos) else None,
+                      regs[i].strip() if i < len(regs) else None, i))
         _log('editar', 'empresa', id, f'Editou empresa: {request.form["nome"]}')
         flash('Atualizada!', 'success')
         return redirect(url_for('empresas'))
-    return render_template('empresas/form.html', emp=emp)
+    supervisores = _q("SELECT * FROM empresa_supervisor WHERE empresa_id = %s ORDER BY ordem, id", (id,))
+    return render_template('empresas/form.html', emp=emp, supervisores=supervisores)
 
 
 @app.route('/empresas/<int:id>/excluir')
@@ -841,6 +871,13 @@ def api_ie_professores(ie_id):
 def api_empresa(id):
     row = _q("SELECT * FROM empresa WHERE id = %s", (id,), one=True)
     return jsonify(dict(row) if row else {})
+
+
+@app.route('/api/empresa_supervisores/<int:empresa_id>')
+@login_required
+def api_empresa_supervisores(empresa_id):
+    sups = _q("SELECT id, nome, cargo, registro FROM empresa_supervisor WHERE empresa_id = %s ORDER BY ordem, id", (empresa_id,))
+    return jsonify([dict(s) for s in sups])
 
 
 # ─── IEs ──────────────────────────────────────────────────────────────────────
