@@ -22,7 +22,7 @@ class _Agente:
     endereco = 'Av. Juracy Magalhães, 3340, Bloco A, sala 1104, Felícia'
     cidade = 'Vitória da Conquista – Bahia'
     email = 'adm.salmocosta@gmail.com'
-    representante = 'Salmo Lima Costa'
+    representante = 'Ildeflávio dos Santos Silva Maia'
     cargo = 'Sócio Gerente'
     cpf = '915.569.295-87'
 
