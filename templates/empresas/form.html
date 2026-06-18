@@ -54,6 +54,31 @@
       </div>
 
       <hr class="my-4">
+      <h6 class="text-muted mb-3">Valores Praticados <span class="fw-normal">(referência para novos contratos)</span></h6>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Bolsa Padrão (R$)</label>
+          <div class="input-group">
+            <span class="input-group-text">R$</span>
+            <input type="number" name="bolsa_padrao" step="0.01" min="0" class="form-control"
+                   value="{{ '%.2f'|format(emp.bolsa_padrao) if emp and emp.bolsa_padrao else '' }}"
+                   placeholder="Ex: 800.00">
+          </div>
+          <div class="form-text">Sugerido ao criar novo contrato.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Auxílio Transporte Mensal (R$)</label>
+          <div class="input-group">
+            <span class="input-group-text">R$</span>
+            <input type="number" name="aux_transporte_padrao" step="0.01" min="0" class="form-control"
+                   value="{{ '%.2f'|format(emp.aux_transporte_padrao) if emp and emp.aux_transporte_padrao else '' }}"
+                   placeholder="Ex: 150.00">
+          </div>
+          <div class="form-text">Sugerido ao criar novo contrato.</div>
+        </div>
+      </div>
+
+      <hr class="my-4">
 
       <!-- Supervisores -->
       <div class="d-flex align-items-center mb-3">
