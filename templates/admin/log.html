@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Log de Auditoria{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0"><i class="bi bi-journal-text me-2"></i>Log de Auditoria</h4>
+  <span class="badge bg-secondary">{{ logs | length }} registro(s)</span>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-2">
+        <label class="form-label fw-semibold mb-1" style="font-size:.8rem">Período</label>
+        <select name="periodo" class="form-select form-select-sm">
+          <option value="7"  {% if periodo=='7'  %}selected{% endif %}>Últimos 7 dias</option>
+          <option value="30" {% if periodo=='30' %}selected{% endif %}>Últimos 30 dias</option>
+          <option value="90" {% if periodo=='90' %}selected{% endif %}>Últimos 90 dias</option>
+          <option value="365" {% if periodo=='365' %}selected{% endif %}>Últimos 365 dias</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label fw-semibold mb-1" style="font-size:.8rem">Entidade</label>
+        <select name="entidade" class="form-select form-select-sm">
+          <option value="">Todas</option>
+          <option value="sistema"   {% if entidade=='sistema'   %}selected{% endif %}>Sistema (login)</option>
+          <option value="estagiario" {% if entidade=='estagiario' %}selected{% endif %}>Estagiário</option>
+          <option value="empresa"   {% if entidade=='empresa'   %}selected{% endif %}>Empresa</option>
+          <option value="ie"        {% if entidade=='ie'        %}selected{% endif %}>Instituição</option>
+          <option value="contrato"  {% if entidade=='contrato'  %}selected{% endif %}>Contrato</option>
+          <option value="aditivo"   {% if entidade=='aditivo'   %}selected{% endif %}>Aditivo</option>
+          <option value="usuario"   {% if entidade=='usuario'   %}selected{% endif %}>Usuário</option>
+          <option value="config"    {% if entidade=='config'    %}selected{% endif %}>Configuração</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold mb-1" style="font-size:.8rem">Usuário</label>
+        <select name="usuario_id" class="form-select form-select-sm">
+          <option value="">Todos os usuários</option>
+          {% for u in usuarios %}
+          <option value="{{ u.id }}" {% if usuario_id == u.id|string %}selected{% endif %}>{{ u.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-search me-1"></i>Filtrar</button>
+        {% if entidade or usuario_id or periodo != '30' %}
+        <a href="{{ url_for('admin_log') }}" class="btn btn-sm btn-link text-muted">Limpar</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0" style="font-size:.82rem">
+        <thead class="table-light">
+          <tr>
+            <th style="width:150px">Data / Hora</th>
+            <th style="width:130px">Usuário</th>
+            <th style="width:90px">Ação</th>
+            <th style="width:100px">Entidade</th>
+            <th>Descrição</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for l in logs %}
+        <tr>
+          <td class="text-nowrap text-muted">{{ l.dt_fmt }}</td>
+          <td>{{ l.usuario_nome or '—' }}</td>
+          <td>
+            {% if l.acao in ['criar', 'aprovar'] %}
+              <span class="badge" style="background:#d1fae5;color:#065f46">{{ l.acao }}</span>
+            {% elif l.acao in ['editar'] %}
+              <span class="badge" style="background:#dbeafe;color:#1e40af">{{ l.acao }}</span>
+            {% elif l.acao in ['excluir', 'rejeitar'] %}
+              <span class="badge" style="background:#fee2e2;color:#991b1b">{{ l.acao }}</span>
+            {% elif l.acao in ['login', 'logout'] %}
+              <span class="badge" style="background:#f3f4f6;color:#374151">{{ l.acao }}</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ l.acao }}</span>
+            {% endif %}
+          </td>
+          <td>
+            {% set entidade_labels = {
+              'estagiario': 'Estagiário',
+              'empresa': 'Empresa',
+              'ie': 'Instituição',
+              'contrato': 'Contrato',
+              'aditivo': 'Aditivo',
+              'usuario': 'Usuário',
+              'config': 'Configuração',
+              'sistema': 'Sistema'
+            } %}
+            {{ entidade_labels.get(l.entidade, l.entidade) }}
+          </td>
+          <td>{{ l.descricao or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">Nenhum registro encontrado para o período selecionado.</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<p class="text-muted mt-2" style="font-size:.75rem">
+  <i class="bi bi-info-circle me-1"></i>O log é imutável e retém registros por 365 dias. Exibindo até 500 registros por consulta.
+</p>
+{% endblock %}
