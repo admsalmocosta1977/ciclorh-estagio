@@ -54,21 +54,62 @@
       </div>
 
       <hr class="my-4">
-      <h6 class="text-muted mb-3">Supervisor Padrão</h6>
-      <div class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label fw-semibold">Nome do Supervisor</label>
-          <input type="text" name="supervisor_nome" class="form-control" value="{{ emp.supervisor_nome if emp else '' }}">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label fw-semibold">Cargo</label>
-          <input type="text" name="supervisor_cargo" class="form-control" value="{{ emp.supervisor_cargo if emp else '' }}">
-        </div>
-        <div class="col-md-3">
-          <label class="form-label fw-semibold">CREA/CRM/CRP (se houver)</label>
-          <input type="text" name="supervisor_registro" class="form-control" value="{{ emp.supervisor_registro if emp else '' }}">
-        </div>
+
+      <!-- Supervisores -->
+      <div class="d-flex align-items-center mb-3">
+        <h6 class="fw-semibold mb-0">Supervisores de Estágio</h6>
+        <span class="text-muted small ms-2">(até 10 estagiários por supervisor — Lei 11.788/2008)</span>
+        <button type="button" class="btn btn-sm btn-outline-primary ms-auto" id="btn-add-sup">
+          <i class="bi bi-plus-lg me-1"></i>Adicionar
+        </button>
       </div>
+
+      <div id="supervisores-container">
+        {% if supervisores %}
+          {% for s in supervisores %}
+          <div class="sup-row row g-2 align-items-end mb-2">
+            <div class="col-md-5">
+              <label class="form-label form-label-sm fw-semibold">Nome do Supervisor</label>
+              <input type="text" name="sup_nome[]" class="form-control form-control-sm" value="{{ s.nome }}" placeholder="Nome completo" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label form-label-sm fw-semibold">Cargo / Função</label>
+              <input type="text" name="sup_cargo[]" class="form-control form-control-sm" value="{{ s.cargo or '' }}" placeholder="Ex: Gerente de RH">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label form-label-sm fw-semibold">CREA/CRM/CRP</label>
+              <input type="text" name="sup_registro[]" class="form-control form-control-sm" value="{{ s.registro or '' }}" placeholder="Opcional">
+            </div>
+            <div class="col-md-1 d-flex align-items-end pb-1">
+              <button type="button" class="btn btn-sm btn-outline-danger remover-sup w-100" title="Remover">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="sup-row row g-2 align-items-end mb-2">
+            <div class="col-md-5">
+              <label class="form-label form-label-sm fw-semibold">Nome do Supervisor</label>
+              <input type="text" name="sup_nome[]" class="form-control form-control-sm" placeholder="Nome completo">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label form-label-sm fw-semibold">Cargo / Função</label>
+              <input type="text" name="sup_cargo[]" class="form-control form-control-sm" placeholder="Ex: Gerente de RH">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label form-label-sm fw-semibold">CREA/CRM/CRP</label>
+              <input type="text" name="sup_registro[]" class="form-control form-control-sm" placeholder="Opcional">
+            </div>
+            <div class="col-md-1 d-flex align-items-end pb-1">
+              <button type="button" class="btn btn-sm btn-outline-danger remover-sup w-100" title="Remover">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+      <p class="text-muted small mt-1"><i class="bi bi-info-circle me-1"></i>Cadastre todos os supervisores da empresa. Ao criar um contrato, você escolherá qual supervisor acompanha aquele estagiário.</p>
 
       <hr>
       <div class="d-flex gap-2">
@@ -84,4 +125,48 @@
     </form>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function novaLinhaSuper() {
+  const div = document.createElement('div');
+  div.className = 'sup-row row g-2 align-items-end mb-2';
+  div.innerHTML = `
+    <div class="col-md-5">
+      <label class="form-label form-label-sm fw-semibold">Nome do Supervisor</label>
+      <input type="text" name="sup_nome[]" class="form-control form-control-sm" placeholder="Nome completo">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label form-label-sm fw-semibold">Cargo / Função</label>
+      <input type="text" name="sup_cargo[]" class="form-control form-control-sm" placeholder="Ex: Gerente de RH">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label form-label-sm fw-semibold">CREA/CRM/CRP</label>
+      <input type="text" name="sup_registro[]" class="form-control form-control-sm" placeholder="Opcional">
+    </div>
+    <div class="col-md-1 d-flex align-items-end pb-1">
+      <button type="button" class="btn btn-sm btn-outline-danger remover-sup w-100" title="Remover">
+        <i class="bi bi-trash"></i>
+      </button>
+    </div>`;
+  return div;
+}
+
+document.getElementById('btn-add-sup').addEventListener('click', function() {
+  document.getElementById('supervisores-container').appendChild(novaLinhaSuper());
+});
+
+document.addEventListener('click', function(e) {
+  if (e.target.closest('.remover-sup')) {
+    const rows = document.querySelectorAll('.sup-row');
+    if (rows.length > 1) {
+      e.target.closest('.sup-row').remove();
+    } else {
+      // Limpa a única linha em vez de remover
+      e.target.closest('.sup-row').querySelectorAll('input').forEach(i => i.value = '');
+    }
+  }
+});
+</script>
 {% endblock %}
