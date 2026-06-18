@@ -202,6 +202,18 @@ def init_db():
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS semestre INTEGER;")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS tipo_ensino TEXT DEFAULT 'superior';")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS matricula TEXT;")
+        cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS representante_legal TEXT;")
+        cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS cargo_representante_legal TEXT;")
+        cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS signatario_tce TEXT DEFAULT 'coordenador';")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS ie_professor (
+            id SERIAL PRIMARY KEY,
+            ie_id INTEGER NOT NULL REFERENCES ie(id) ON DELETE CASCADE,
+            nome TEXT NOT NULL,
+            cargo TEXT,
+            ordem INTEGER DEFAULT 0
+        )""")
+        cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS ie_professor_id INTEGER;")
         cur.execute("""
         CREATE TABLE IF NOT EXISTS aditivo (
             id SERIAL PRIMARY KEY,
@@ -817,6 +829,13 @@ def empresa_excluir(id):
     return redirect(url_for('empresas'))
 
 
+@app.route('/api/ie_professores/<int:ie_id>')
+@login_required
+def api_ie_professores(ie_id):
+    profs = _q("SELECT id, nome, cargo FROM ie_professor WHERE ie_id = %s ORDER BY ordem, id", (ie_id,))
+    return jsonify([dict(p) for p in profs])
+
+
 @app.route('/api/empresa/<int:id>')
 @login_required
 def api_empresa(id):
@@ -839,16 +858,27 @@ def ies():
 @login_required
 def ie_nova():
     if request.method == 'POST':
-        _ins("""INSERT INTO ie (nome,sigla,endereco,cidade,telefone,email,coordenador,coordenador_cargo)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+        ie_id = _ins("""INSERT INTO ie
+                (nome,sigla,endereco,cidade,telefone,email,coordenador,coordenador_cargo,
+                 representante_legal,cargo_representante_legal,signatario_tce)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['nome'], request.form.get('sigla'),
               request.form.get('endereco'), request.form.get('cidade', 'Vitória da Conquista'),
               request.form.get('telefone'), request.form.get('email'),
-              request.form.get('coordenador'), request.form.get('coordenador_cargo')))
-        _log('criar', 'ie', None, f'Criou instituição: {request.form["nome"]}')
+              request.form.get('coordenador'), request.form.get('coordenador_cargo'),
+              request.form.get('representante_legal'), request.form.get('cargo_representante_legal'),
+              request.form.get('signatario_tce', 'coordenador')))
+        nomes_p = request.form.getlist('prof_nome[]')
+        cargos_p = request.form.getlist('prof_cargo[]')
+        for i, np in enumerate(nomes_p):
+            cp = cargos_p[i] if i < len(cargos_p) else ''
+            if np.strip():
+                _ins("INSERT INTO ie_professor (ie_id,nome,cargo,ordem) VALUES (%s,%s,%s,%s)",
+                     (ie_id, np.strip(), cp.strip(), i))
+        _log('criar', 'ie', ie_id, f'Criou instituição: {request.form["nome"]}')
         flash('Instituição cadastrada!', 'success')
         return redirect(url_for('ies'))
-    return render_template('ies/form.html', ie=None)
+    return render_template('ies/form.html', ie=None, professores=[])
 
 
 @app.route('/ies/<int:id>/editar', methods=['GET', 'POST'])
@@ -859,15 +889,27 @@ def ie_editar(id):
         abort(404)
     if request.method == 'POST':
         _run("""UPDATE ie SET nome=%s,sigla=%s,endereco=%s,cidade=%s,telefone=%s,email=%s,
-                coordenador=%s,coordenador_cargo=%s WHERE id=%s""",
+                coordenador=%s,coordenador_cargo=%s,representante_legal=%s,
+                cargo_representante_legal=%s,signatario_tce=%s WHERE id=%s""",
              (request.form['nome'], request.form.get('sigla'),
               request.form.get('endereco'), request.form.get('cidade'),
               request.form.get('telefone'), request.form.get('email'),
-              request.form.get('coordenador'), request.form.get('coordenador_cargo'), id))
+              request.form.get('coordenador'), request.form.get('coordenador_cargo'),
+              request.form.get('representante_legal'), request.form.get('cargo_representante_legal'),
+              request.form.get('signatario_tce', 'coordenador'), id))
+        _run("DELETE FROM ie_professor WHERE ie_id = %s", (id,))
+        nomes_p = request.form.getlist('prof_nome[]')
+        cargos_p = request.form.getlist('prof_cargo[]')
+        for i, np in enumerate(nomes_p):
+            cp = cargos_p[i] if i < len(cargos_p) else ''
+            if np.strip():
+                _ins("INSERT INTO ie_professor (ie_id,nome,cargo,ordem) VALUES (%s,%s,%s,%s)",
+                     (id, np.strip(), cp.strip(), i))
         _log('editar', 'ie', id, f'Editou instituição: {request.form["nome"]}')
         flash('Atualizada!', 'success')
         return redirect(url_for('ies'))
-    return render_template('ies/form.html', ie=ie)
+    professores = _q("SELECT * FROM ie_professor WHERE ie_id = %s ORDER BY ordem, id", (id,))
+    return render_template('ies/form.html', ie=ie, professores=professores)
 
 
 @app.route('/ies/<int:id>/excluir')
@@ -931,8 +973,9 @@ def contrato_novo():
                 (estagiario_id,empresa_id,ie_id,orientador,
                  supervisor_nome,supervisor_cargo,supervisor_registro,
                  curso,tipo_estagio,area_atuacao,ch_diaria,ch_semanal,
-                 data_inicio,data_fim,numero_contrato,bolsa,taxa,aux_transporte,atividades,obs,jornada,data_encerramento)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                 data_inicio,data_fim,numero_contrato,bolsa,taxa,aux_transporte,atividades,obs,
+                 jornada,data_encerramento,ie_professor_id)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['estagiario_id'], request.form['empresa_id'], request.form['ie_id'],
               request.form.get('orientador', 'Salmo Lima Costa'),
               request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
@@ -946,7 +989,8 @@ def contrato_novo():
               request.form.get('taxa') or None,
               request.form.get('aux_transporte') or None,
               ats, request.form.get('obs'), _build_jornada_json(),
-              request.form.get('data_encerramento') or None))
+              request.form.get('data_encerramento') or None,
+              request.form.get('ie_professor_id') or None))
         _est = _q("SELECT nome FROM estagiario WHERE id=%s", (request.form['estagiario_id'],), one=True)
         _emp = _q("SELECT nome FROM empresa WHERE id=%s", (request.form['empresa_id'],), one=True)
         _log('criar', 'contrato', None,
@@ -975,7 +1019,8 @@ def contrato_editar(id):
                 supervisor_nome=%s,supervisor_cargo=%s,supervisor_registro=%s,
                 curso=%s,tipo_estagio=%s,area_atuacao=%s,ch_diaria=%s,ch_semanal=%s,
                 data_inicio=%s,data_fim=%s,numero_contrato=%s,bolsa=%s,taxa=%s,
-                aux_transporte=%s,atividades=%s,obs=%s,jornada=%s,data_encerramento=%s WHERE id=%s""",
+                aux_transporte=%s,atividades=%s,obs=%s,jornada=%s,data_encerramento=%s,
+                ie_professor_id=%s WHERE id=%s""",
              (request.form['estagiario_id'], request.form['empresa_id'], request.form['ie_id'],
               request.form.get('orientador'),
               request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
@@ -989,7 +1034,8 @@ def contrato_editar(id):
               request.form.get('taxa') or None,
               request.form.get('aux_transporte') or None,
               ats, request.form.get('obs'), _build_jornada_json(),
-              request.form.get('data_encerramento') or None, id))
+              request.form.get('data_encerramento') or None,
+              request.form.get('ie_professor_id') or None, id))
         _est2 = _q("SELECT nome FROM estagiario WHERE id=%s", (request.form['estagiario_id'],), one=True)
         _emp2 = _q("SELECT nome FROM empresa WHERE id=%s", (request.form['empresa_id'],), one=True)
         _log('editar', 'contrato', id,
@@ -1051,6 +1097,24 @@ def _doc_ctx(id):
 
     ch_j_diaria, ch_j_semanal = calcular_ch_jornada(c.get('jornada'))
 
+    professor = None
+    if c.get('ie_professor_id'):
+        professor = _q("SELECT * FROM ie_professor WHERE id = %s", (c['ie_professor_id'],), one=True)
+
+    sig_tce = (ie.get('signatario_tce') or 'coordenador') if ie else 'coordenador'
+    if sig_tce == 'representante':
+        sig_nome = ie.get('representante_legal', '') if ie else ''
+        sig_cargo = ie.get('cargo_representante_legal', '') if ie else ''
+        sig_tipo = 'Representante Legal'
+    elif sig_tce == 'professor':
+        sig_nome = professor['nome'] if professor else ''
+        sig_cargo = professor['cargo'] if professor else ''
+        sig_tipo = 'Professor Orientador'
+    else:
+        sig_nome = ie.get('coordenador', '') if ie else ''
+        sig_cargo = ie.get('coordenador_cargo', '') if ie else ''
+        sig_tipo = 'Coordenador(a) de Estágio'
+
     d = type('D', (), {
         'id': c['id'],
         'curso': c['curso'],
@@ -1104,6 +1168,13 @@ def _doc_ctx(id):
         'ie_cidade': ie['cidade'] if ie else 'Vitória da Conquista',
         'ie_coordenador': ie['coordenador'] if ie else '',
         'ie_coord_cargo': ie['coordenador_cargo'] if ie else '',
+        'ie_representante_legal': ie.get('representante_legal', '') if ie else '',
+        'ie_cargo_rep_legal': ie.get('cargo_representante_legal', '') if ie else '',
+        'ie_professor_nome': professor['nome'] if professor else '',
+        'ie_professor_cargo': professor['cargo'] if professor else '',
+        'ie_signatario_nome': sig_nome,
+        'ie_signatario_cargo': sig_cargo,
+        'ie_signatario_tipo': sig_tipo,
     })()
 
     return dict(d=d, agente=AGENTE, ch_total=ch_total, ch_total_real=ch_total_real,
