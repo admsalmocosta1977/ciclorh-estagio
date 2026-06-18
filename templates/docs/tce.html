@@ -76,6 +76,7 @@
   <p style="margin-top:7px"><strong>INSTITUIÇÃO DE ENSINO (IES / ESCOLA):</strong></p>
   <table class="dados">
     <tr><td class="label">Nome:</td><td>{{ d.ie_nome }}</td></tr>
+    {% if d.ie_cnpj %}<tr><td class="label">CNPJ:</td><td>{{ d.ie_cnpj }}</td></tr>{% endif %}
     <tr><td class="label">Endereço:</td><td>{{ d.ie_endereco or '___________________________' }}, {{ d.ie_cidade or 'Vitória da Conquista – BA' }}</td></tr>
     <tr><td class="label">Representante Legal:</td><td>{{ d.ie_representante_legal or '___________________________' }}{% if d.ie_cargo_rep_legal %} — {{ d.ie_cargo_rep_legal }}{% endif %}</td></tr>
     <tr><td class="label">Coordenador(a) de Estágio:</td><td>{{ d.ie_coordenador or '___________________________' }}{% if d.ie_coord_cargo %} — {{ d.ie_coord_cargo }}{% endif %}</td></tr>
