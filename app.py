@@ -1250,7 +1250,8 @@ def relatorio_estagiarios():
                            contratos=contratos, empresas=empresas, ies=ies,
                            empresa_id=empresa_id, ie_id=ie_id, curso=curso,
                            total_taxa=total_taxa, total_bolsa=total_bolsa,
-                           empresa_sel=empresa_sel)
+                           empresa_sel=empresa_sel, agente=AGENTE,
+                           fmt_date=fmt_date, data_hoje=date.today())
 
 
 # ─── CADASTRO PÚBLICO ────────────────────────────────────────────────────────
