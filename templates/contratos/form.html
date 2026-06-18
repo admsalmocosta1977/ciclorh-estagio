@@ -63,10 +63,17 @@
           </select>
           <div class="form-text">Professores cadastrados na instituição selecionada.</div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6" id="div-supervisor" style="display:none">
           <label class="form-label fw-semibold">Supervisor na Empresa</label>
+          <select class="form-select" id="sel-supervisor">
+            <option value="">— selecione o supervisor —</option>
+          </select>
+          <div class="form-text">Supervisores cadastrados na empresa selecionada.</div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Nome do Supervisor <span class="text-muted small">(editável)</span></label>
           <input type="text" name="supervisor_nome" class="form-control" id="sup-nome"
-                 value="{{ c.supervisor_nome if c else '' }}" placeholder="Preenchido automaticamente">
+                 value="{{ c.supervisor_nome if c else '' }}" placeholder="Preenchido ao escolher acima">
         </div>
         <div class="col-md-4">
           <label class="form-label fw-semibold">Cargo do Supervisor</label>
@@ -374,19 +381,58 @@
 
 {% block scripts %}
 <script>
-// Auto-preencher supervisor ao selecionar empresa
-document.getElementById('sel-empresa').addEventListener('change', function() {
-  const id = this.value;
-  if (!id) return;
-  fetch('/api/empresa/' + id)
+// Carregar supervisores ao selecionar empresa
+const selEmp = document.getElementById('sel-empresa');
+const selSup = document.getElementById('sel-supervisor');
+const divSup = document.getElementById('div-supervisor');
+const supAtual = '{{ c.supervisor_nome if c and c.supervisor_nome else "" }}';
+
+function carregarSupervisores(empresaId, supNomeAtual) {
+  if (!empresaId) { divSup.style.display = 'none'; return; }
+  fetch('/api/empresa_supervisores/' + empresaId)
     .then(r => r.json())
-    .then(d => {
-      document.getElementById('sup-nome').value = d.supervisor_nome || '';
-      document.getElementById('sup-cargo').value = d.supervisor_cargo || '';
-      document.getElementById('sup-reg').value = d.supervisor_registro || '';
+    .then(sups => {
+      selSup.innerHTML = '<option value="">— selecione o supervisor —</option>';
+      if (sups.length > 0) {
+        sups.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.dataset.nome = s.nome;
+          opt.dataset.cargo = s.cargo || '';
+          opt.dataset.registro = s.registro || '';
+          opt.textContent = s.nome + (s.cargo ? ' — ' + s.cargo : '');
+          if (supNomeAtual && s.nome === supNomeAtual) opt.selected = true;
+          selSup.appendChild(opt);
+        });
+        divSup.style.display = '';
+        // Se encontrou match, preenche os campos
+        if (selSup.selectedIndex > 0) {
+          const opt = selSup.options[selSup.selectedIndex];
+          document.getElementById('sup-nome').value = opt.dataset.nome;
+          document.getElementById('sup-cargo').value = opt.dataset.cargo;
+          document.getElementById('sup-reg').value = opt.dataset.registro;
+        }
+      } else {
+        divSup.style.display = 'none';
+      }
     });
+}
+
+selSup.addEventListener('change', function() {
+  const opt = this.options[this.selectedIndex];
+  if (opt && opt.value) {
+    document.getElementById('sup-nome').value = opt.dataset.nome || '';
+    document.getElementById('sup-cargo').value = opt.dataset.cargo || '';
+    document.getElementById('sup-reg').value = opt.dataset.registro || '';
+  }
+});
+
+selEmp.addEventListener('change', function() {
+  carregarSupervisores(this.value, null);
   checkVinculo();
 });
+
+if (selEmp.value) carregarSupervisores(selEmp.value, supAtual);
 
 // Verificar limite de 2 anos CPF+CNPJ (Lei 11.788/2008, art. 11)
 function checkVinculo() {
