@@ -5,27 +5,27 @@
 <title>Relatório de Estágio – {{ d.est_nome }}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Arial, sans-serif; font-size: 11pt; color: #000; background: #fff; }
-  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 20mm 15mm; }
-  h1 { font-size: 13pt; text-align: center; text-transform: uppercase; margin-bottom: 4px; }
-  .subtitulo { font-size: 10pt; text-align: center; color: #333; margin-bottom: 20px; }
-  .secao { font-size: 10.5pt; font-weight: bold; text-transform: uppercase; margin: 14px 0 6px; border-bottom: 1px solid #000; padding-bottom: 2px; }
-  table.dados { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-  table.dados td { padding: 4px 6px; vertical-align: top; border-bottom: 1px dotted #ddd; }
+  body { font-family: Arial, sans-serif; font-size: 8.5pt; color: #000; background: #fff; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 12mm 16mm 10mm; }
+  h1 { font-size: 10.5pt; text-align: center; text-transform: uppercase; margin-bottom: 3px; }
+  .subtitulo { font-size: 8.5pt; text-align: center; color: #333; margin-bottom: 10px; }
+  .secao { font-size: 8.5pt; font-weight: bold; text-transform: uppercase; margin: 8px 0 4px; border-bottom: 1px solid #000; padding-bottom: 1px; }
+  table.dados { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+  table.dados td { padding: 2px 5px; vertical-align: top; border-bottom: 1px dotted #ddd; }
   table.dados td.label { font-weight: bold; width: 40%; }
-  table.avaliacao { width: 100%; border-collapse: collapse; margin-top: 8px; }
-  table.avaliacao th { background: #1a2845; color: #fff; padding: 6px 10px; font-size: 10pt; }
-  table.avaliacao td { padding: 7px 10px; border: 1px solid #ccc; font-size: 10.5pt; }
+  table.avaliacao { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  table.avaliacao th { background: #1a2845; color: #fff; padding: 4px 8px; font-size: 8.5pt; }
+  table.avaliacao td { padding: 3px 8px; border: 1px solid #ccc; font-size: 8.5pt; }
   table.avaliacao tr:nth-child(even) td { background: #f5f7fa; }
-  table.avaliacao .resp { text-align: center; width: 60px; font-weight: bold; }
-  .area-texto { border: 1px solid #ccc; min-height: 60px; padding: 8px; margin-top: 6px; border-radius: 4px; background: #fafafa; }
-  .assinaturas { display: flex; justify-content: space-between; gap: 12px; margin-top: 28px; }
+  table.avaliacao .resp { text-align: center; width: 50px; font-weight: bold; }
+  .area-texto { border: 1px solid #ccc; min-height: 30px; padding: 5px; margin-top: 3px; border-radius: 3px; background: #fafafa; }
+  .assinaturas { display: flex; justify-content: space-between; gap: 10px; margin-top: 14px; }
   .assinatura-bloco { flex: 1; text-align: center; }
-  .assinatura-linha { border-top: 1px solid #000; padding-top: 4px; }
-  .assinatura-img { height: 80px; display: block; margin: 0 auto 4px; object-fit: contain; }
-  .assinatura-agente { text-align: center; margin-top: 18px; }
-  .rodape { font-size: 8pt; color: #555; text-align: center; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 6px; }
-  @media print { .no-print { display: none !important; } .page { padding: 15mm 18mm 12mm; } }
+  .assinatura-linha { border-top: 1px solid #000; padding-top: 3px; }
+  .assinatura-img { height: 55px; display: block; margin: 0 auto 3px; object-fit: contain; }
+  .assinatura-agente { text-align: center; margin-top: 10px; }
+  .rodape { font-size: 7pt; color: #555; text-align: center; margin-top: 10px; border-top: 1px solid #ccc; padding-top: 4px; }
+  @media print { .no-print { display: none !important; } .page { padding: 10mm 14mm 8mm; } }
 </style>
 <link rel="stylesheet" href="{{ url_for('static', filename='ciclorh_doc.css') }}">
 </head>
