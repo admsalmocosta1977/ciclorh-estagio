@@ -137,6 +137,9 @@
             <span class="input-group-text">h</span>
           </div>
         </div>
+        <div class="col-12" id="div-aviso-jornada" style="display:none">
+          <div id="aviso-jornada-inline" class="alert alert-danger mb-0 py-2"></div>
+        </div>
         <div class="col-md-4">
           <label class="form-label fw-semibold">Data de Início *</label>
           <input type="date" name="data_inicio" class="form-control" value="{{ c.data_inicio if c else '' }}" required>
@@ -424,6 +427,24 @@
 
 {% block scripts %}
 <script>
+// ── Rastreamento de violações legais ──────────────────────────────────────────
+const violations = {};
+function setViolation(key, isViolation) {
+  violations[key] = isViolation;
+  const btn = document.querySelector('button[type="submit"]');
+  const hasV = Object.values(violations).some(Boolean);
+  btn.disabled = hasV;
+  btn.classList.toggle('btn-danger', hasV);
+  btn.classList.toggle('btn-primary', !hasV);
+  btn.title = hasV ? 'Corrija os erros indicados antes de salvar.' : '';
+}
+function showAvisoJornada(msg) {
+  const div = document.getElementById('div-aviso-jornada');
+  const el  = document.getElementById('aviso-jornada-inline');
+  if (msg) { el.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i>' + msg; div.style.display = ''; }
+  else { div.style.display = 'none'; }
+}
+
 // Carregar supervisores ao selecionar empresa
 const selEmp = document.getElementById('sel-empresa');
 const selSup = document.getElementById('sel-supervisor');
@@ -573,7 +594,8 @@ function checkVinculo() {
   if (excludeId) url += '?exclude=' + excludeId;
   fetch(url).then(r => r.json()).then(d => {
     const dIni = document.querySelector('[name="data_inicio"]').value;
-    const dFim = document.querySelector('[name="data_fim"]').value;
+    const dEnc = document.querySelector('[name="data_encerramento"]').value;
+    const dFim = dEnc || document.querySelector('[name="data_fim"]').value;
     let propostaDias = 0;
     if (dIni && dFim) {
       propostaDias = Math.max(0, Math.round((new Date(dFim) - new Date(dIni)) / 86400000));
@@ -586,18 +608,22 @@ function checkVinculo() {
       el.className = 'alert alert-danger mb-0 py-2';
       el.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i><strong>Estágio excede o período de 2 anos!</strong> Total acumulado: ' + total + ' dias (' + anos + ' anos).';
       divWrap.style.display = '';
+      setViolation('vinculo', true);
     } else if (total >= 600) {
       el.className = 'alert alert-warning mb-0 py-2';
       el.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i><strong>Atenção:</strong> Total acumulado será de ' + total + ' dias (' + anos + ' anos). Limite legal: 2 anos.';
       divWrap.style.display = '';
+      setViolation('vinculo', false);
     } else if (d.total_dias > 0) {
       el.className = 'alert alert-info mb-0 py-2';
       el.innerHTML = '<i class="bi bi-info-circle me-1"></i>Histórico: ' + d.total_dias + ' dias (' + d.anos + ' anos) neste vínculo CPF+CNPJ.';
       divWrap.style.display = '';
+      setViolation('vinculo', false);
     } else {
       divWrap.style.display = 'none';
+      setViolation('vinculo', false);
     }
-  }).catch(() => { divWrap.style.display = 'none'; });
+  }).catch(() => { divWrap.style.display = 'none'; setViolation('vinculo', false); });
 }
 document.getElementById('sel-estagiario').addEventListener('change', checkVinculo);
 document.querySelector('[name="data_inicio"]').addEventListener('change', checkVinculo);
@@ -691,15 +717,36 @@ function verificarJornada() {
     if (horasDia > maxDiario) maxDiario = horasDia;
     totalSemanal += horasDia;
   });
-  if (maxDiario > 6 || totalSemanal > 30) {
-    const det = 'Máximo diário calculado: ' + maxDiario.toFixed(1) + 'h — Total semanal: ' + totalSemanal.toFixed(1) + 'h';
+  const overGrid = maxDiario > 6 || totalSemanal > 30;
+  if (overGrid) {
+    const det = 'Jornada excede o limite legal: ' + maxDiario.toFixed(1) + 'h/dia e ' + totalSemanal.toFixed(1) + 'h/semana (máx: 6h/dia e 30h/sem — art. 10, Lei 11.788/2008)';
     document.getElementById('modal-jornada-detalhe').textContent = det;
     new bootstrap.Modal(document.getElementById('modal-jornada-maxima')).show();
+    showAvisoJornada(det);
+  } else {
+    showAvisoJornada(null);
   }
+  setViolation('jornada', overGrid);
 }
 document.querySelectorAll('input[type="time"]').forEach(el => {
   el.addEventListener('change', verificarJornada);
 });
+
+// Verificar CH diária/semanal digitadas diretamente
+function verificarCH() {
+  const chD = parseFloat(document.querySelector('[name="ch_diaria"]').value) || 0;
+  const chS = parseFloat(document.querySelector('[name="ch_semanal"]').value) || 0;
+  const over = chD > 6 || chS > 30;
+  if (over) {
+    showAvisoJornada('Carga horária excede o limite legal: ' + chD + 'h/dia e ' + chS + 'h/semana (máx: 6h/dia e 30h/sem — art. 10, Lei 11.788/2008)');
+  } else {
+    showAvisoJornada(null);
+  }
+  setViolation('ch', over);
+}
+document.querySelector('[name="ch_diaria"]').addEventListener('input', verificarCH);
+document.querySelector('[name="ch_semanal"]').addEventListener('input', verificarCH);
+document.querySelector('[name="data_encerramento"]').addEventListener('change', checkVinculo);
 
 // Carregar professores ao selecionar IE
 const selIe = document.getElementById('sel-ie');
