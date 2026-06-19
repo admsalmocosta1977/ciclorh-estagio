@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Áreas de Estágio{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0"><i class="bi bi-tags me-2"></i>Áreas de Estágio</h4>
+  <a href="{{ url_for('area_nova') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Nova Área
+  </a>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" style="font-size:0.85rem">
+      <thead class="table-dark" style="font-size:0.8rem">
+        <tr>
+          <th>Área de Estágio</th>
+          <th class="text-center">Atividades</th>
+          <th class="text-end"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in areas %}
+        <tr>
+          <td class="fw-semibold">{{ a.nome }}</td>
+          <td class="text-center">
+            <span class="badge bg-secondary">{{ a.qtd_atividades }}</span>
+          </td>
+          <td class="text-end">
+            <a href="{{ url_for('area_editar', id=a.id) }}" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" class="text-center text-muted py-4">Nenhuma área cadastrada.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
