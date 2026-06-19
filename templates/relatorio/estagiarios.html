@@ -4,38 +4,42 @@
 {% block head_extra %}
 <link rel="stylesheet" href="{{ url_for('static', filename='ciclorh_doc.css') }}">
 <style>
-  .print-cabecalho { display: none; }
+  /* cabeçalho de impressão: oculto na tela */
+  .cab-print { display: none !important; }
   @media print {
-    .print-cabecalho { display: flex !important; margin-bottom: 6px; }
+    .cab-print  { display: flex !important; align-items: center; gap: 14px; margin-bottom: 6px; }
+    .cab-screen { display: none !important; }
+    .no-print   { display: none !important; }
+    .rel-table  { font-size: 6.5pt !important; }
+    .rel-table thead th { font-size: 6pt !important; }
   }
-  /* logo menor só nesta página */
-  .rel-logo { height: 36px; object-fit: contain; flex-shrink: 0; }
-  .rel-table { font-size: 0.65rem; }
-  .rel-table thead th { font-size: 0.60rem; text-transform: uppercase; letter-spacing: 0.04em; color: #555; font-weight: 600; }
-  .rel-table td, .rel-table th { padding: 3px 6px; vertical-align: middle; }
-  .rel-table tfoot td { font-size: 0.63rem; }
-  .grupo-header td { background: #e9ecef; font-weight: 700; font-size: 0.66rem; letter-spacing: 0.03em; }
-  .grupo-subtotal td { background: #f8f9fa; font-weight: 600; font-size: 0.62rem; border-top: 1px solid #dee2e6; }
-  .btn-modo { font-size: .72rem; }
-  @media print {
-    .no-print { display: none !important; }
-    .rel-table { font-size: 7pt; }
-    .rel-table thead th { font-size: 6.5pt; }
-    .rel-logo { height: 30px; }
-  }
+  .rel-table { font-size: 0.62rem !important; }
+  .rel-table thead th { font-size: 0.58rem !important; text-transform: uppercase; letter-spacing: 0.04em; color: #555; font-weight: 600; }
+  .rel-table td, .rel-table th { padding: 3px 5px !important; vertical-align: middle; }
+  .rel-table tfoot td { font-size: 0.60rem !important; }
+  .grupo-header td { background: #e9ecef; font-weight: 700; font-size: 0.62rem; letter-spacing: 0.03em; }
+  .grupo-subtotal td { background: #f8f9fa; font-weight: 600; font-size: 0.60rem; border-top: 1px solid #dee2e6; }
+  .btn-modo { font-size: .70rem; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="print-cabecalho doc-cabecalho">
-  <img src="{{ url_for('static', filename='logo_ciclorh.png.png') }}" class="rel-logo" alt="Ciclo RH">
+<!-- Cabeçalho somente na impressão -->
+<div class="cab-print">
+  <img src="{{ url_for('static', filename='logo_ciclorh.png.png') }}" style="height:54px;object-fit:contain;flex-shrink:0" alt="Ciclo RH">
   <div class="doc-cab-info">
     <span class="doc-cab-nome">{{ agente.nome }}</span>
     <span class="doc-cab-sub">Agente de Integração de Estágio — Lei Federal n.º 11.788/2008</span>
     <span class="doc-cab-contato">CNPJ: {{ agente.cnpj }} | {{ agente.email }}</span>
   </div>
 </div>
-<div class="print-cabecalho doc-stripe" style="margin-bottom:12px"></div>
+<div class="cab-print doc-stripe" style="margin-bottom:10px"></div>
+
+<!-- Cabeçalho compacto na tela -->
+<div class="cab-screen d-flex align-items-center gap-2 mb-3">
+  <img src="{{ url_for('static', filename='logo_ciclorh.png.png') }}" style="height:32px;object-fit:contain" alt="Ciclo RH">
+  <span style="font-size:.72rem;color:#555">{{ agente.nome }} — CNPJ: {{ agente.cnpj }}</span>
+</div>
 
 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
   <h5 class="fw-bold mb-0"><i class="bi bi-people me-2"></i>Relatório de Estagiários</h5>
