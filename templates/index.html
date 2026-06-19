@@ -30,6 +30,42 @@
   </div>
 </div>
 
+{% if pendentes %}
+<div class="card mb-4 border-danger">
+  <div class="card-header d-flex align-items-center gap-2" style="background:#fff3cd;border-bottom:1px solid #f5c842">
+    <i class="bi bi-clock-history text-danger fs-5"></i>
+    <span class="fw-semibold">Contratos vencidos aguardando confirmação ({{ pendentes|length }})</span>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover align-middle mb-0" style="font-size:.9rem">
+      <thead class="table-light"><tr>
+        <th>Estagiário</th><th>Empresa</th><th>Venceu em</th><th class="text-center">Ação</th>
+      </tr></thead>
+      <tbody>
+      {% for r in pendentes %}
+      <tr class="table-warning">
+        <td class="fw-semibold">{{ r.est_nome }}</td>
+        <td>{{ r.emp_nome }}</td>
+        <td><span class="badge bg-danger">{{ fmt_date(r.data_efetiva) }}</span></td>
+        <td class="text-center">
+          <form method="post" action="{{ url_for('contrato_encerrar', id=r.id) }}" class="d-inline"
+                onsubmit="return confirm('Confirmar encerramento do estágio de {{ r.est_nome }}?')">
+            <button type="submit" class="btn btn-sm btn-danger">
+              <i class="bi bi-check-circle me-1"></i>Confirmar Encerramento
+            </button>
+          </form>
+          <a href="{{ url_for('contrato_editar', id=r.id) }}" class="btn btn-sm btn-outline-primary ms-1">
+            <i class="bi bi-arrow-repeat me-1"></i>Renovar
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 {% if vencendo %}
 <div class="card mb-4">
   <div class="card-header d-flex align-items-center gap-2">
@@ -46,11 +82,9 @@
       <tr>
         <td>{{ r.est_nome }}</td>
         <td>{{ r.emp_nome }}</td>
-        <td>{{ fmt_date(r.data_fim) }}</td>
-        <td>
-          {% set st = calcular_status(r.data_fim) %}
+        <td>{{ fmt_date(r.data_efetiva) }}</td>
+        <td>{% set st = calcular_status(r.data_efetiva) %}
           {% if 'DIAS' in st %}<span class="badge badge-vencendo">{{ st }}</span>
-          {% elif st == 'VENCIDO' %}<span class="badge badge-vencido">VENCIDO</span>
           {% else %}<span class="badge badge-ativo">ATIVO</span>{% endif %}
         </td>
         <td>

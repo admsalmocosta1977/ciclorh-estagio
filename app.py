@@ -685,27 +685,93 @@ def admin_importar():
 @app.route('/')
 @login_required
 def index():
-    total = _q("SELECT COUNT(*) AS n FROM contrato", one=True)['n']
+    hoje = date.today().isoformat()
     d30 = (date.today() + timedelta(days=30)).isoformat()
-    vencendo = _q("""
-        SELECT c.*, e.nome est_nome, emp.nome emp_nome
+
+    # CTE que calcula a data efetiva de fim (considera aditivos de prorrogação)
+    cte = """
+        WITH ef AS (
+            SELECT c.id,
+                   COALESCE(
+                       c.data_encerramento,
+                       (SELECT a.nova_data_fim FROM aditivo a
+                        WHERE a.contrato_id = c.id AND a.nova_data_fim IS NOT NULL AND a.nova_data_fim <> ''
+                        ORDER BY a.created_at DESC LIMIT 1),
+                       c.data_fim
+                   ) AS data_efetiva
+            FROM contrato c
+        )
+    """
+
+    # Contratos ativos (data efetiva >= hoje e sem encerramento)
+    total = _q(cte + """
+        SELECT COUNT(*) AS n FROM contrato c
+        JOIN ef ON ef.id = c.id
+        WHERE c.data_encerramento IS NULL AND ef.data_efetiva >= %s
+    """, (hoje,), one=True)['n']
+
+    # Vencendo em 30 dias (ainda ativos)
+    vencendo = _q(cte + """
+        SELECT c.*, e.nome est_nome, emp.nome emp_nome, ef.data_efetiva
         FROM contrato c
         JOIN estagiario e ON e.id = c.estagiario_id
         JOIN empresa emp ON emp.id = c.empresa_id
-        WHERE c.data_fim <= %s ORDER BY c.data_fim
-    """, (d30,))
-    recentes = _q("""
-        SELECT c.*, e.nome est_nome, emp.nome emp_nome
+        JOIN ef ON ef.id = c.id
+        WHERE c.data_encerramento IS NULL
+          AND ef.data_efetiva >= %s AND ef.data_efetiva <= %s
+        ORDER BY ef.data_efetiva
+    """, (hoje, d30))
+
+    # Vencidos sem confirmação (precisam de ação)
+    pendentes = _q(cte + """
+        SELECT c.*, e.nome est_nome, emp.nome emp_nome, ef.data_efetiva
         FROM contrato c
         JOIN estagiario e ON e.id = c.estagiario_id
         JOIN empresa emp ON emp.id = c.empresa_id
+        JOIN ef ON ef.id = c.id
+        WHERE c.data_encerramento IS NULL AND ef.data_efetiva < %s
+        ORDER BY ef.data_efetiva DESC
+    """, (hoje,))
+
+    # Contratos recentes ativos
+    recentes = _q(cte + """
+        SELECT c.*, e.nome est_nome, emp.nome emp_nome, ef.data_efetiva
+        FROM contrato c
+        JOIN estagiario e ON e.id = c.estagiario_id
+        JOIN empresa emp ON emp.id = c.empresa_id
+        JOIN ef ON ef.id = c.id
+        WHERE c.data_encerramento IS NULL AND ef.data_efetiva >= %s
         ORDER BY c.created_at DESC LIMIT 10
-    """)
+    """, (hoje,))
+
     total_est = _q("SELECT COUNT(*) AS n FROM estagiario", one=True)['n']
     total_emp = _q("SELECT COUNT(*) AS n FROM empresa", one=True)['n']
     total_ie = _q("SELECT COUNT(*) AS n FROM ie", one=True)['n']
     return render_template('index.html', total=total, vencendo=vencendo, recentes=recentes,
+                           pendentes=pendentes,
                            total_est=total_est, total_emp=total_emp, total_ie=total_ie)
+
+
+@app.route('/contratos/<int:id>/encerrar', methods=['POST'])
+@login_required
+def contrato_encerrar(id):
+    c = _q("SELECT * FROM contrato WHERE id = %s", (id,), one=True)
+    if not c:
+        abort(404)
+    # Usa a data efetiva (último aditivo ou data_fim original)
+    data_efetiva = _q("""
+        SELECT COALESCE(
+            (SELECT nova_data_fim FROM aditivo
+             WHERE contrato_id = %s AND nova_data_fim IS NOT NULL AND nova_data_fim <> ''
+             ORDER BY created_at DESC LIMIT 1),
+            %s
+        ) AS dt
+    """, (id, c['data_fim']), one=True)['dt']
+    _run("UPDATE contrato SET data_encerramento = %s WHERE id = %s", (data_efetiva, id))
+    est = _q("SELECT nome FROM estagiario WHERE id = %s", (c['estagiario_id'],), one=True)
+    _log('encerrar', 'contrato', id, f'Encerrou contrato: {est["nome"] if est else id}')
+    flash(f'Contrato encerrado em {fmt_date(data_efetiva)}.', 'success')
+    return redirect(url_for('index'))
 
 
 # ─── ESTAGIÁRIOS ──────────────────────────────────────────────────────────────
