@@ -37,7 +37,7 @@
     <span class="fw-semibold">Contratos vencidos aguardando confirmação ({{ pendentes|length }})</span>
   </div>
   <div class="card-body p-0">
-    <table class="table table-hover align-middle mb-0" style="font-size:.9rem">
+    <table class="table table-hover align-middle mb-0" style="font-size:.75rem">
       <thead class="table-light"><tr>
         <th>Estagiário</th><th>Empresa</th><th>Venceu em</th><th class="text-center">Ação</th>
       </tr></thead>
@@ -45,7 +45,7 @@
       {% for r in pendentes %}
       <tr class="table-warning">
         <td class="fw-semibold">{{ r.est_nome }}</td>
-        <td>{{ r.emp_nome }}</td>
+        <td>{{ r.emp_display }}</td>
         <td><span class="badge bg-danger">{{ fmt_date(r.data_efetiva) }}</span></td>
         <td class="text-center">
           <form method="post" action="{{ url_for('contrato_encerrar', id=r.id) }}" class="d-inline"
@@ -73,7 +73,7 @@
     <span>Contratos vencendo nos próximos 30 dias ({{ vencendo|length }})</span>
   </div>
   <div class="card-body p-0">
-    <table class="table table-hover mb-0">
+    <table class="table table-hover mb-0" style="font-size:.75rem">
       <thead class="table-light"><tr>
         <th>Estagiário</th><th>Empresa</th><th>Vencimento</th><th>Situação</th><th></th>
       </tr></thead>
@@ -81,7 +81,7 @@
       {% for r in vencendo %}
       <tr>
         <td>{{ r.est_nome }}</td>
-        <td>{{ r.emp_nome }}</td>
+        <td>{{ r.emp_display }}</td>
         <td>{{ fmt_date(r.data_efetiva) }}</td>
         <td>{% set st = calcular_status(r.data_efetiva) %}
           {% if 'DIAS' in st %}<span class="badge badge-vencendo">{{ st }}</span>
@@ -107,7 +107,7 @@
     </a>
   </div>
   <div class="card-body p-0">
-    <table class="table table-hover mb-0">
+    <table class="table table-hover mb-0" style="font-size:.75rem">
       <thead class="table-light"><tr>
         <th>Estagiário</th><th>Empresa</th><th>Vigência</th><th>Documentos</th>
       </tr></thead>
@@ -115,7 +115,7 @@
       {% for r in recentes %}
       <tr>
         <td>{{ r.est_nome }}</td>
-        <td>{{ r.emp_nome }}</td>
+        <td>{{ r.emp_display }}</td>
         <td>{{ fmt_date(r.data_inicio) }} – {{ fmt_date(r.data_fim) }}</td>
         <td class="d-flex gap-1 flex-wrap">
           <a href="{{ url_for('doc_tce', id=r.id) }}" class="btn btn-sm btn-outline-primary btn-doc" target="_blank">TCE</a>

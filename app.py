@@ -712,7 +712,8 @@ def index():
 
     # Vencendo em 30 dias (ainda ativos)
     vencendo = _q(cte + """
-        SELECT c.*, e.nome est_nome, emp.nome emp_nome, ef.data_efetiva
+        SELECT c.*, e.nome est_nome, emp.nome emp_nome,
+               COALESCE(emp.nome_fantasia, emp.nome) emp_display, ef.data_efetiva
         FROM contrato c
         JOIN estagiario e ON e.id = c.estagiario_id
         JOIN empresa emp ON emp.id = c.empresa_id
@@ -724,7 +725,8 @@ def index():
 
     # Vencidos sem confirmação (precisam de ação)
     pendentes = _q(cte + """
-        SELECT c.*, e.nome est_nome, emp.nome emp_nome, ef.data_efetiva
+        SELECT c.*, e.nome est_nome, emp.nome emp_nome,
+               COALESCE(emp.nome_fantasia, emp.nome) emp_display, ef.data_efetiva
         FROM contrato c
         JOIN estagiario e ON e.id = c.estagiario_id
         JOIN empresa emp ON emp.id = c.empresa_id
@@ -735,7 +737,8 @@ def index():
 
     # Contratos recentes ativos
     recentes = _q(cte + """
-        SELECT c.*, e.nome est_nome, emp.nome emp_nome, ef.data_efetiva
+        SELECT c.*, e.nome est_nome, emp.nome emp_nome,
+               COALESCE(emp.nome_fantasia, emp.nome) emp_display, ef.data_efetiva
         FROM contrato c
         JOIN estagiario e ON e.id = c.estagiario_id
         JOIN empresa emp ON emp.id = c.empresa_id
