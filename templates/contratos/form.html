@@ -111,7 +111,17 @@
         </div>
         <div class="col-md-6">
           <label class="form-label fw-semibold">Área de Atuação</label>
-          <input type="text" name="area_atuacao" class="form-control" value="{{ c.area_atuacao if c else '' }}">
+          {% if areas %}
+          <select class="form-select form-select-sm mb-1" id="sel-area">
+            <option value="">— Escolher área pré-cadastrada —</option>
+            {% for a in areas %}
+            <option value="{{ a.id }}" data-nome="{{ a.nome }}"
+              {% if c and c.area_atuacao == a.nome %}selected{% endif %}>{{ a.nome }}</option>
+            {% endfor %}
+          </select>
+          {% endif %}
+          <input type="text" name="area_atuacao" id="inp-area-atuacao" class="form-control form-control-sm"
+                 value="{{ c.area_atuacao if c else '' }}" placeholder="Ou descreva livremente">
         </div>
         <div class="col-md-3">
           <label class="form-label fw-semibold">Carga Horária Diária</label>
@@ -251,6 +261,19 @@
       <button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="btn-add-at">
         <i class="bi bi-plus me-1"></i>Adicionar atividade
       </button>
+
+      <div id="painel-sugestao-ats" class="border rounded p-3 mt-3 bg-light" style="display:none">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-semibold small"><i class="bi bi-list-check me-1 text-primary"></i>Atividades da área — marque as que se aplicam</span>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-marcar-todas">Marcar todas</button>
+            <button type="button" class="btn btn-sm btn-primary" id="btn-aplicar-ats">
+              <i class="bi bi-check2-circle me-1"></i>Aplicar selecionadas
+            </button>
+          </div>
+        </div>
+        <div id="lista-checks-area" class="row g-2"></div>
+      </div>
 
       <hr>
       <div class="col-12">
@@ -465,6 +488,68 @@ selEmp.addEventListener('change', function() {
 });
 
 if (selEmp.value) carregarSupervisores(selEmp.value, supAtual);
+
+// Área de estágio — sugestão de atividades
+const selArea = document.getElementById('sel-area');
+if (selArea) {
+  selArea.addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    const areaId = this.value;
+    const areaNome = opt ? opt.dataset.nome : '';
+    const inpArea = document.getElementById('inp-area-atuacao');
+    const painel = document.getElementById('painel-sugestao-ats');
+    const lista = document.getElementById('lista-checks-area');
+
+    if (areaNome) inpArea.value = areaNome;
+
+    if (!areaId) { painel.style.display = 'none'; lista.innerHTML = ''; return; }
+
+    fetch('/api/area_atividades/' + areaId)
+      .then(r => r.json())
+      .then(ats => {
+        lista.innerHTML = '';
+        if (!ats.length) { painel.style.display = 'none'; return; }
+        ats.forEach((desc, i) => {
+          const col = document.createElement('div');
+          col.className = 'col-12';
+          col.innerHTML = `<div class="form-check">
+            <input class="form-check-input check-at" type="checkbox" id="at_check_${i}" value="${desc.replace(/"/g,'&quot;')}" checked>
+            <label class="form-check-label small" for="at_check_${i}">${desc}</label>
+          </div>`;
+          lista.appendChild(col);
+        });
+        painel.style.display = '';
+      });
+  });
+
+  document.getElementById('btn-marcar-todas').addEventListener('click', function() {
+    const checks = document.querySelectorAll('.check-at');
+    const allChecked = Array.from(checks).every(c => c.checked);
+    checks.forEach(c => c.checked = !allChecked);
+    this.textContent = allChecked ? 'Marcar todas' : 'Desmarcar todas';
+  });
+
+  document.getElementById('btn-aplicar-ats').addEventListener('click', function() {
+    const selecionadas = Array.from(document.querySelectorAll('.check-at:checked')).map(c => c.value);
+    if (!selecionadas.length) return;
+    const inputs = document.querySelectorAll('[name^="atividade_"]');
+    // Limpa todos os campos primeiro
+    inputs.forEach(inp => { inp.value = ''; inp.closest('.atividade-row').style.display = 'none'; });
+    // Preenche na ordem e garante visibilidade
+    selecionadas.forEach((desc, i) => {
+      if (i < inputs.length) {
+        inputs[i].value = desc;
+        inputs[i].closest('.atividade-row').style.display = '';
+      }
+    });
+    visibleAts = selecionadas.length;
+    if (visibleAts >= inputs.length) document.getElementById('btn-add-at').style.display = 'none';
+    else document.getElementById('btn-add-at').style.display = '';
+    // Garante que a primeira linha aparece sempre
+    if (inputs[0]) inputs[0].closest('.atividade-row').style.display = '';
+    document.getElementById('painel-sugestao-ats').style.display = 'none';
+  });
+}
 
 // Toggle label bolsa mensal/diária
 function atualizarLabelBolsa() {
