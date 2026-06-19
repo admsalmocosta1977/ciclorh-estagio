@@ -8,21 +8,27 @@
   @media print {
     .print-cabecalho { display: flex !important; margin-bottom: 6px; }
   }
-  .rel-table { font-size: 0.78rem; }
-  .rel-table thead th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: #555; font-weight: 600; }
-  .rel-table td, .rel-table th { padding: 5px 8px; vertical-align: middle; }
-  .rel-table tfoot td { font-size: 0.76rem; }
+  /* logo menor só nesta página */
+  .rel-logo { height: 36px; object-fit: contain; flex-shrink: 0; }
+  .rel-table { font-size: 0.65rem; }
+  .rel-table thead th { font-size: 0.60rem; text-transform: uppercase; letter-spacing: 0.04em; color: #555; font-weight: 600; }
+  .rel-table td, .rel-table th { padding: 3px 6px; vertical-align: middle; }
+  .rel-table tfoot td { font-size: 0.63rem; }
+  .grupo-header td { background: #e9ecef; font-weight: 700; font-size: 0.66rem; letter-spacing: 0.03em; }
+  .grupo-subtotal td { background: #f8f9fa; font-weight: 600; font-size: 0.62rem; border-top: 1px solid #dee2e6; }
+  .btn-modo { font-size: .72rem; }
   @media print {
     .no-print { display: none !important; }
-    .rel-table { font-size: 8pt; }
-    .rel-table thead th { font-size: 7.5pt; }
+    .rel-table { font-size: 7pt; }
+    .rel-table thead th { font-size: 6.5pt; }
+    .rel-logo { height: 30px; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="print-cabecalho doc-cabecalho">
-  <img src="{{ url_for('static', filename='logo_ciclorh.png.png') }}" class="doc-logo" alt="Ciclo RH">
+  <img src="{{ url_for('static', filename='logo_ciclorh.png.png') }}" class="rel-logo" alt="Ciclo RH">
   <div class="doc-cab-info">
     <span class="doc-cab-nome">{{ agente.nome }}</span>
     <span class="doc-cab-sub">Agente de Integração de Estágio — Lei Federal n.º 11.788/2008</span>
@@ -31,25 +37,27 @@
 </div>
 <div class="print-cabecalho doc-stripe" style="margin-bottom:12px"></div>
 
-<div class="d-flex justify-content-between align-items-center mb-4 no-print">
-  <h4 class="fw-bold mb-0"><i class="bi bi-people me-2"></i>Relatório de Estagiários</h4>
+<div class="d-flex justify-content-between align-items-center mb-3 no-print">
+  <h5 class="fw-bold mb-0"><i class="bi bi-people me-2"></i>Relatório de Estagiários</h5>
   {% if contratos %}
   <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
     <i class="bi bi-printer me-1"></i>Imprimir / Salvar PDF
   </button>
   {% endif %}
 </div>
-<h4 class="fw-bold mb-1 d-none d-print-block">Relatório de Estagiários
+<h5 class="fw-bold mb-1 d-none d-print-block">Relatório de Estagiários
   {% if empresa_sel %} — {{ empresa_sel.nome }}{% endif %}
-</h4>
-{% if data_hoje is defined %}<p class="d-none d-print-block text-muted small mb-3">Emitido em {{ fmt_date(data_hoje) }}</p>{% endif %}
+</h5>
+{% if data_hoje is defined %}<p class="d-none d-print-block text-muted" style="font-size:7.5pt;margin-bottom:8px">Emitido em {{ fmt_date(data_hoje) }}</p>{% endif %}
 
-<div class="card mb-3 no-print">
+<!-- Filtros -->
+<div class="card mb-2 no-print">
   <div class="card-body py-2">
     <form method="get" class="row g-2 align-items-end">
+      <input type="hidden" name="modo" value="{{ modo }}">
       <div class="col-md-4">
-        <label class="form-label fw-semibold mb-1" style="font-size:.8rem">Empresa</label>
-        <select name="empresa_id" class="form-select form-select-sm">
+        <label class="form-label fw-semibold mb-1" style="font-size:.75rem">Empresa</label>
+        <select name="empresa_id" class="form-select form-select-sm" style="font-size:.75rem">
           <option value="">Todas as empresas</option>
           {% for emp in empresas %}
           <option value="{{ emp.id }}" {% if empresa_id == emp.id|string %}selected{% endif %}>{{ emp.nome }}</option>
@@ -57,125 +65,191 @@
         </select>
       </div>
       <div class="col-md-3">
-        <label class="form-label fw-semibold mb-1" style="font-size:.8rem">Instituição de Ensino</label>
-        <select name="ie_id" class="form-select form-select-sm">
+        <label class="form-label fw-semibold mb-1" style="font-size:.75rem">Instituição de Ensino</label>
+        <select name="ie_id" class="form-select form-select-sm" style="font-size:.75rem">
           <option value="">Todas as IEs</option>
           {% for ie in ies %}
           <option value="{{ ie.id }}" {% if ie_id == ie.id|string %}selected{% endif %}>{{ ie.nome }}</option>
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-3">
-        <label class="form-label fw-semibold mb-1" style="font-size:.8rem">Curso</label>
-        <input type="text" name="curso" value="{{ curso }}" class="form-control form-control-sm" placeholder="Ex: Administração">
+      <div class="col-md-2">
+        <label class="form-label fw-semibold mb-1" style="font-size:.75rem">Curso</label>
+        <input type="text" name="curso" value="{{ curso }}" class="form-control form-control-sm" style="font-size:.75rem" placeholder="Ex: Administração">
       </div>
       <div class="col-auto">
-        <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-search me-1"></i>Filtrar</button>
+        <button class="btn btn-sm btn-primary" type="submit" style="font-size:.72rem"><i class="bi bi-search me-1"></i>Filtrar</button>
         {% if empresa_id or ie_id or curso %}
-        <a href="{{ url_for('relatorio_estagiarios') }}" class="btn btn-sm btn-link text-muted">Limpar</a>
+        <a href="{{ url_for('relatorio_estagiarios', modo=modo) }}" class="btn btn-sm btn-link text-muted" style="font-size:.72rem">Limpar</a>
         {% endif %}
       </div>
     </form>
   </div>
 </div>
 
+<!-- Botões de modo -->
+<div class="d-flex gap-2 mb-2 no-print">
+  <a href="{{ url_for('relatorio_estagiarios', empresa_id=empresa_id, ie_id=ie_id, curso=curso, modo='') }}"
+     class="btn btn-sm btn-modo {% if not modo %}btn-primary{% else %}btn-outline-secondary{% %}">
+    <i class="bi bi-list-ul me-1"></i>Geral
+  </a>
+  <a href="{{ url_for('relatorio_estagiarios', empresa_id=empresa_id, ie_id=ie_id, curso=curso, modo='taxa') }}"
+     class="btn btn-sm btn-modo {% if modo == 'taxa' %}btn-primary{% else %}btn-outline-secondary{% %}">
+    <i class="bi bi-cash-coin me-1"></i>Com Taxas
+  </a>
+  <a href="{{ url_for('relatorio_estagiarios', empresa_id=empresa_id, ie_id=ie_id, curso=curso, modo='subtotais') }}"
+     class="btn btn-sm btn-modo {% if modo == 'subtotais' %}btn-primary{% else %}btn-outline-secondary{% %}">
+    <i class="bi bi-building me-1"></i>Subtotais por Empresa
+  </a>
+</div>
+
 <div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center" style="font-size:.82rem">
+  <div class="card-header d-flex justify-content-between align-items-center" style="font-size:.75rem;padding:6px 12px">
     <span>
       {% if empresa_sel %}Estagiários de <strong>{{ empresa_sel.nome }}</strong>
+      {% elif modo == 'taxa' %}Relatório geral com taxas
+      {% elif modo == 'subtotais' %}Subtotais por empresa
       {% elif ie_id or curso %}Resultado do filtro
       {% else %}Todos os estagiários ativos
       {% endif %}
     </span>
-    <span class="badge bg-secondary">{{ contratos | length }} contrato(s)</span>
+    <span class="badge bg-secondary" style="font-size:.65rem">{{ contratos | length }} contrato(s)</span>
   </div>
   <div class="card-body p-0">
-    {% if empresa_id %}
-    <!-- Relatório por empresa -->
-    <table class="table table-sm table-hover mb-0 rel-table">
-      <thead class="table-light">
-        <tr>
-          <th>Estagiário</th>
-          <th>Curso</th>
-          <th>Período</th>
-          <th>Início</th>
-          <th>Término</th>
-          <th class="text-end">Taxa Mensal (R$)</th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for c in contratos %}
-      <tr>
-        <td class="fw-semibold">{{ c.est_nome }}</td>
-        <td>{{ c.curso }}</td>
-        <td>
-          {% if c.est_semestre %}{{ c.est_semestre }}º {{ 'Ano' if c.est_tipo_ensino == 'medio' else 'Sem.' }}
-          {% else %}—{% endif %}
-        </td>
-        <td class="text-nowrap">{{ fmt_date(c.data_inicio) }}</td>
-        <td class="text-nowrap">{{ fmt_date(c.data_fim) }}</td>
-        <td class="text-end fw-semibold">{{ '%.2f'|format(c.taxa or 0) }}</td>
-      </tr>
-      {% else %}
-      <tr><td colspan="6" class="text-center text-muted py-4">Nenhum estagiário nesta empresa.</td></tr>
-      {% endfor %}
-      </tbody>
-      {% if contratos %}
-      <tfoot class="table-light fw-bold">
-        <tr>
-          <td colspan="5" class="text-end">TOTAL</td>
-          <td class="text-end">R$ {{ '%.2f'|format(total_taxa) }}</td>
-        </tr>
-      </tfoot>
-      {% endif %}
-    </table>
 
-    {% else %}
-    <!-- Relatório geral -->
-    <table class="table table-sm table-hover mb-0 rel-table">
-      <thead class="table-light">
-        <tr>
-          <th>Estagiário</th>
-          <th>Empresa</th>
-          <th>IE</th>
-          <th>Curso</th>
-          <th>Período</th>
-          <th>Início</th>
-          <th>Término</th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for c in contratos %}
+  {% if modo == 'subtotais' %}
+  <!-- ── MODO SUBTOTAIS POR EMPRESA ───────────────────────── -->
+  <table class="table table-sm table-hover mb-0 rel-table">
+    <thead class="table-light">
       <tr>
-        <td class="fw-semibold">{{ c.est_nome }}</td>
-        <td>{{ c.emp_nome }}</td>
+        <th>Estagiário</th>
+        <th>IE</th>
+        <th>Curso</th>
+        <th>Período</th>
+        <th class="text-nowrap">Início</th>
+        <th class="text-nowrap">Término</th>
+        <th class="text-end">Taxa (R$)</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for emp_nome, g in grupos.items() %}
+      <tr class="grupo-header">
+        <td colspan="7"><i class="bi bi-building me-1"></i>{{ g.display }}</td>
+      </tr>
+      {% for c in g.itens %}
+      <tr>
+        <td class="fw-semibold ps-3">{{ c.est_nome }}</td>
         <td>{{ c.ie_sigla or c.ie_nome }}</td>
         <td>{{ c.curso }}</td>
-        <td>
-          {% if c.est_semestre %}{{ c.est_semestre }}º {{ 'Ano' if c.est_tipo_ensino == 'medio' else 'Sem.' }}
-          {% else %}—{% endif %}
-        </td>
+        <td>{% if c.est_semestre %}{{ c.est_semestre }}º {{ 'Ano' if c.est_tipo_ensino == 'medio' else 'Sem.' }}{% else %}—{% endif %}</td>
         <td class="text-nowrap">{{ fmt_date(c.data_inicio) }}</td>
         <td class="text-nowrap">{{ fmt_date(c.data_fim) }}</td>
+        <td class="text-end">{{ '%.2f'|format(c.taxa or 0) }}</td>
       </tr>
-      {% else %}
-      <tr><td colspan="7" class="text-center text-muted py-4">
-        {% if empresa_id or ie_id or curso %}Nenhum resultado para os filtros aplicados.
-        {% else %}Nenhum contrato cadastrado.{% endif %}
-      </td></tr>
       {% endfor %}
-      </tbody>
-      {% if contratos %}
-      <tfoot class="table-light">
-        <tr>
-          <td colspan="7" class="text-end text-muted" style="font-size:.72rem">
-            {{ contratos | length }} estagiário(s) ativo(s)
-          </td>
-        </tr>
-      </tfoot>
-      {% endif %}
-    </table>
+      <tr class="grupo-subtotal">
+        <td colspan="6" class="text-end">Subtotal — {{ g.itens|length }} estagiário(s)</td>
+        <td class="text-end">R$ {{ '%.2f'|format(g.total_taxa) }}</td>
+      </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-center text-muted py-3">Nenhum contrato cadastrado.</td></tr>
+    {% endfor %}
+    </tbody>
+    {% if contratos %}
+    <tfoot class="table-light fw-bold">
+      <tr>
+        <td colspan="6" class="text-end">TOTAL GERAL — {{ contratos|length }} estagiário(s)</td>
+        <td class="text-end">R$ {{ '%.2f'|format(total_taxa) }}</td>
+      </tr>
+    </tfoot>
     {% endif %}
+  </table>
+
+  {% elif modo == 'taxa' or empresa_id %}
+  <!-- ── MODO COM TAXAS (geral ou por empresa) ────────────── -->
+  <table class="table table-sm table-hover mb-0 rel-table">
+    <thead class="table-light">
+      <tr>
+        <th>Estagiário</th>
+        {% if not empresa_id %}<th>Empresa</th>{% endif %}
+        <th>IE</th>
+        <th>Curso</th>
+        <th>Período</th>
+        <th class="text-nowrap">Início</th>
+        <th class="text-nowrap">Término</th>
+        <th class="text-end">Taxa (R$)</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for c in contratos %}
+    <tr>
+      <td class="fw-semibold">{{ c.est_nome }}</td>
+      {% if not empresa_id %}<td>{{ c.emp_display }}</td>{% endif %}
+      <td>{{ c.ie_sigla or c.ie_nome }}</td>
+      <td>{{ c.curso }}</td>
+      <td>{% if c.est_semestre %}{{ c.est_semestre }}º {{ 'Ano' if c.est_tipo_ensino == 'medio' else 'Sem.' }}{% else %}—{% endif %}</td>
+      <td class="text-nowrap">{{ fmt_date(c.data_inicio) }}</td>
+      <td class="text-nowrap">{{ fmt_date(c.data_fim) }}</td>
+      <td class="text-end fw-semibold">{{ '%.2f'|format(c.taxa or 0) }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="text-center text-muted py-3">Nenhum resultado.</td></tr>
+    {% endfor %}
+    </tbody>
+    {% if contratos %}
+    <tfoot class="table-light fw-bold">
+      <tr>
+        <td colspan="{{ 6 if empresa_id else 7 }}" class="text-end">TOTAL</td>
+        <td class="text-end">R$ {{ '%.2f'|format(total_taxa) }}</td>
+      </tr>
+    </tfoot>
+    {% endif %}
+  </table>
+
+  {% else %}
+  <!-- ── MODO GERAL (padrão) ──────────────────────────────── -->
+  <table class="table table-sm table-hover mb-0 rel-table">
+    <thead class="table-light">
+      <tr>
+        <th>Estagiário</th>
+        <th>Empresa</th>
+        <th>IE</th>
+        <th>Curso</th>
+        <th>Período</th>
+        <th class="text-nowrap">Início</th>
+        <th class="text-nowrap">Término</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for c in contratos %}
+    <tr>
+      <td class="fw-semibold">{{ c.est_nome }}</td>
+      <td>{{ c.emp_display }}</td>
+      <td>{{ c.ie_sigla or c.ie_nome }}</td>
+      <td>{{ c.curso }}</td>
+      <td>{% if c.est_semestre %}{{ c.est_semestre }}º {{ 'Ano' if c.est_tipo_ensino == 'medio' else 'Sem.' }}{% else %}—{% endif %}</td>
+      <td class="text-nowrap">{{ fmt_date(c.data_inicio) }}</td>
+      <td class="text-nowrap">{{ fmt_date(c.data_fim) }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-center text-muted py-3">
+      {% if empresa_id or ie_id or curso %}Nenhum resultado para os filtros aplicados.
+      {% else %}Nenhum contrato cadastrado.{% endif %}
+    </td></tr>
+    {% endfor %}
+    </tbody>
+    {% if contratos %}
+    <tfoot class="table-light">
+      <tr>
+        <td colspan="7" class="text-end text-muted" style="font-size:.60rem">
+          {{ contratos | length }} estagiário(s) ativo(s)
+        </td>
+      </tr>
+    </tfoot>
+    {% endif %}
+  </table>
+  {% endif %}
+
   </div>
 </div>
 {% endblock %}

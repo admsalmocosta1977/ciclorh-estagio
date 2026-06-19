@@ -1566,16 +1566,18 @@ def relatorio_estagiarios():
     empresa_id = request.args.get('empresa_id', '')
     ie_id = request.args.get('ie_id', '')
     curso = request.args.get('curso', '').strip()
+    modo = request.args.get('modo', '')
 
     sql = """
         SELECT c.*, e.nome est_nome, e.cpf est_cpf, e.semestre est_semestre,
                e.tipo_ensino est_tipo_ensino, e.matricula est_matricula,
-               emp.nome emp_nome, ie.nome ie_nome, ie.sigla ie_sigla
+               emp.nome emp_nome, COALESCE(emp.nome_fantasia, emp.nome) emp_display,
+               ie.nome ie_nome, ie.sigla ie_sigla
         FROM contrato c
         JOIN estagiario e ON e.id = c.estagiario_id
         JOIN empresa emp ON emp.id = c.empresa_id
         JOIN ie ON ie.id = c.ie_id
-        WHERE 1=1
+        WHERE c.data_encerramento IS NULL
     """
     params = []
     if empresa_id:
@@ -1596,10 +1598,21 @@ def relatorio_estagiarios():
     total_bolsa = sum(c['bolsa'] or 0 for c in contratos)
     empresa_sel = _q("SELECT nome FROM empresa WHERE id = %s", (empresa_id,), one=True) if empresa_id else None
 
+    # Agrupar por empresa para modo subtotais
+    grupos = {}
+    for c in contratos:
+        k = c['emp_nome']
+        if k not in grupos:
+            grupos[k] = {'display': c['emp_display'], 'itens': [], 'total_taxa': 0}
+        grupos[k]['itens'].append(c)
+        grupos[k]['total_taxa'] += (c['taxa'] or 0)
+
     return render_template('relatorio/estagiarios.html',
                            contratos=contratos, empresas=empresas, ies=ies,
                            empresa_id=empresa_id, ie_id=ie_id, curso=curso,
+                           modo=modo,
                            total_taxa=total_taxa, total_bolsa=total_bolsa,
+                           grupos=grupos,
                            empresa_sel=empresa_sel, agente=AGENTE,
                            fmt_date=fmt_date, data_hoje=date.today())
 
