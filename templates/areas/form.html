@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Editar' if area else 'Nova' }} Área de Estágio{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{{ url_for('areas') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="fw-bold mb-0">{{ 'Editar' if area else 'Nova' }} Área de Estágio</h4>
+</div>
+
+<form method="post">
+<div class="card mb-3">
+  <div class="card-header fw-semibold"><i class="bi bi-tag me-2"></i>Dados da Área</div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-8">
+        <label class="form-label fw-semibold">Nome da Área *</label>
+        <input type="text" name="nome" class="form-control" value="{{ area.nome if area else '' }}"
+               placeholder="Ex: Enfermagem, Administração, Informática" required>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header fw-semibold"><i class="bi bi-list-check me-2"></i>Atividades Correlatas</div>
+  <div class="card-body">
+    <p class="text-muted small mb-3">
+      <i class="bi bi-info-circle me-1"></i>
+      Cadastre as atividades típicas desta área. Ao criar um contrato, o operador poderá selecioná-las diretamente.
+    </p>
+    <div id="lista-atividades">
+      {% if atividades %}
+        {% for at in atividades %}
+        <div class="atividade-row d-flex gap-2 mb-2">
+          <span class="d-flex align-items-center text-muted small fw-semibold" style="min-width:20px">{{ loop.index }}.</span>
+          <input type="text" name="atividade[]" class="form-control form-control-sm"
+                 value="{{ at.descricao }}" placeholder="Descrição da atividade">
+          <button type="button" class="btn btn-sm btn-outline-danger remover-at" title="Remover">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="atividade-row d-flex gap-2 mb-2">
+          <span class="d-flex align-items-center text-muted small fw-semibold" style="min-width:20px">1.</span>
+          <input type="text" name="atividade[]" class="form-control form-control-sm" placeholder="Descrição da atividade">
+          <button type="button" class="btn btn-sm btn-outline-danger remover-at" title="Remover">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      {% endif %}
+    </div>
+    <button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="btn-add-at">
+      <i class="bi bi-plus me-1"></i>Adicionar Atividade
+    </button>
+  </div>
+</div>
+
+<div class="d-flex gap-2">
+  <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar</button>
+  <a href="{{ url_for('areas') }}" class="btn btn-outline-secondary">Cancelar</a>
+  {% if area %}
+  <a href="{{ url_for('area_excluir', id=area.id) }}" class="btn btn-outline-danger ms-auto"
+     onclick="return confirm('Excluir esta área e todas as atividades?')">
+    <i class="bi bi-trash me-1"></i>Excluir
+  </a>
+  {% endif %}
+</div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+function renumerar() {
+  document.querySelectorAll('#lista-atividades .atividade-row').forEach((row, i) => {
+    row.querySelector('span').textContent = (i + 1) + '.';
+  });
+}
+
+document.getElementById('btn-add-at').addEventListener('click', function() {
+  const lista = document.getElementById('lista-atividades');
+  const n = lista.querySelectorAll('.atividade-row').length + 1;
+  const div = document.createElement('div');
+  div.className = 'atividade-row d-flex gap-2 mb-2';
+  div.innerHTML = `<span class="d-flex align-items-center text-muted small fw-semibold" style="min-width:20px">${n}.</span>
+    <input type="text" name="atividade[]" class="form-control form-control-sm" placeholder="Descrição da atividade">
+    <button type="button" class="btn btn-sm btn-outline-danger remover-at" title="Remover"><i class="bi bi-x-lg"></i></button>`;
+  lista.appendChild(div);
+  div.querySelector('.remover-at').addEventListener('click', function() {
+    const rows = document.querySelectorAll('#lista-atividades .atividade-row');
+    if (rows.length > 1) { div.remove(); renumerar(); }
+    else div.querySelector('input').value = '';
+  });
+  div.querySelector('input').focus();
+});
+
+document.querySelectorAll('.remover-at').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const rows = document.querySelectorAll('#lista-atividades .atividade-row');
+    if (rows.length > 1) { btn.closest('.atividade-row').remove(); renumerar(); }
+    else btn.closest('.atividade-row').querySelector('input').value = '';
+  });
+});
+</script>
+{% endblock %}
