@@ -90,15 +90,15 @@
 <!-- Botões de modo -->
 <div class="d-flex gap-2 mb-2 no-print">
   <a href="{{ url_for('relatorio_estagiarios', empresa_id=empresa_id, ie_id=ie_id, curso=curso, modo='') }}"
-     class="btn btn-sm btn-modo {% if not modo %}btn-primary{% else %}btn-outline-secondary{% %}">
+     class="btn btn-sm btn-modo {% if not modo %}btn-primary{% else %}btn-outline-secondary{% endif %}">
     <i class="bi bi-list-ul me-1"></i>Geral
   </a>
   <a href="{{ url_for('relatorio_estagiarios', empresa_id=empresa_id, ie_id=ie_id, curso=curso, modo='taxa') }}"
-     class="btn btn-sm btn-modo {% if modo == 'taxa' %}btn-primary{% else %}btn-outline-secondary{% %}">
+     class="btn btn-sm btn-modo {% if modo == 'taxa' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
     <i class="bi bi-cash-coin me-1"></i>Com Taxas
   </a>
   <a href="{{ url_for('relatorio_estagiarios', empresa_id=empresa_id, ie_id=ie_id, curso=curso, modo='subtotais') }}"
-     class="btn btn-sm btn-modo {% if modo == 'subtotais' %}btn-primary{% else %}btn-outline-secondary{% %}">
+     class="btn btn-sm btn-modo {% if modo == 'subtotais' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
     <i class="bi bi-building me-1"></i>Subtotais por Empresa
   </a>
 </div>
