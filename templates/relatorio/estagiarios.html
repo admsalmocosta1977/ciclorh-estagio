@@ -5,16 +5,21 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='ciclorh_doc.css') }}">
 <style>
   @media print {
+    @page { size: A4 landscape; margin: 8mm; }
     .no-print   { display: none !important; }
-    .rel-table  { font-size: 6.5pt !important; }
-    .rel-table thead th { font-size: 6pt !important; }
+    .rel-table  { font-size: 5pt !important; }
+    .rel-table thead th { font-size: 4.5pt !important; }
+    .rel-table td, .rel-table th { padding: 1px 3px !important; white-space: nowrap !important; }
+    .rel-table tfoot td { font-size: 4.5pt !important; }
+    .grupo-header td { font-size: 5pt !important; }
+    .grupo-subtotal td { font-size: 4.5pt !important; }
   }
-  .rel-table { font-size: 0.58rem !important; }
-  .rel-table thead th { font-size: 0.55rem !important; text-transform: uppercase; letter-spacing: 0.04em; color: #555; font-weight: 600; }
-  .rel-table td, .rel-table th { padding: 2px 5px !important; vertical-align: middle; }
-  .rel-table tfoot td { font-size: 0.56rem !important; }
-  .grupo-header td { background: #e9ecef; font-weight: 700; font-size: 0.58rem; letter-spacing: 0.03em; }
-  .grupo-subtotal td { background: #f8f9fa; font-weight: 600; font-size: 0.56rem; border-top: 1px solid #dee2e6; }
+  .rel-table { font-size: 0.42rem !important; }
+  .rel-table thead th { font-size: 0.40rem !important; text-transform: uppercase; letter-spacing: 0.04em; color: #555; font-weight: 600; }
+  .rel-table td, .rel-table th { padding: 1px 3px !important; vertical-align: middle; white-space: nowrap !important; }
+  .rel-table tfoot td { font-size: 0.40rem !important; }
+  .grupo-header td { background: #e9ecef; font-weight: 700; font-size: 0.42rem; letter-spacing: 0.03em; }
+  .grupo-subtotal td { background: #f8f9fa; font-weight: 600; font-size: 0.40rem; border-top: 1px solid #dee2e6; }
   .btn-modo { font-size: .70rem; }
 </style>
 {% endblock %}
