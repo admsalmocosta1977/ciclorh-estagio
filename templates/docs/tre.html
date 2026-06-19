@@ -96,7 +96,7 @@
     <tr><td class="label">Carga Horária Diária:</td><td>{{ d.ch_diaria or 6 }} horas</td></tr>
     <tr><td class="label">Carga Horária Semanal:</td><td>{{ d.ch_semanal or 30 }} horas</td></tr>
     <tr><td class="label">Carga Horária Total Cumprida:</td><td><strong>{{ ch_total_real }} horas</strong></td></tr>
-    <tr><td class="label">Bolsa-Auxílio {% if d.bolsa_tipo == 'diaria' %}por Dia{% else %}Mensal{% endif %}:</td><td>R$ {{ '%.2f'|format(d.bolsa or 0) }}{% if d.bolsa_tipo == 'diaria' %} por dia trabalhado{% endif %}</td></tr>
+    <tr><td class="label">Bolsa-Auxílio {% if d.bolsa_tipo == 'diaria' %}por Dia{% elif d.bolsa_tipo == 'hora' %}por Hora{% else %}Mensal{% endif %}:</td><td>R$ {{ '%.2f'|format(d.bolsa or 0) }}{% if d.bolsa_tipo == 'diaria' %} por dia trabalhado{% elif d.bolsa_tipo == 'hora' %} por hora trabalhada{% endif %}</td></tr>
   </table>
 
   <!-- ATIVIDADES -->

@@ -171,6 +171,8 @@
   <div class="clausula">
     {% if d.bolsa_tipo == 'diaria' %}
     <p><strong>Cláusula 8ª — Da Bolsa-Auxílio e Outros Benefícios</strong> (art. 12, Lei n.º 11.788/2008). Fica estabelecida bolsa-auxílio no valor de <strong>R$ {{ br_currency(d.bolsa or 0) }}</strong>{% if d.bolsa_extenso %} ({{ d.bolsa_extenso }}){% endif %} por dia efetivamente trabalhado, a ser paga pela Parte Concedente ao Estagiário mensalmente, até o 5.º (quinto) dia útil do mês subsequente, calculada com base nos dias úteis de presença.</p>
+    {% elif d.bolsa_tipo == 'hora' %}
+    <p><strong>Cláusula 8ª — Da Bolsa-Auxílio e Outros Benefícios</strong> (art. 12, Lei n.º 11.788/2008). Fica estabelecida bolsa-auxílio no valor de <strong>R$ {{ br_currency(d.bolsa or 0) }}</strong>{% if d.bolsa_extenso %} ({{ d.bolsa_extenso }}){% endif %} por hora efetivamente trabalhada, a ser paga pela Parte Concedente ao Estagiário mensalmente, até o 5.º (quinto) dia útil do mês subsequente, calculada com base nas horas efetivamente cumpridas.</p>
     {% else %}
     <p><strong>Cláusula 8ª — Da Bolsa-Auxílio e Outros Benefícios</strong> (art. 12, Lei n.º 11.788/2008). Fica estabelecida bolsa-auxílio mensal no valor de <strong>R$ {{ br_currency(d.bolsa or 0) }}</strong>{% if d.bolsa_extenso %} ({{ d.bolsa_extenso }}){% endif %}, a ser paga pela Parte Concedente ao Estagiário, mensalmente, até o 5.º (quinto) dia útil do mês subsequente.</p>
     {% endif %}

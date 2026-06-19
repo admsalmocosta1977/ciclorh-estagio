@@ -214,6 +214,11 @@
             <label class="btn btn-outline-primary btn-sm" for="bolsa-diaria">
               <i class="bi bi-calendar-day me-1"></i>Por dia trabalhado
             </label>
+            <input type="radio" class="btn-check" name="bolsa_tipo" id="bolsa-hora" value="hora"
+                   {% if c and c.bolsa_tipo == 'hora' %}checked{% endif %}>
+            <label class="btn btn-outline-primary btn-sm" for="bolsa-hora">
+              <i class="bi bi-clock me-1"></i>Por hora
+            </label>
           </div>
         </div>
         <div class="col-md-4">
@@ -225,6 +230,9 @@
           </div>
           <div class="form-text" id="hint-bolsa-diaria" style="display:none">
             Valor por dia × dias úteis do mês = bolsa mensal estimada.
+          </div>
+          <div class="form-text" id="hint-bolsa-hora" style="display:none">
+            Valor por hora × horas trabalhadas no mês = bolsa mensal estimada.
           </div>
         </div>
         <div class="col-md-4">
@@ -572,14 +580,17 @@ if (selArea) {
   });
 }
 
-// Toggle label bolsa mensal/diária
+// Toggle label bolsa mensal/diária/hora
 function atualizarLabelBolsa() {
   const diaria = document.getElementById('bolsa-diaria').checked;
-  document.getElementById('span-bolsa-tipo').textContent = diaria ? 'por dia' : 'Mensal';
+  const hora = document.getElementById('bolsa-hora').checked;
+  document.getElementById('span-bolsa-tipo').textContent = diaria ? 'por dia' : hora ? 'por hora' : 'Mensal';
   document.getElementById('hint-bolsa-diaria').style.display = diaria ? '' : 'none';
+  document.getElementById('hint-bolsa-hora').style.display = hora ? '' : 'none';
 }
 document.getElementById('bolsa-mensal').addEventListener('change', atualizarLabelBolsa);
 document.getElementById('bolsa-diaria').addEventListener('change', atualizarLabelBolsa);
+document.getElementById('bolsa-hora').addEventListener('change', atualizarLabelBolsa);
 atualizarLabelBolsa();
 
 // Verificar limite de 2 anos CPF+CNPJ (Lei 11.788/2008, art. 11)
