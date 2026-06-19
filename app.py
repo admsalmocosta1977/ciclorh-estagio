@@ -237,6 +237,19 @@ def init_db():
               AND id NOT IN (SELECT empresa_id FROM empresa_supervisor)
         """)
         cur.execute("""
+        CREATE TABLE IF NOT EXISTS area_estagio (
+            id SERIAL PRIMARY KEY,
+            nome TEXT NOT NULL,
+            status TEXT DEFAULT 'ativo'
+        )""")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS area_atividade (
+            id SERIAL PRIMARY KEY,
+            area_id INTEGER NOT NULL REFERENCES area_estagio(id) ON DELETE CASCADE,
+            descricao TEXT NOT NULL,
+            ordem INTEGER DEFAULT 0
+        )""")
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS aditivo (
             id SERIAL PRIMARY KEY,
             contrato_id INTEGER NOT NULL REFERENCES contrato(id) ON DELETE CASCADE,
@@ -974,6 +987,81 @@ def ie_excluir(id):
     return redirect(url_for('ies'))
 
 
+# ─── ÁREAS DE ESTÁGIO ────────────────────────────────────────────────────────
+
+@app.route('/areas')
+@login_required
+def areas():
+    areas_list = _q("""
+        SELECT a.*, COUNT(av.id) qtd_atividades
+        FROM area_estagio a
+        LEFT JOIN area_atividade av ON av.area_id = a.id
+        GROUP BY a.id ORDER BY a.nome
+    """)
+    return render_template('areas/lista.html', areas=areas_list)
+
+
+@app.route('/areas/nova', methods=['GET', 'POST'])
+@login_required
+def area_nova():
+    if request.method == 'POST':
+        nome = request.form['nome'].strip()
+        if not nome:
+            flash('Nome obrigatório.', 'danger')
+            return redirect(url_for('area_nova'))
+        area_id = _ins("INSERT INTO area_estagio (nome) VALUES (%s)", (nome,))
+        for i, desc in enumerate(request.form.getlist('atividade[]')):
+            desc = desc.strip()
+            if desc:
+                _run("INSERT INTO area_atividade (area_id, descricao, ordem) VALUES (%s,%s,%s)",
+                     (area_id, desc, i))
+        _log('criar', 'area_estagio', area_id, f'Criou área: {nome}')
+        flash('Área criada!', 'success')
+        return redirect(url_for('areas'))
+    return render_template('areas/form.html', area=None, atividades=[])
+
+
+@app.route('/areas/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+def area_editar(id):
+    area = _q("SELECT * FROM area_estagio WHERE id = %s", (id,), one=True)
+    if not area:
+        abort(404)
+    if request.method == 'POST':
+        nome = request.form['nome'].strip()
+        _run("UPDATE area_estagio SET nome=%s WHERE id=%s", (nome, id))
+        _run("DELETE FROM area_atividade WHERE area_id=%s", (id,))
+        for i, desc in enumerate(request.form.getlist('atividade[]')):
+            desc = desc.strip()
+            if desc:
+                _run("INSERT INTO area_atividade (area_id, descricao, ordem) VALUES (%s,%s,%s)",
+                     (id, desc, i))
+        _log('editar', 'area_estagio', id, f'Editou área: {nome}')
+        flash('Área atualizada!', 'success')
+        return redirect(url_for('areas'))
+    atividades = _q("SELECT * FROM area_atividade WHERE area_id=%s ORDER BY ordem, id", (id,))
+    return render_template('areas/form.html', area=area, atividades=atividades)
+
+
+@app.route('/areas/<int:id>/excluir')
+@login_required
+def area_excluir(id):
+    reg = _q("SELECT nome FROM area_estagio WHERE id=%s", (id,), one=True)
+    _run("DELETE FROM area_estagio WHERE id=%s", (id,))
+    _log('excluir', 'area_estagio', id, f'Excluiu área: {reg["nome"] if reg else id}')
+    flash('Área excluída.', 'warning')
+    return redirect(url_for('areas'))
+
+
+@app.route('/api/area_atividades/<int:area_id>')
+@login_required
+def api_area_atividades(area_id):
+    atividades = _q(
+        "SELECT descricao FROM area_atividade WHERE area_id=%s ORDER BY ordem, id",
+        (area_id,))
+    return jsonify([r['descricao'] for r in atividades])
+
+
 # ─── CONTRATOS ────────────────────────────────────────────────────────────────
 
 @app.route('/contratos')
@@ -1054,9 +1142,10 @@ def contrato_novo():
     estagiarios = _q("SELECT * FROM estagiario WHERE status='ativo' ORDER BY nome")
     empresas_list = _q("SELECT * FROM empresa WHERE status='ativo' ORDER BY nome")
     ies_list = _q("SELECT * FROM ie ORDER BY COALESCE(NULLIF(TRIM(sigla),''), nome)")
+    areas_list = _q("SELECT id, nome FROM area_estagio WHERE status='ativo' ORDER BY nome")
     return render_template('contratos/form.html', c=None,
                            estagiarios=estagiarios, empresas=empresas_list, ies=ies_list,
-                           aditivos=[])
+                           areas=areas_list, aditivos=[])
 
 
 @app.route('/contratos/<int:id>/editar', methods=['GET', 'POST'])
@@ -1099,10 +1188,11 @@ def contrato_editar(id):
     estagiarios = _q("SELECT * FROM estagiario WHERE status='ativo' ORDER BY nome")
     empresas_list = _q("SELECT * FROM empresa WHERE status='ativo' ORDER BY nome")
     ies_list = _q("SELECT * FROM ie ORDER BY COALESCE(NULLIF(TRIM(sigla),''), nome)")
+    areas_list = _q("SELECT id, nome FROM area_estagio WHERE status='ativo' ORDER BY nome")
     aditivos = _q("SELECT * FROM aditivo WHERE contrato_id = %s ORDER BY created_at", (id,))
     return render_template('contratos/form.html', c=c,
                            estagiarios=estagiarios, empresas=empresas_list, ies=ies_list,
-                           aditivos=aditivos)
+                           areas=areas_list, aditivos=aditivos)
 
 
 @app.route('/contratos/<int:id>/excluir')
