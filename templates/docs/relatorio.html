@@ -51,7 +51,7 @@
     <tr><td class="label">Instituição de Ensino:</td><td>{{ d.ie_nome }}</td></tr>
     <tr><td class="label">Empresa:</td><td>{{ d.emp_nome }}</td></tr>
     <tr><td class="label">Supervisor:</td><td>{{ d.supervisor_nome or '________________' }}</td></tr>
-    <tr><td class="label">Período do Relatório:</td><td>{{ fmt_date(d.data_inicio) }} a {{ fmt_date(d.data_fim) }}</td></tr>
+    <tr><td class="label">Período do Relatório:</td><td>{{ fmt_date(d.data_inicio) }} a {{ fmt_date(d.data_encerramento or d.data_fim) }}</td></tr>
   </table>
 
   <div class="secao">2. Atividades Desenvolvidas no Período</div>
