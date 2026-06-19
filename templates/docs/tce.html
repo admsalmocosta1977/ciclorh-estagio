@@ -68,7 +68,7 @@
     <tr><td class="label">Razão Social / Nome:</td><td>{{ d.emp_nome }}</td></tr>
     <tr><td class="label">CNPJ / CPF:</td><td>{{ d.emp_cnpj or '___________________________' }}</td></tr>
     <tr><td class="label">Endereço:</td><td>{{ d.emp_endereco or '___________________________' }}, {{ d.emp_cidade or 'Vitória da Conquista – BA' }}</td></tr>
-    <tr><td class="label">Telefone / E-mail:</td><td>{{ d.emp_telefone or '___________' }} / {{ d.emp_email or '___________________________' }}</td></tr>
+    <tr><td class="label">E-mail:</td><td>{{ d.emp_email or '___________________________' }}</td></tr>
     <tr><td class="label">Representante Legal:</td><td>{{ d.emp_representante or '___________________________' }}{% if d.emp_cargo_rep %} — {{ d.emp_cargo_rep }}{% endif %} — CPF: {{ d.emp_cpf_rep or '__________________' }}</td></tr>
     <tr><td class="label">Supervisor de Estágio:</td><td>{{ d.supervisor_nome or '___________________________' }}{% if d.supervisor_cargo %} — {{ d.supervisor_cargo }}{% endif %}{% if d.supervisor_registro %} — Reg. Prof.: {{ d.supervisor_registro }}{% endif %}</td></tr>
   </table>
@@ -79,7 +79,6 @@
     {% if d.ie_cnpj %}<tr><td class="label">CNPJ:</td><td>{{ d.ie_cnpj }}</td></tr>{% endif %}
     <tr><td class="label">Endereço:</td><td>{{ d.ie_endereco or '___________________________' }}, {{ d.ie_cidade or 'Vitória da Conquista – BA' }}</td></tr>
     <tr><td class="label">Representante Legal:</td><td>{{ d.ie_representante_legal or '___________________________' }}{% if d.ie_cargo_rep_legal %} — {{ d.ie_cargo_rep_legal }}{% endif %}</td></tr>
-    <tr><td class="label">Coordenador(a) de Estágio:</td><td>{{ d.ie_coordenador or '___________________________' }}{% if d.ie_coord_cargo %} — {{ d.ie_coord_cargo }}{% endif %}</td></tr>
     <tr><td class="label">Professor Orientador:</td><td>{{ d.ie_professor_nome or '___________________________' }}{% if d.ie_professor_cargo %} — {{ d.ie_professor_cargo }}{% endif %}</td></tr>
   </table>
 
@@ -90,7 +89,6 @@
     <tr><td class="label">RG / Órgão Emissor:</td><td>{{ d.est_rg or '___________________________' }}</td></tr>
     <tr><td class="label">Data de Nascimento:</td><td>{{ fmt_date(d.est_data_nasc) if d.est_data_nasc else '_______________' }}</td></tr>
     <tr><td class="label">Endereço Residencial:</td><td>{{ d.est_endereco or '___________________________' }}</td></tr>
-    <tr><td class="label">Telefone / Celular:</td><td>{{ d.est_telefone or '___________________________' }}</td></tr>
     <tr><td class="label">E-mail:</td><td>{{ d.est_email or '___________________________' }}</td></tr>
     <tr><td class="label">Curso:</td><td>{{ d.curso }}</td></tr>
     <tr><td class="label">Semestre / Período:</td><td>{{ d.est_semestre or '_______________' }}</td></tr>
@@ -102,12 +100,8 @@
   <table class="dados">
     <tr><td class="label">Área de Atuação:</td><td>{{ d.area_atuacao or d.curso }}</td></tr>
     <tr><td class="label">Tipo de Estágio:</td><td>{{ d.tipo_estagio or 'Não Obrigatório' }}</td></tr>
-    <tr><td class="label">Data de Início:</td><td>{{ fmt_date(d.data_inicio) }}</td></tr>
-    <tr><td class="label">Data de Término:</td><td>{{ fmt_date(d.data_fim) }}</td></tr>
     <tr><td class="label">Carga Horária Diária:</td><td>{{ d.ch_diaria_jornada or d.ch_diaria or 6 }} horas</td></tr>
     <tr><td class="label">Carga Horária Semanal:</td><td>{{ d.ch_semanal_jornada or d.ch_semanal or 30 }} horas</td></tr>
-    <tr><td class="label">Bolsa-Auxílio {% if d.bolsa_tipo == 'diaria' %}por Dia{% else %}Mensal{% endif %}:</td><td>R$ {{ br_currency(d.bolsa or 0) }}{% if d.bolsa_extenso %} ({{ d.bolsa_extenso }}){% endif %}{% if d.bolsa_tipo == 'diaria' %} por dia trabalhado{% endif %}</td></tr>
-    <tr><td class="label">Auxílio-Transporte:</td><td>{% if d.aux_transporte %}R$ {{ br_currency(d.aux_transporte) }}{% if d.aux_transporte_extenso %} ({{ d.aux_transporte_extenso }}){% endif %} por mês{% else %}Não concedido{% endif %}</td></tr>
   </table>
 
   <!-- CLÁUSULAS -->
