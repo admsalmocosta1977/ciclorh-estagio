@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block title %}Backup / Restauração{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <h4 class="fw-bold mb-0"><i class="bi bi-database-fill-down me-2"></i>Backup / Restauração</h4>
+</div>
+
+<div class="row g-4">
+
+  <!-- ── Exportar backup ── -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-download text-primary"></i>
+        <span>Exportar Backup</span>
+      </div>
+      <div class="card-body d-flex flex-column gap-3">
+        <p class="text-muted small mb-0">
+          Gera um arquivo <code>.json</code> com todos os dados do sistema: estagiários, empresas,
+          instituições, contratos, aditivos, usuários e configurações.
+        </p>
+        {% if ultimo_backup %}
+        <div class="alert alert-light border py-2 px-3 mb-0" style="font-size:.82rem">
+          <i class="bi bi-clock-history me-1 text-muted"></i>
+          Último download: <strong>{{ ultimo_backup }}</strong>
+        </div>
+        {% endif %}
+        <form method="post" class="mt-auto">
+          <input type="hidden" name="acao" value="download">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-file-earmark-arrow-down me-2"></i>Baixar Backup Agora
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── E-mail automático ── -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-envelope-arrow-up {% if smtp_ok %}text-success{% else %}text-warning{% endif %}"></i>
+        <span>Backup por E-mail</span>
+        {% if smtp_ok %}
+        <span class="badge bg-success ms-auto" style="font-size:.65rem">Configurado</span>
+        {% else %}
+        <span class="badge bg-warning text-dark ms-auto" style="font-size:.65rem">Não configurado</span>
+        {% endif %}
+      </div>
+      <div class="card-body d-flex flex-column gap-3">
+        {% if smtp_ok %}
+        <p class="text-muted small mb-0">
+          Backup automático enviado todo dia às <strong>02:00h</strong> para
+          <strong>{{ backup_email }}</strong>.
+        </p>
+        <form method="post" class="mt-auto">
+          <input type="hidden" name="acao" value="email">
+          <button type="submit" class="btn btn-outline-primary w-100">
+            <i class="bi bi-send me-2"></i>Enviar E-mail de Teste Agora
+          </button>
+        </form>
+        {% else %}
+        <p class="text-muted small mb-0">
+          Para ativar o envio automático diário, defina as variáveis de ambiente no Railway:
+        </p>
+        <div class="bg-light rounded p-3" style="font-size:.80rem;font-family:monospace;line-height:1.8">
+          <div><strong>SMTP_USER</strong> = seu-email@gmail.com</div>
+          <div><strong>SMTP_PASS</strong> = senha-de-app-do-gmail</div>
+          <div><strong>BACKUP_EMAIL</strong> = destino@gmail.com <span class="text-muted">(opcional)</span></div>
+        </div>
+        <p class="text-muted small mb-0">
+          <i class="bi bi-info-circle me-1"></i>
+          Use uma <em>Senha de App</em> do Google (não a senha normal).
+          <a href="https://myaccount.google.com/apppasswords" target="_blank">Gerar senha de app →</a>
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Restaurar backup ── -->
+  <div class="col-12">
+    <div class="card border-danger">
+      <div class="card-header d-flex align-items-center gap-2 text-danger">
+        <i class="bi bi-arrow-counterclockwise"></i>
+        <span>Restaurar Backup</span>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-warning d-flex gap-2 align-items-start">
+          <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+          <div>
+            <strong>Atenção:</strong> A restauração <strong>substitui todos os dados atuais</strong> pelos
+            do arquivo de backup. Esta ação não pode ser desfeita. Use somente em caso de necessidade real.
+          </div>
+        </div>
+        <form method="post" action="{{ url_for('admin_restaurar') }}" enctype="multipart/form-data"
+              onsubmit="return confirm('Tem certeza? Todos os dados atuais serão substituídos pelo backup selecionado.')">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">Arquivo de Backup (.json)</label>
+              <input type="file" name="backup_file" accept=".json" class="form-control" required>
+              <div class="form-text">Selecione um arquivo exportado por este sistema.</div>
+            </div>
+            <div class="col-md-4">
+              <button type="submit" class="btn btn-danger w-100">
+                <i class="bi bi-upload me-2"></i>Restaurar
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

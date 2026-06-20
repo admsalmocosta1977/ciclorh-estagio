@@ -1,5 +1,8 @@
-import os, json, psycopg2, psycopg2.extras
-from flask import Flask, render_template, request, redirect, url_for, flash, g, jsonify, abort
+import os, json, psycopg2, psycopg2.extras, smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+from flask import Flask, render_template, request, redirect, url_for, flash, g, jsonify, abort, Response
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import date, datetime, timedelta
@@ -1778,6 +1781,160 @@ def admin_log():
                            entidade=entidade, usuario_id=uid_filtro, usuarios=usuarios)
 
 
+# ─── BACKUP / RESTAURAÇÃO ─────────────────────────────────────────────────────
+
+_BACKUP_TABELAS_EXPORT = [
+    'usuario', 'estagiario', 'empresa', 'ie', 'ie_professor',
+    'empresa_supervisor', 'area_estagio', 'area_atividade',
+    'contrato', 'aditivo', 'config', 'log_auditoria',
+]
+_BACKUP_TABELAS_DELETE = list(reversed(_BACKUP_TABELAS_EXPORT))
+
+
+def _get_conn_direct():
+    url = DATABASE_URL
+    if url.startswith('postgres://'):
+        url = url.replace('postgres://', 'postgresql://', 1)
+    return psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
+
+
+def _serial(obj):
+    if isinstance(obj, (date, datetime)):
+        return obj.isoformat()
+    return str(obj)
+
+
+def gerar_backup_json():
+    conn = _get_conn_direct()
+    dados = {'versao': '2.0', 'gerado_em': datetime.now().isoformat(), 'tabelas': {}}
+    try:
+        with conn.cursor() as cur:
+            for tabela in _BACKUP_TABELAS_EXPORT:
+                try:
+                    cur.execute(f'SELECT * FROM {tabela}')
+                    dados['tabelas'][tabela] = [dict(r) for r in cur.fetchall()]
+                except Exception:
+                    dados['tabelas'][tabela] = []
+    finally:
+        conn.close()
+    return json.dumps(dados, default=_serial, ensure_ascii=False, indent=2)
+
+
+def restaurar_backup_json(json_str):
+    dados = json.loads(json_str)
+    if dados.get('versao') not in ('1.0', '2.0'):
+        raise ValueError('Versão de backup incompatível.')
+    conn = _get_conn_direct()
+    conn.autocommit = False
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SET session_replication_role = 'replica'")
+            for tabela in _BACKUP_TABELAS_DELETE:
+                cur.execute(f'DELETE FROM {tabela}')
+            for tabela in _BACKUP_TABELAS_EXPORT:
+                rows = dados['tabelas'].get(tabela, [])
+                if not rows:
+                    continue
+                for row in rows:
+                    cols = list(row.keys())
+                    vals = list(row.values())
+                    ph = ', '.join(['%s'] * len(cols))
+                    cur.execute(
+                        f"INSERT INTO {tabela} ({', '.join(cols)}) VALUES ({ph})",
+                        vals
+                    )
+                cur.execute(
+                    f"SELECT setval(pg_get_serial_sequence('{tabela}', 'id'), "
+                    f"COALESCE(MAX(id), 1)) FROM {tabela}"
+                )
+            cur.execute("SET session_replication_role = 'DEFAULT'")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def enviar_backup_email():
+    smtp_user = os.environ.get('SMTP_USER', '')
+    smtp_pass = os.environ.get('SMTP_PASS', '')
+    dest = os.environ.get('BACKUP_EMAIL', smtp_user)
+    if not smtp_user or not smtp_pass:
+        return
+    try:
+        json_str = gerar_backup_json()
+        nome_arquivo = f"backup_ciclorh_{datetime.now().strftime('%Y%m%d_%H%M')}.json"
+        msg = MIMEMultipart()
+        msg['From'] = smtp_user
+        msg['To'] = dest
+        msg['Subject'] = f'Backup CicloRH — {datetime.now().strftime("%d/%m/%Y")}'
+        msg.attach(MIMEText(
+            f'Backup automático do sistema Ciclo RH gerado em '
+            f'{datetime.now().strftime("%d/%m/%Y às %H:%M")}.\n\n'
+            f'Tabelas incluídas: {", ".join(_BACKUP_TABELAS_EXPORT)}\n\n'
+            f'Arquivo: {nome_arquivo}',
+            'plain', 'utf-8'
+        ))
+        anexo = MIMEApplication(json_str.encode('utf-8'), Name=nome_arquivo)
+        anexo['Content-Disposition'] = f'attachment; filename="{nome_arquivo}"'
+        msg.attach(anexo)
+        with smtplib.SMTP('smtp.gmail.com', 587) as srv:
+            srv.starttls()
+            srv.login(smtp_user, smtp_pass)
+            srv.sendmail(smtp_user, dest, msg.as_string())
+    except Exception as e:
+        print(f'[Backup] Erro ao enviar e-mail: {e}')
+
+
+@app.route('/admin/backup', methods=['GET', 'POST'])
+@admin_required
+def admin_backup():
+    if request.method == 'POST':
+        acao = request.form.get('acao', 'download')
+        if acao == 'email':
+            enviar_backup_email()
+            if os.environ.get('SMTP_USER'):
+                flash('E-mail de backup enviado!', 'success')
+            else:
+                flash('SMTP não configurado. Defina SMTP_USER e SMTP_PASS nas variáveis de ambiente.', 'warning')
+            return redirect(url_for('admin_backup'))
+        json_str = gerar_backup_json()
+        nome = f"backup_ciclorh_{datetime.now().strftime('%Y%m%d_%H%M')}.json"
+        _run("INSERT INTO config (chave, valor) VALUES ('ultimo_backup', %s) "
+             "ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor",
+             (datetime.now().strftime('%d/%m/%Y às %H:%M'),))
+        _log('backup', 'sistema', descricao='Download de backup realizado')
+        return Response(
+            json_str,
+            mimetype='application/json',
+            headers={'Content-Disposition': f'attachment; filename="{nome}"'}
+        )
+    ultimo = _q("SELECT valor FROM config WHERE chave='ultimo_backup'", one=True)
+    smtp_ok = bool(os.environ.get('SMTP_USER') and os.environ.get('SMTP_PASS'))
+    return render_template('admin/backup.html',
+                           ultimo_backup=ultimo['valor'] if ultimo else None,
+                           smtp_ok=smtp_ok,
+                           backup_email=os.environ.get('BACKUP_EMAIL', os.environ.get('SMTP_USER', '—')))
+
+
+@app.route('/admin/restaurar', methods=['POST'])
+@admin_required
+def admin_restaurar():
+    arq = request.files.get('backup_file')
+    if not arq or not arq.filename.endswith('.json'):
+        flash('Selecione um arquivo .json exportado pelo sistema.', 'danger')
+        return redirect(url_for('admin_backup'))
+    try:
+        conteudo = arq.read().decode('utf-8')
+        restaurar_backup_json(conteudo)
+        _log('restaurar', 'sistema', descricao='Banco restaurado via backup')
+        flash('Banco de dados restaurado com sucesso!', 'success')
+    except Exception as e:
+        flash(f'Erro na restauração: {e}', 'danger')
+    return redirect(url_for('admin_backup'))
+
+
 # ─── ERROS ────────────────────────────────────────────────────────────────────
 
 @app.errorhandler(403)
@@ -1792,6 +1949,14 @@ def not_found(e):
 
 
 init_db()
+
+try:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    _scheduler = BackgroundScheduler(timezone='America/Bahia')
+    _scheduler.add_job(enviar_backup_email, 'cron', hour=2, minute=0)
+    _scheduler.start()
+except Exception as _e:
+    print(f'[Scheduler] Não iniciado: {_e}')
 
 if __name__ == '__main__':
     print('\n' + '=' * 50)
