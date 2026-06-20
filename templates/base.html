@@ -261,6 +261,9 @@
     <a href="{{ url_for('admin_log') }}" class="nav-link {% if ep=='admin_log' %}active{% endif %}">
       <i class="bi bi-journal-text"></i> Log do Sistema
     </a>
+    <a href="{{ url_for('admin_backup') }}" class="nav-link {% if ep in ['admin_backup','admin_restaurar'] %}active{% endif %}">
+      <i class="bi bi-database-fill-down"></i> Backup / Restaurar
+    </a>
   </div>
   {% endif %}
 
