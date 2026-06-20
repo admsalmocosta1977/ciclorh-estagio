@@ -37,11 +37,23 @@
           <input type="email" name="email" class="form-control">
         </div>
         <div class="col-12">
-          <label class="form-label fw-semibold">Endereço Completo</label>
-          <input type="text" name="endereco" class="form-control" placeholder="Rua, número, bairro, cidade — CEP">
+          <label class="form-label fw-semibold">Endereço (Logradouro, n.º, Bairro)</label>
+          <input type="text" name="endereco" class="form-control" placeholder="Rua, número, bairro">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Estado</label>
+          <select name="estado" id="sel-estado-cadest" class="form-select">
+            <option value="">-- Selecione --</option>
+          </select>
+        </div>
+        <div class="col-md-8">
+          <label class="form-label fw-semibold">Cidade</label>
+          <select name="cidade" id="sel-cidade-cadest" class="form-select">
+            <option value="">-- Selecione o estado primeiro --</option>
+          </select>
         </div>
         <div class="col-12">
-          <label class="form-label fw-semibold">Observações</label>
+          <label class="form-label fw-semibold">Observações (opcional)</label>
           <textarea name="obs" class="form-control" rows="3" placeholder="Informações adicionais relevantes..."></textarea>
         </div>
         <div class="col-12 mt-2">
@@ -58,4 +70,9 @@
     </form>
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+initEstadoCidade('sel-estado-cadest','sel-cidade-cadest','','','BA');
+</script>
 {% endblock %}

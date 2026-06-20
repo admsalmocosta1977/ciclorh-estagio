@@ -26,12 +26,20 @@
           <input type="text" name="ramo" class="form-control" placeholder="Ex: Comércio varejista, Saúde...">
         </div>
         <div class="col-12">
-          <label class="form-label fw-semibold">Endereço</label>
+          <label class="form-label fw-semibold">Endereço (Logradouro, n.º, Bairro)</label>
           <input type="text" name="endereco" class="form-control" placeholder="Rua, número, bairro">
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Estado</label>
+          <select name="estado" id="sel-estado-cademp" class="form-select">
+            <option value="">-- Selecione --</option>
+          </select>
+        </div>
+        <div class="col-md-8">
           <label class="form-label fw-semibold">Cidade</label>
-          <input type="text" name="cidade" class="form-control" value="Vitória da Conquista">
+          <select name="cidade" id="sel-cidade-cademp" class="form-select">
+            <option value="">-- Selecione o estado primeiro --</option>
+          </select>
         </div>
         <div class="col-md-6">
           <label class="form-label fw-semibold">Telefone</label>
@@ -86,4 +94,9 @@
     </form>
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+initEstadoCidade('sel-estado-cademp','sel-cidade-cademp','','','BA');
+</script>
 {% endblock %}

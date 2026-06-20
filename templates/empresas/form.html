@@ -23,13 +23,21 @@
           <label class="form-label fw-semibold">Nome Fantasia</label>
           <input type="text" name="nome_fantasia" class="form-control" value="{{ emp.nome_fantasia if emp and emp.nome_fantasia else '' }}" placeholder="Como é conhecida (opcional)">
         </div>
-        <div class="col-md-8">
-          <label class="form-label fw-semibold">Endereço</label>
-          <input type="text" name="endereco" class="form-control" value="{{ emp.endereco if emp else '' }}">
-        </div>
         <div class="col-md-4">
+          <label class="form-label fw-semibold">Endereço (Logradouro, n.º, Bairro)</label>
+          <input type="text" name="endereco" class="form-control" value="{{ emp.endereco if emp else '' }}" placeholder="Ex: Av. Juracy Magalhães, 100, Centro">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Estado</label>
+          <select name="estado" id="sel-estado-emp" class="form-select">
+            <option value="">-- Selecione --</option>
+          </select>
+        </div>
+        <div class="col-md-5">
           <label class="form-label fw-semibold">Cidade</label>
-          <input type="text" name="cidade" class="form-control" value="{{ emp.cidade if emp else 'Vitória da Conquista' }}">
+          <select name="cidade" id="sel-cidade-emp" class="form-select">
+            <option value="">-- Selecione o estado primeiro --</option>
+          </select>
         </div>
         <div class="col-md-4">
           <label class="form-label fw-semibold">Telefone</label>
@@ -158,6 +166,11 @@
 
 {% block scripts %}
 <script>
+initEstadoCidade('sel-estado-emp','sel-cidade-emp',
+  '{{ emp.estado if emp and emp.estado else "" }}',
+  '{{ emp.cidade if emp and emp.cidade else "" }}',
+  'BA');
+
 function novaLinhaSuper() {
   const div = document.createElement('div');
   div.className = 'sup-row row g-2 align-items-end mb-2';

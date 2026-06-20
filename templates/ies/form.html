@@ -23,13 +23,21 @@
         <label class="form-label fw-semibold">CNPJ</label>
         <input type="text" name="cnpj" class="form-control" value="{{ ie.cnpj if ie and ie.cnpj else '' }}" placeholder="00.000.000/0000-00">
       </div>
-      <div class="col-md-8">
-        <label class="form-label fw-semibold">Endereço</label>
-        <input type="text" name="endereco" class="form-control" value="{{ ie.endereco if ie else '' }}">
-      </div>
       <div class="col-md-4">
+        <label class="form-label fw-semibold">Endereço (Logradouro, n.º, Bairro)</label>
+        <input type="text" name="endereco" class="form-control" value="{{ ie.endereco if ie else '' }}" placeholder="Ex: Rua das Flores, 10, Centro">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold">Estado</label>
+        <select name="estado" id="sel-estado-ie" class="form-select">
+          <option value="">-- Selecione --</option>
+        </select>
+      </div>
+      <div class="col-md-5">
         <label class="form-label fw-semibold">Cidade</label>
-        <input type="text" name="cidade" class="form-control" value="{{ ie.cidade if ie else 'Vitória da Conquista' }}">
+        <select name="cidade" id="sel-cidade-ie" class="form-select">
+          <option value="">-- Selecione o estado primeiro --</option>
+        </select>
       </div>
       <div class="col-md-4">
         <label class="form-label fw-semibold">Telefone</label>
@@ -176,6 +184,11 @@
 {% endblock %}
 {% block scripts %}
 <script>
+initEstadoCidade('sel-estado-ie','sel-cidade-ie',
+  '{{ ie.estado if ie and ie.estado else "" }}',
+  '{{ ie.cidade if ie and ie.cidade else "" }}',
+  'BA');
+
 document.getElementById('btn-add-prof').addEventListener('click', function() {
   const row = document.createElement('div');
   row.className = 'professor-row border rounded p-2 mb-2';

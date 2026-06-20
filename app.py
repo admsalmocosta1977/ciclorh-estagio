@@ -208,6 +208,8 @@ def init_db():
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS matricula TEXT;")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS cidade TEXT;")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS estado TEXT;")
+        cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS estado TEXT;")
+        cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS estado TEXT;")
         cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS cnpj TEXT;")
         cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS representante_legal TEXT;")
         cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS cargo_representante_legal TEXT;")
@@ -889,13 +891,14 @@ def empresas():
 def empresa_nova():
     if request.method == 'POST':
         emp_id = _ins("""INSERT INTO empresa
-                (nome,nome_fantasia,cnpj,endereco,cidade,telefone,email,ramo,
+                (nome,nome_fantasia,cnpj,endereco,cidade,estado,telefone,email,ramo,
                  representante,cargo_representante,cpf_representante,
                  bolsa_padrao,aux_transporte_padrao)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['nome'], request.form.get('nome_fantasia') or None,
               request.form.get('cnpj'),
-              request.form.get('endereco'), request.form.get('cidade', 'Vitória da Conquista'),
+              request.form.get('endereco'), request.form.get('cidade') or None,
+              request.form.get('estado') or None,
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('ramo'), request.form.get('representante'),
               request.form.get('cargo_representante'), request.form.get('cpf_representante'),
@@ -923,12 +926,13 @@ def empresa_editar(id):
         abort(404)
     if request.method == 'POST':
         _run("""UPDATE empresa SET
-                nome=%s,nome_fantasia=%s,cnpj=%s,endereco=%s,cidade=%s,telefone=%s,email=%s,ramo=%s,
+                nome=%s,nome_fantasia=%s,cnpj=%s,endereco=%s,cidade=%s,estado=%s,telefone=%s,email=%s,ramo=%s,
                 representante=%s,cargo_representante=%s,cpf_representante=%s,
                 bolsa_padrao=%s,aux_transporte_padrao=%s WHERE id=%s""",
              (request.form['nome'], request.form.get('nome_fantasia') or None,
               request.form.get('cnpj'),
-              request.form.get('endereco'), request.form.get('cidade'),
+              request.form.get('endereco'), request.form.get('cidade') or None,
+              request.form.get('estado') or None,
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('ramo'), request.form.get('representante'),
               request.form.get('cargo_representante'), request.form.get('cpf_representante'),
@@ -997,12 +1001,13 @@ def ies():
 def ie_nova():
     if request.method == 'POST':
         ie_id = _ins("""INSERT INTO ie
-                (nome,sigla,cnpj,endereco,cidade,telefone,email,coordenador,coordenador_cargo,
+                (nome,sigla,cnpj,endereco,cidade,estado,telefone,email,coordenador,coordenador_cargo,
                  representante_legal,cargo_representante_legal,signatario_tce)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['nome'], request.form.get('sigla'),
               request.form.get('cnpj') or None,
-              request.form.get('endereco'), request.form.get('cidade', 'Vitória da Conquista'),
+              request.form.get('endereco'), request.form.get('cidade') or None,
+              request.form.get('estado') or None,
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('coordenador'), request.form.get('coordenador_cargo'),
               request.form.get('representante_legal'), request.form.get('cargo_representante_legal'),
@@ -1027,12 +1032,13 @@ def ie_editar(id):
     if not ie:
         abort(404)
     if request.method == 'POST':
-        _run("""UPDATE ie SET nome=%s,sigla=%s,cnpj=%s,endereco=%s,cidade=%s,telefone=%s,email=%s,
+        _run("""UPDATE ie SET nome=%s,sigla=%s,cnpj=%s,endereco=%s,cidade=%s,estado=%s,telefone=%s,email=%s,
                 coordenador=%s,coordenador_cargo=%s,representante_legal=%s,
                 cargo_representante_legal=%s,signatario_tce=%s WHERE id=%s""",
              (request.form['nome'], request.form.get('sigla'),
               request.form.get('cnpj') or None,
-              request.form.get('endereco'), request.form.get('cidade'),
+              request.form.get('endereco'), request.form.get('cidade') or None,
+              request.form.get('estado') or None,
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('coordenador'), request.form.get('coordenador_cargo'),
               request.form.get('representante_legal'), request.form.get('cargo_representante_legal'),
@@ -1679,11 +1685,12 @@ def cadastro_estagiario():
 def cadastro_empresa():
     if request.method == 'POST':
         _ins("""INSERT INTO empresa
-                (nome,cnpj,endereco,cidade,telefone,email,ramo,
+                (nome,cnpj,endereco,cidade,estado,telefone,email,ramo,
                  representante,cargo_representante,cpf_representante,supervisor_nome,supervisor_cargo,status)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pendente')""",
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pendente')""",
              (request.form['nome'], request.form.get('cnpj'),
-              request.form.get('endereco'), request.form.get('cidade', 'Vitória da Conquista'),
+              request.form.get('endereco'), request.form.get('cidade') or None,
+              request.form.get('estado') or None,
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('ramo'), request.form.get('representante'),
               request.form.get('cargo_representante'), request.form.get('cpf_representante'),
