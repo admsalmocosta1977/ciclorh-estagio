@@ -1672,12 +1672,19 @@ def cadastro_estagiario():
     if request.method == 'POST':
         try:
             _ins("""INSERT INTO estagiario
-                    (nome,cpf,rg,data_nascimento,telefone,email,endereco,obs,status)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'pendente')""",
+                    (nome,cpf,rg,data_nascimento,telefone,email,endereco,
+                     cidade,estado,tipo_ensino,semestre,matricula,obs,status)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pendente')""",
                  (request.form['nome'], request.form['cpf'],
                   request.form.get('rg'), request.form.get('data_nascimento') or None,
                   request.form.get('telefone'), request.form.get('email'),
-                  request.form.get('endereco'), request.form.get('obs')))
+                  request.form.get('endereco'),
+                  request.form.get('cidade') or None,
+                  request.form.get('estado') or None,
+                  request.form.get('tipo_ensino', 'superior'),
+                  request.form.get('semestre') or None,
+                  request.form.get('matricula') or None,
+                  request.form.get('obs')))
             return render_template('cadastro/sucesso.html', tipo='estagiário')
         except psycopg2.errors.UniqueViolation:
             flash('Este CPF já está cadastrado no sistema.', 'danger')

@@ -72,7 +72,7 @@
           </select>
         </div>
         <div class="col-md-4">
-          <label class="form-label fw-semibold" id="lbl-semestre">Semestre Atual</label>
+          <label class="form-label fw-semibold" id="lbl-semestre">Período Atual</label>
           <input type="number" name="semestre" class="form-control" id="inp-semestre"
                  min="1" max="10" value="{{ e.semestre if e and e.semestre else '' }}"
                  placeholder="Ex: 3">
@@ -121,7 +121,7 @@ function atualizarLabelSemestre() {
     inp.max = 3;
     txt.textContent = 'Ensino Médio: 1º, 2º ou 3º Ano';
   } else {
-    lbl.textContent = 'Semestre Atual';
+    lbl.textContent = 'Período Atual';
     inp.max = 10;
     txt.textContent = 'Superior/Técnico: 1 a 10';
   }

@@ -52,6 +52,24 @@
             <option value="">-- Selecione o estado primeiro --</option>
           </select>
         </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Nível de Ensino</label>
+          <select name="tipo_ensino" id="cad-tipo-ensino" class="form-select">
+            <option value="superior">Ensino Superior</option>
+            <option value="tecnico">Ensino Técnico</option>
+            <option value="medio">Ensino Médio</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold" id="cad-lbl-periodo">Período Atual</label>
+          <input type="number" name="semestre" id="cad-inp-periodo" class="form-control"
+                 min="1" max="10" placeholder="Ex: 3">
+          <div class="form-text" id="cad-txt-periodo">Superior/Técnico: 1 a 10 — Médio: 1 a 3</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">N.º de Matrícula</label>
+          <input type="text" name="matricula" class="form-control" placeholder="Número de matrícula">
+        </div>
         <div class="col-12">
           <label class="form-label fw-semibold">Observações (opcional)</label>
           <textarea name="obs" class="form-control" rows="3" placeholder="Informações adicionais relevantes..."></textarea>
@@ -74,5 +92,20 @@
 {% block scripts %}
 <script>
 initEstadoCidade('sel-estado-cadest','sel-cidade-cadest','','','BA');
+(function(){
+  const sel = document.getElementById('cad-tipo-ensino');
+  const lbl = document.getElementById('cad-lbl-periodo');
+  const inp = document.getElementById('cad-inp-periodo');
+  const txt = document.getElementById('cad-txt-periodo');
+  function atualizar(){
+    if(sel.value==='medio'){
+      lbl.textContent='Ano Atual'; inp.max=3; txt.textContent='Ensino Médio: 1º, 2º ou 3º Ano';
+    } else {
+      lbl.textContent='Período Atual'; inp.max=10; txt.textContent='Superior/Técnico: 1 a 10';
+    }
+  }
+  sel.addEventListener('change', atualizar);
+  atualizar();
+})();
 </script>
 {% endblock %}
