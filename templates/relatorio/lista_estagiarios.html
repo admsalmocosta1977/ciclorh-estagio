@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% block title %}Lista de Estagiários{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='ciclorh_doc.css') }}">
+<style>
+  @media print {
+    @page { size: A4 portrait; margin: 10mm; }
+    .no-print { display: none !important; }
+    .rel-table { font-size: 7pt !important; }
+    .rel-table th { font-size: 6.5pt !important; }
+    .rel-table td, .rel-table th { padding: 2px 4px !important; white-space: nowrap !important; }
+    .grupo-header td { font-size: 7pt !important; }
+  }
+  .rel-table { font-size: 0.78rem; }
+  .rel-table th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: #555; font-weight: 600; }
+  .rel-table td, .rel-table th { padding: 4px 8px; vertical-align: middle; }
+  .rel-table tbody tr:hover { background: #f8f9fa; }
+  .grupo-header td { background: #e9ecef; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.03em; }
+  .badge-ensino { font-size: 0.65rem; font-weight: 600; padding: 2px 7px; border-radius: 20px; }
+  .badge-superior { background: #dbeafe; color: #1d4ed8; }
+  .badge-tecnico  { background: #fef9c3; color: #854d0e; }
+  .badge-medio    { background: #dcfce7; color: #166534; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Cabeçalho -->
+<div class="doc-cabecalho mb-2">
+  <img src="{{ url_for('static', filename='logo_ciclorh.png.png') }}" style="height:54px;object-fit:contain;flex-shrink:0" alt="Ciclo RH">
+  <div class="doc-cab-info">
+    <span class="doc-cab-nome">{{ agente.nome }}</span>
+    <span class="doc-cab-sub">Agente de Integração de Estágio — Lei Federal n.º 11.788/2008</span>
+    <span class="doc-cab-contato">CNPJ: {{ agente.cnpj }} | {{ agente.email }}</span>
+  </div>
+</div>
+<div class="doc-stripe" style="margin-bottom:10px"></div>
+
+<div class="d-flex justify-content-between align-items-center mb-3 no-print">
+  <h5 class="fw-bold mb-0"><i class="bi bi-person-lines-fill me-2"></i>Lista de Estagiários</h5>
+  {% if estagiarios %}
+  <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-printer me-1"></i>Imprimir / Salvar PDF
+  </button>
+  {% endif %}
+</div>
+<h5 class="fw-bold mb-1 d-none d-print-block">
+  Lista de Estagiários
+  {% if estado %} — {{ estado }}{% endif %}
+  {% if cidade %} / {{ cidade }}{% endif %}
+  {% if tipo_ensino %} — {{ {'superior':'Ensino Superior','tecnico':'Ensino Técnico','medio':'Ensino Médio'}.get(tipo_ensino,'') }}{% endif %}
+</h5>
+<p class="d-none d-print-block text-muted" style="font-size:7.5pt;margin-bottom:8px">Emitido em {{ fmt_date(data_hoje) }}</p>
+
+<!-- Filtros -->
+<div class="card mb-3 no-print">
+  <div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label fw-semibold mb-1" style="font-size:.75rem">Estado</label>
+        <select name="estado" id="flt-estado" class="form-select form-select-sm" style="font-size:.75rem">
+          <option value="">Todos os estados</option>
+          {% for row in estados_db %}
+            <option value="{{ row.estado }}" {% if row.estado == estado %}selected{% endif %}>{{ row.estado }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold mb-1" style="font-size:.75rem">Cidade</label>
+        <select name="cidade" id="flt-cidade" class="form-select form-select-sm" style="font-size:.75rem">
+          <option value="">Todas as cidades</option>
+          {% for row in cidades_db %}
+            <option value="{{ row.cidade }}" {% if row.cidade == cidade %}selected{% endif %}>{{ row.cidade }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold mb-1" style="font-size:.75rem">Nível de Ensino</label>
+        <select name="tipo_ensino" class="form-select form-select-sm" style="font-size:.75rem">
+          <option value="">Todos os níveis</option>
+          <option value="superior" {% if tipo_ensino=='superior' %}selected{% endif %}>Ensino Superior</option>
+          <option value="tecnico"  {% if tipo_ensino=='tecnico'  %}selected{% endif %}>Ensino Técnico</option>
+          <option value="medio"    {% if tipo_ensino=='medio'    %}selected{% endif %}>Ensino Médio</option>
+        </select>
+      </div>
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-fill" style="font-size:.75rem">
+          <i class="bi bi-funnel me-1"></i>Filtrar
+        </button>
+        <a href="{{ url_for('relatorio_lista_estagiarios') }}" class="btn btn-outline-secondary btn-sm" style="font-size:.75rem">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if estagiarios %}
+  {# Agrupar por estado > cidade #}
+  {% set ns = namespace(estado_atual='', cidade_atual='', count=0) %}
+
+  <table class="table table-bordered rel-table w-100">
+    <thead class="table-light">
+      <tr>
+        <th>#</th>
+        <th>Nome</th>
+        <th>CPF</th>
+        <th>Endereço</th>
+        <th>Cidade</th>
+        <th>UF</th>
+        <th>Nível</th>
+        <th>Período</th>
+        <th>Telefone</th>
+        <th>E-mail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in estagiarios %}
+        {% set uf = e.estado or '—' %}
+        {% set cid = e.cidade or '—' %}
+
+        {# Quebra de grupo por estado #}
+        {% if not estado and uf != ns.estado_atual %}
+          {% set ns.estado_atual = uf %}
+          {% set ns.cidade_atual = '' %}
+          <tr class="grupo-header">
+            <td colspan="10"><i class="bi bi-geo-alt-fill me-1"></i>{{ uf }}</td>
+          </tr>
+        {% endif %}
+
+        {# Quebra de grupo por cidade (quando não filtrado por cidade) #}
+        {% if not cidade and cid != ns.cidade_atual %}
+          {% set ns.cidade_atual = cid %}
+          <tr>
+            <td colspan="10" style="background:#f4f6f8;font-weight:600;font-size:0.73rem;padding:3px 8px;border-top:1px solid #dee2e6">
+              <i class="bi bi-building me-1 text-muted"></i>{{ cid }}
+            </td>
+          </tr>
+        {% endif %}
+
+        {% set ns.count = ns.count + 1 %}
+        <tr>
+          <td class="text-muted">{{ ns.count }}</td>
+          <td class="fw-semibold">{{ e.nome }}</td>
+          <td class="font-monospace text-danger" style="font-size:0.72rem">{{ e.cpf }}</td>
+          <td>{{ e.endereco or '—' }}</td>
+          <td>{{ e.cidade or '—' }}</td>
+          <td>{{ e.estado or '—' }}</td>
+          <td>
+            {% if e.tipo_ensino == 'superior' %}
+              <span class="badge-ensino badge-superior">Superior</span>
+            {% elif e.tipo_ensino == 'tecnico' %}
+              <span class="badge-ensino badge-tecnico">Técnico</span>
+            {% elif e.tipo_ensino == 'medio' %}
+              <span class="badge-ensino badge-medio">Médio</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if e.semestre %}
+              {% if e.tipo_ensino == 'medio' %}{{ e.semestre }}º Ano
+              {% else %}{{ e.semestre }}º Sem.{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ e.telefone or '—' }}</td>
+          <td style="font-size:0.70rem">{{ e.email or '—' }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot class="table-light">
+      <tr>
+        <td colspan="10" class="fw-semibold" style="font-size:0.72rem">
+          Total: {{ estagiarios | length }} estagiário{{ 's' if estagiarios | length != 1 }}
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+
+{% else %}
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    Nenhum estagiário encontrado com os filtros selecionados.
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* Filtro dinâmico de cidades ao mudar estado no filtro */
+const CIDADES_FILTRO = {
+  AC: ['Rio Branco','Cruzeiro do Sul','Sena Madureira','Tarauacá','Feijó'],
+  AL: ['Maceió','Arapiraca','Palmeira dos Índios','Rio Largo','Penedo','União dos Palmares'],
+  AP: ['Macapá','Santana','Laranjal do Jari','Oiapoque'],
+  AM: ['Manaus','Parintins','Itacoatiara','Manacapuru','Coari','Tefé'],
+  BA: ['Aiquara','Anagé','Aracatu','Barra da Estiva','Barra do Choça','Belo Campo','Boa Nova','Bom Jesus da Lapa','Bom Jesus da Serra','Brumado','Caculé','Caetité','Cafarnaum','Cândido Sales','Caraíbas','Contendas do Sincorá','Condeúba','Cordeiros','Dom Basílio','Encruzilhada','Feira de Santana','Guanambi','Ibiassucê','Ilhéus','Ipiaú','Itabuna','Itagibá','Itamaraju','Ituaçu','Itapetinga','Jequié','Lagoa Real','Licínio de Almeida','Macarani','Maetinga','Manoel Vitorino','Mirante','Mortugaba','Morro do Chapéu','Mucugê','Palmas de Monte Alto','Piripá','Planalto','Poções','Porto Seguro','Presidente Jânio Quadros','Ribeirão do Largo','Rio do Antônio','Salvador','Santo Antônio de Jesus','Tremedal','Ubatã','Urandi','Vitória da Conquista'],
+  CE: ['Fortaleza','Caucaia','Juazeiro do Norte','Maracanaú','Sobral','Crato','Iguatu'],
+  DF: ['Brasília','Ceilândia','Taguatinga','Samambaia','Planaltina'],
+  ES: ['Vitória','Serra','Vila Velha','Cariacica','Cachoeiro de Itapemirim','Linhares'],
+  GO: ['Goiânia','Aparecida de Goiânia','Anápolis','Rio Verde','Luziânia','Águas Lindas de Goiás'],
+  MA: ['São Luís','Imperatriz','São José de Ribamar','Timon','Caxias','Codó'],
+  MT: ['Cuiabá','Várzea Grande','Rondonópolis','Sinop','Tangará da Serra'],
+  MS: ['Campo Grande','Dourados','Três Lagoas','Corumbá','Grande Dourados'],
+  MG: ['Belo Horizonte','Uberlândia','Contagem','Juiz de Fora','Betim','Montes Claros','Ribeirão das Neves'],
+  PA: ['Belém','Ananindeua','Santarém','Marabá','Parauapebas','Castanhal'],
+  PB: ['João Pessoa','Campina Grande','Santa Rita','Patos','Bayeux','Sousa'],
+  PR: ['Curitiba','Londrina','Maringá','Ponta Grossa','Cascavel','São José dos Pinhais'],
+  PE: ['Recife','Caruaru','Olinda','Petrolina','Paulista','Jaboatão dos Guararapes'],
+  PI: ['Teresina','Parnaíba','Picos','Floriano','Campo Maior'],
+  RJ: ['Rio de Janeiro','São Gonçalo','Duque de Caxias','Nova Iguaçu','Niterói','Belford Roxo'],
+  RN: ['Natal','Mossoró','Parnamirim','São Gonçalo do Amarante','Macaíba'],
+  RS: ['Porto Alegre','Caxias do Sul','Pelotas','Canoas','Santa Maria','Gravataí'],
+  RO: ['Porto Velho','Ji-Paraná','Ariquemes','Vilhena','Cacoal'],
+  RR: ['Boa Vista','Rorainópolis','Caracaraí'],
+  SC: ['Florianópolis','Joinville','Blumenau','São José','Criciúma','Chapecó'],
+  SP: ['São Paulo','Guarulhos','Campinas','São Bernardo do Campo','Santo André','Osasco','Ribeirão Preto','Sorocaba'],
+  SE: ['Aracaju','Nossa Senhora do Socorro','Lagarto','Itabaiana','São Cristóvão'],
+  TO: ['Palmas','Araguaína','Gurupi','Porto Nacional','Paraíso do Tocantins']
+};
+
+const fltEstado = document.getElementById('flt-estado');
+const fltCidade = document.getElementById('flt-cidade');
+const cidadeAtualFlt = "{{ cidade }}";
+
+function atualizarCidadesFiltro(uf) {
+  const cidades = CIDADES_FILTRO[uf] || [];
+  fltCidade.innerHTML = '<option value="">Todas as cidades</option>';
+  cidades.sort().forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    if (c === cidadeAtualFlt) opt.selected = true;
+    fltCidade.appendChild(opt);
+  });
+}
+
+if (fltEstado && fltCidade) {
+  fltEstado.addEventListener('change', function() { atualizarCidadesFiltro(this.value); });
+  if (fltEstado.value) atualizarCidadesFiltro(fltEstado.value);
+}
+</script>
+{% endblock %}

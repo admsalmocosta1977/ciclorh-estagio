@@ -206,6 +206,8 @@ def init_db():
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS semestre INTEGER;")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS tipo_ensino TEXT DEFAULT 'superior';")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS matricula TEXT;")
+        cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS cidade TEXT;")
+        cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS estado TEXT;")
         cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS cnpj TEXT;")
         cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS representante_legal TEXT;")
         cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS cargo_representante_legal TEXT;")
@@ -802,13 +804,15 @@ def estagiario_novo():
     if request.method == 'POST':
         try:
             _ins("""INSERT INTO estagiario
-                    (nome,cpf,rg,data_nascimento,telefone,email,endereco,banco,agencia,conta,obs,
+                    (nome,cpf,rg,data_nascimento,telefone,email,endereco,cidade,estado,banco,agencia,conta,obs,
                      tipo_ensino,semestre,matricula)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                  (request.form['nome'], request.form['cpf'],
                   request.form.get('rg'), request.form.get('data_nascimento') or None,
                   request.form.get('telefone'), request.form.get('email'),
-                  request.form.get('endereco'), request.form.get('banco'),
+                  request.form.get('endereco'), request.form.get('cidade') or None,
+                  request.form.get('estado') or None,
+                  request.form.get('banco'),
                   request.form.get('agencia'), request.form.get('conta'),
                   request.form.get('obs'),
                   request.form.get('tipo_ensino', 'superior'),
@@ -831,12 +835,14 @@ def estagiario_editar(id):
     if request.method == 'POST':
         _run("""UPDATE estagiario SET
                 nome=%s,cpf=%s,rg=%s,data_nascimento=%s,telefone=%s,email=%s,
-                endereco=%s,banco=%s,agencia=%s,conta=%s,obs=%s,
+                endereco=%s,cidade=%s,estado=%s,banco=%s,agencia=%s,conta=%s,obs=%s,
                 tipo_ensino=%s,semestre=%s,matricula=%s WHERE id=%s""",
              (request.form['nome'], request.form['cpf'],
               request.form.get('rg'), request.form.get('data_nascimento') or None,
               request.form.get('telefone'), request.form.get('email'),
-              request.form.get('endereco'), request.form.get('banco'),
+              request.form.get('endereco'), request.form.get('cidade') or None,
+              request.form.get('estado') or None,
+              request.form.get('banco'),
               request.form.get('agencia'), request.form.get('conta'),
               request.form.get('obs'),
               request.form.get('tipo_ensino', 'superior'),
@@ -1615,6 +1621,39 @@ def relatorio_estagiarios():
                            grupos=grupos,
                            empresa_sel=empresa_sel, agente=AGENTE,
                            fmt_date=fmt_date, data_hoje=date.today())
+
+
+@app.route('/relatorio/lista-estagiarios')
+@login_required
+def relatorio_lista_estagiarios():
+    estado = request.args.get('estado', '').strip()
+    cidade = request.args.get('cidade', '').strip()
+    tipo_ensino = request.args.get('tipo_ensino', '').strip()
+
+    sql = "SELECT * FROM estagiario WHERE status='ativo'"
+    params = []
+    if estado:
+        sql += " AND estado = %s"
+        params.append(estado)
+    if cidade:
+        sql += " AND cidade = %s"
+        params.append(cidade)
+    if tipo_ensino:
+        sql += " AND tipo_ensino = %s"
+        params.append(tipo_ensino)
+    sql += " ORDER BY nome"
+
+    estagiarios = _q(sql, params)
+    estados_db = _q(
+        "SELECT DISTINCT estado FROM estagiario WHERE estado IS NOT NULL AND estado <> '' ORDER BY estado")
+    cidades_db = _q(
+        "SELECT DISTINCT cidade FROM estagiario WHERE cidade IS NOT NULL AND cidade <> '' ORDER BY cidade")
+
+    return render_template('relatorio/lista_estagiarios.html',
+                           estagiarios=estagiarios, estado=estado, cidade=cidade,
+                           tipo_ensino=tipo_ensino,
+                           estados_db=estados_db, cidades_db=cidades_db,
+                           agente=AGENTE, fmt_date=fmt_date, data_hoje=date.today())
 
 
 # ─── CADASTRO PÚBLICO ────────────────────────────────────────────────────────

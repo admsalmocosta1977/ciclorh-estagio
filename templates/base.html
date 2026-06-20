@@ -109,6 +109,9 @@
     <a href="{{ url_for('relatorio_estagiarios') }}" class="nav-link {% if request.endpoint=='relatorio_estagiarios' %}active{% endif %}">
       <i class="bi bi-people"></i> Rel. Estagiários
     </a>
+    <a href="{{ url_for('relatorio_lista_estagiarios') }}" class="nav-link {% if request.endpoint=='relatorio_lista_estagiarios' %}active{% endif %}">
+      <i class="bi bi-person-lines-fill"></i> Lista Estagiários
+    </a>
     {% if current_user.is_admin %}
     <div class="nav-section">Administração</div>
     <a href="{{ url_for('admin_usuarios') }}" class="nav-link {% if 'admin_usuario' in request.endpoint %}active{% endif %}">

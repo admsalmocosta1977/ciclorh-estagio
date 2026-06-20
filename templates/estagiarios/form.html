@@ -35,8 +35,20 @@
           <input type="email" name="email" class="form-control" value="{{ e.email if e else '' }}">
         </div>
         <div class="col-md-6">
-          <label class="form-label fw-semibold">Endereço</label>
-          <input type="text" name="endereco" class="form-control" value="{{ e.endereco if e else '' }}">
+          <label class="form-label fw-semibold">Endereço (Logradouro, n.º, Bairro)</label>
+          <input type="text" name="endereco" class="form-control" value="{{ e.endereco if e else '' }}" placeholder="Ex: Rua das Flores, 123, Centro">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Estado</label>
+          <select name="estado" id="sel-estado" class="form-select">
+            <option value="">-- Selecione --</option>
+          </select>
+        </div>
+        <div class="col-md-5">
+          <label class="form-label fw-semibold">Cidade</label>
+          <select name="cidade" id="sel-cidade" class="form-select">
+            <option value="">-- Selecione o estado primeiro --</option>
+          </select>
         </div>
         <div class="col-md-4">
           <label class="form-label fw-semibold">Banco</label>
@@ -94,6 +106,94 @@
 {% endblock %}
 {% block scripts %}
 <script>
+const ESTADOS = [
+  ['AC','Acre'],['AL','Alagoas'],['AP','Amapá'],['AM','Amazonas'],['BA','Bahia'],
+  ['CE','Ceará'],['DF','Distrito Federal'],['ES','Espírito Santo'],['GO','Goiás'],
+  ['MA','Maranhão'],['MT','Mato Grosso'],['MS','Mato Grosso do Sul'],['MG','Minas Gerais'],
+  ['PA','Pará'],['PB','Paraíba'],['PR','Paraná'],['PE','Pernambuco'],['PI','Piauí'],
+  ['RJ','Rio de Janeiro'],['RN','Rio Grande do Norte'],['RS','Rio Grande do Sul'],
+  ['RO','Rondônia'],['RR','Roraima'],['SC','Santa Catarina'],['SP','São Paulo'],
+  ['SE','Sergipe'],['TO','Tocantins']
+];
+
+const CIDADES = {
+  AC: ['Rio Branco','Cruzeiro do Sul','Sena Madureira','Tarauacá','Feijó'],
+  AL: ['Maceió','Arapiraca','Palmeira dos Índios','Rio Largo','Penedo','União dos Palmares'],
+  AP: ['Macapá','Santana','Laranjal do Jari','Oiapoque'],
+  AM: ['Manaus','Parintins','Itacoatiara','Manacapuru','Coari','Tefé'],
+  BA: [
+    'Aiquara','Anagé','Aracatu','Barra da Estiva','Barra do Choça','Belo Campo','Boa Nova',
+    'Bom Jesus da Lapa','Bom Jesus da Serra','Brumado','Caculé','Caetité','Cafarnaum',
+    'Cândido Sales','Caraíbas','Contendas do Sincorá','Condeúba','Cordeiros','Dom Basílio',
+    'Encruzilhada','Feira de Santana','Guanambi','Ibiassucê','Ilhéus','Ipiaú','Itabuna',
+    'Itagibá','Itamaraju','Ituaçu','Itapetinga','Jequié','Lagoa Real','Licínio de Almeida',
+    'Macarani','Maetinga','Manoel Vitorino','Mirante','Mortugaba','Morro do Chapéu',
+    'Mucugê','Palmas de Monte Alto','Piripá','Planalto','Poções','Porto Seguro',
+    'Presidente Jânio Quadros','Ribeirão do Largo','Rio do Antônio','Salvador',
+    'Santo Antônio de Jesus','Tremedal','Ubatã','Urandi','Vitória da Conquista'
+  ],
+  CE: ['Fortaleza','Caucaia','Juazeiro do Norte','Maracanaú','Sobral','Crato','Iguatu'],
+  DF: ['Brasília','Ceilândia','Taguatinga','Samambaia','Planaltina'],
+  ES: ['Vitória','Serra','Vila Velha','Cariacica','Cachoeiro de Itapemirim','Linhares'],
+  GO: ['Goiânia','Aparecida de Goiânia','Anápolis','Rio Verde','Luziânia','Águas Lindas de Goiás'],
+  MA: ['São Luís','Imperatriz','São José de Ribamar','Timon','Caxias','Codó'],
+  MT: ['Cuiabá','Várzea Grande','Rondonópolis','Sinop','Tangará da Serra'],
+  MS: ['Campo Grande','Dourados','Três Lagoas','Corumbá','Grande Dourados'],
+  MG: ['Belo Horizonte','Uberlândia','Contagem','Juiz de Fora','Betim','Montes Claros','Ribeirão das Neves'],
+  PA: ['Belém','Ananindeua','Santarém','Marabá','Parauapebas','Castanhal'],
+  PB: ['João Pessoa','Campina Grande','Santa Rita','Patos','Bayeux','Sousa'],
+  PR: ['Curitiba','Londrina','Maringá','Ponta Grossa','Cascavel','São José dos Pinhais'],
+  PE: ['Recife','Caruaru','Olinda','Petrolina','Paulista','Jaboatão dos Guararapes'],
+  PI: ['Teresina','Parnaíba','Picos','Floriano','Campo Maior'],
+  RJ: ['Rio de Janeiro','São Gonçalo','Duque de Caxias','Nova Iguaçu','Niterói','Belford Roxo'],
+  RN: ['Natal','Mossoró','Parnamirim','São Gonçalo do Amarante','Macaíba'],
+  RS: ['Porto Alegre','Caxias do Sul','Pelotas','Canoas','Santa Maria','Gravataí'],
+  RO: ['Porto Velho','Ji-Paraná','Ariquemes','Vilhena','Cacoal'],
+  RR: ['Boa Vista','Rorainópolis','Caracaraí'],
+  SC: ['Florianópolis','Joinville','Blumenau','São José','Criciúma','Chapecó'],
+  SP: ['São Paulo','Guarulhos','Campinas','São Bernardo do Campo','Santo André','Osasco','Ribeirão Preto','Sorocaba'],
+  SE: ['Aracaju','Nossa Senhora do Socorro','Lagarto','Itabaiana','São Cristóvão'],
+  TO: ['Palmas','Araguaína','Gurupi','Porto Nacional','Paraíso do Tocantins']
+};
+
+const estadoAtual = "{{ e.estado if e and e.estado else '' }}";
+const cidadeAtual = "{{ e.cidade if e and e.cidade else '' }}";
+
+function popularEstados() {
+  const sel = document.getElementById('sel-estado');
+  ESTADOS.forEach(([sigla, nome]) => {
+    const opt = document.createElement('option');
+    opt.value = sigla;
+    opt.textContent = sigla + ' - ' + nome;
+    if (sigla === estadoAtual) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function popularCidades(estadoSigla, cidadeSel) {
+  const sel = document.getElementById('sel-cidade');
+  sel.innerHTML = '';
+  const vazio = document.createElement('option');
+  vazio.value = '';
+  vazio.textContent = estadoSigla ? '-- Selecione a cidade --' : '-- Selecione o estado primeiro --';
+  sel.appendChild(vazio);
+  if (!estadoSigla || !CIDADES[estadoSigla]) return;
+  CIDADES[estadoSigla].sort().forEach(cidade => {
+    const opt = document.createElement('option');
+    opt.value = cidade;
+    opt.textContent = cidade;
+    if (cidade === cidadeSel) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+popularEstados();
+popularCidades(estadoAtual, cidadeAtual);
+
+document.getElementById('sel-estado').addEventListener('change', function() {
+  popularCidades(this.value, '');
+});
+
 function atualizarLabelSemestre() {
   const tipo = document.getElementById('sel-tipo-ensino').value;
   const lbl = document.getElementById('lbl-semestre');
