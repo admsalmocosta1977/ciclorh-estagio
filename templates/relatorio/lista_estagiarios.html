@@ -7,12 +7,15 @@
   @media print {
     @page { size: A4 landscape; margin: 6mm; }
     .no-print { display: none !important; }
-    .rel-table { font-size: 5pt !important; }
-    .rel-table th { font-size: 4.5pt !important; }
-    .rel-table td, .rel-table th { padding: 1px 3px !important; white-space: nowrap !important; }
-    .grupo-header td { font-size: 5pt !important; }
-    .grupo-cidade td { font-size: 4.5pt !important; }
-    .badge-ensino { font-size: 4pt !important; padding: 1px 3px !important; border-radius: 3px !important; }
+    .col-endereco { display: none !important; }
+    .rel-table { font-size: 5.5pt !important; width: 100% !important; table-layout: fixed !important; }
+    .rel-table th { font-size: 5pt !important; }
+    .rel-table td, .rel-table th { padding: 1px 3px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+    .rel-table td:nth-child(2), .rel-table th:nth-child(2) { max-width: 120pt !important; }
+    .rel-table td:last-child, .rel-table th:last-child { max-width: 90pt !important; }
+    .grupo-header td { font-size: 5.5pt !important; }
+    .grupo-cidade td { font-size: 5pt !important; }
+    .badge-ensino { font-size: 4.5pt !important; padding: 1px 3px !important; border-radius: 3px !important; }
   }
   .rel-table { font-size: 0.72rem; }
   .rel-table th { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; color: #555; font-weight: 600; }
@@ -107,7 +110,7 @@
         <th>#</th>
         <th>Nome</th>
         <th>CPF</th>
-        <th>Endereço</th>
+        <th class="col-endereco">Endereço</th>
         <th>Cidade</th>
         <th>UF</th>
         <th>Nível</th>
@@ -145,7 +148,7 @@
           <td class="text-muted">{{ ns.count }}</td>
           <td class="fw-semibold">{{ e.nome }}</td>
           <td class="font-monospace text-danger" style="font-size:0.72rem">{{ e.cpf }}</td>
-          <td>{{ e.endereco or '—' }}</td>
+          <td class="col-endereco">{{ e.endereco or '—' }}</td>
           <td>{{ e.cidade or '—' }}</td>
           <td>{{ e.estado or '—' }}</td>
           <td>
