@@ -11,13 +11,14 @@
   .subtitulo { font-size: 10pt; text-align: center; font-weight: bold; font-style: italic; margin-bottom: 22px; }
   p { margin-bottom: 10px; line-height: 1.65; text-align: justify; }
   .clausula-titulo { font-weight: bold; margin-top: 18px; margin-bottom: 5px; }
-  .assinaturas { display: flex; justify-content: space-between; gap: 16px; margin-top: 50px; }
-  .assinaturas-2 { display: flex; justify-content: center; gap: 16px; margin-top: 30px; }
+  .assinaturas { display: flex; justify-content: space-between; gap: 16px; margin-top: 36px; }
+  .assinaturas-2 { display: flex; justify-content: center; gap: 16px; margin-top: 24px; }
   .assinatura-bloco { flex: 1; text-align: center; max-width: 200px; }
   .assinatura-linha { border-top: 1px solid #000; padding-top: 5px; font-size: 9.5pt; line-height: 1.4; }
-  .assinatura-img { height: 80px; display: block; margin: 0 auto 4px; object-fit: contain; }
-  .assinatura-agente { text-align: center; margin-top: 18px; }
-  .rodape { font-size: 8pt; color: #555; text-align: center; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 5px; }
+  .assinatura-img { height: 70px; display: block; margin: 0 auto 4px; object-fit: contain; }
+  .assinatura-agente { text-align: center; margin-top: 14px; }
+  .rodape { font-size: 8pt; color: #555; text-align: center; margin-top: 14px; border-top: 1px solid #ccc; padding-top: 5px; }
+  .bloco-assinaturas { break-inside: avoid; page-break-inside: avoid; }
   @media print {
     body { print-color-adjust: exact; }
     .no-print { display: none !important; }
@@ -67,6 +68,7 @@
 
   <p style="text-align:center; margin-top:22px">Vitória da Conquista, {{ data_hoje }}</p>
 
+  <div class="bloco-assinaturas">
   <div class="assinaturas">
     <div class="assinatura-bloco">
       <div class="assinatura-linha">
@@ -101,6 +103,7 @@
   <div class="rodape">
     {{ agente.nome }} — CNPJ {{ agente.cnpj }} — {{ agente.endereco }}, {{ agente.cidade }} — {{ agente.email }}
   </div>
+  </div>{{# fim bloco-assinaturas #}}
 </div>
 </body>
 </html>
