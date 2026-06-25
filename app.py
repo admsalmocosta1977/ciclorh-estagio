@@ -1505,6 +1505,40 @@ def doc_aditivo_registrar(id):
     return jsonify({'ok': True, 'numero': numero})
 
 
+@app.route('/contratos/<int:id>/aditivo/<int:aditivo_id>/editar', methods=['POST'])
+@login_required
+def aditivo_editar(id, aditivo_id):
+    ad = _q("SELECT id FROM aditivo WHERE id=%s AND contrato_id=%s", (aditivo_id, id), one=True)
+    if not ad:
+        return jsonify({'ok': False}), 404
+    data = request.get_json(silent=True) or {}
+    nova_data_fim = data.get('nova_data_fim') or None
+    clausulas = data.get('clausulas', [])
+    _run("UPDATE aditivo SET nova_data_fim=%s, clausulas=%s WHERE id=%s",
+         (nova_data_fim, json.dumps(clausulas, ensure_ascii=False), aditivo_id))
+    _log('editar', 'aditivo', aditivo_id, f'Editou aditivo do contrato ID {id}')
+    return jsonify({'ok': True})
+
+
+@app.route('/contratos/<int:id>/aditivo/<int:aditivo_id>/excluir', methods=['POST'])
+@login_required
+def aditivo_excluir(id, aditivo_id):
+    ad = _q("SELECT nova_data_fim FROM aditivo WHERE id=%s AND contrato_id=%s", (aditivo_id, id), one=True)
+    if not ad:
+        abort(404)
+    _run("DELETE FROM aditivo WHERE id=%s", (aditivo_id,))
+    # vigência efetiva após exclusão
+    prev = _q("SELECT nova_data_fim FROM aditivo WHERE contrato_id=%s AND nova_data_fim IS NOT NULL ORDER BY created_at DESC LIMIT 1", (id,), one=True)
+    if prev:
+        vig = fmt_date(prev['nova_data_fim'])
+    else:
+        ct = _q("SELECT data_fim FROM contrato WHERE id=%s", (id,), one=True)
+        vig = fmt_date(ct['data_fim']) if ct else '—'
+    _log('excluir', 'aditivo', aditivo_id, f'Excluiu aditivo do contrato ID {id}')
+    flash(f'Aditivo excluído. Vigência efetiva do contrato: {vig}.', 'warning')
+    return redirect(url_for('contrato_editar', id=id))
+
+
 @app.route('/api/check-vinculo/<int:est_id>/<int:emp_id>')
 @login_required
 def api_check_vinculo(est_id, emp_id):
