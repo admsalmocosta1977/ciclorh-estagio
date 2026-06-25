@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Pipeline de Implantação{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="bi bi-rocket-takeoff me-2"></i>Pipeline de Implantação</h4>
+    <small class="text-muted">{{ implantacoes|length }} cliente(s) em implantação</small>
+  </div>
+  <a href="{{ url_for('crm_kanban') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-kanban me-1"></i>Funil
+  </a>
+</div>
+
+{% if implantacoes %}
+<div class="row g-3">
+  {% for imp in implantacoes %}
+  {% set pct = (imp.itens_ok / imp.total_itens * 100) | round | int if imp.total_itens else 0 %}
+  <div class="col-md-6 col-xl-4">
+    <a href="{{ url_for('crm_implantacao_detalhe', id=imp.id) }}" class="text-decoration-none">
+      <div class="card h-100" style="transition:box-shadow .15s"
+           onmouseover="this.style.boxShadow='0 4px 14px rgba(0,0,0,.12)'"
+           onmouseout="this.style.boxShadow=''">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <div class="fw-bold text-dark" style="font-size:.95rem">{{ imp.empresa_nome }}</div>
+              {% if imp.cidade %}<small class="text-muted"><i class="bi bi-geo-alt"></i> {{ imp.cidade }}</small>{% endif %}
+            </div>
+            {% if imp.status == 'concluida' %}
+              <span class="badge bg-success">Concluída</span>
+            {% else %}
+              <span class="badge bg-primary">Em andamento</span>
+            {% endif %}
+          </div>
+
+          <div class="mb-1 d-flex justify-content-between" style="font-size:.8rem;color:#555">
+            <span>{{ imp.itens_ok }}/{{ imp.total_itens }} etapas</span>
+            <span class="fw-semibold">{{ pct }}%</span>
+          </div>
+          <div class="progress mb-3" style="height:8px">
+            <div class="progress-bar
+              {% if pct == 100 %}bg-success{% elif pct >= 50 %}bg-primary{% else %}bg-warning{% endif %}"
+              style="width:{{ pct }}%" role="progressbar"></div>
+          </div>
+
+          <div style="font-size:.78rem;color:#888">
+            <i class="bi bi-person"></i> {{ imp.resp_nome or 'Sem responsável' }}
+            &nbsp;·&nbsp;
+            <i class="bi bi-clock"></i> {{ fmt_date(imp.updated_at) }}
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-rocket-takeoff fs-1 mb-3 d-block" style="opacity:.3"></i>
+    <p class="mb-1">Nenhum pipeline de implantação ativo.</p>
+    <small>Quando um lead avançar para <strong>Cliente Ativo</strong> no funil, o pipeline é criado automaticamente.</small>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -39,6 +39,16 @@ ETAPAS_CRM = [
 ]
 ORIGENS_CRM = ['Site', 'Indicação', 'LinkedIn', 'Prospecção ativa', 'Eventos']
 TIPOS_INTERACAO = ['Ligação', 'WhatsApp', 'E-mail', 'Reunião', 'Nota interna']
+ITENS_IMPLANTACAO_PADRAO = [
+    'Reunião de kick-off realizada',
+    'TCE/Contrato assinado pelas partes',
+    'Empresa cadastrada no sistema',
+    'Supervisor cadastrado',
+    'Áreas de estágio configuradas',
+    'Vagas publicadas',
+    'Primeiro estagiário alocado',
+    'Follow-up 30 dias',
+]
 ETAPAS_CRM_COR = {
     'Lead Captado': '#6c757d',
     'Primeiro Contato': '#17a2b8',
@@ -328,6 +338,27 @@ def init_db():
             descricao TEXT,
             usuario_id INTEGER REFERENCES usuario(id),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS crm_implantacao (
+            id SERIAL PRIMARY KEY,
+            lead_id INTEGER NOT NULL REFERENCES crm_lead(id) ON DELETE CASCADE,
+            empresa_id INTEGER REFERENCES empresa(id),
+            responsavel_id INTEGER REFERENCES usuario(id),
+            status TEXT NOT NULL DEFAULT 'em_andamento',
+            obs TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS crm_implantacao_item (
+            id SERIAL PRIMARY KEY,
+            implantacao_id INTEGER NOT NULL REFERENCES crm_implantacao(id) ON DELETE CASCADE,
+            titulo TEXT NOT NULL,
+            ordem INTEGER DEFAULT 0,
+            concluido BOOLEAN DEFAULT FALSE,
+            concluido_em TIMESTAMP,
+            concluido_por INTEGER REFERENCES usuario(id)
         )""")
         cur.execute("""
         CREATE TABLE IF NOT EXISTS config (
@@ -2238,10 +2269,17 @@ def crm_lead_detalhe(id):
                        LEFT JOIN usuario u ON u.id = i.usuario_id
                        WHERE i.lead_id=%s ORDER BY i.created_at DESC""", (id,))
     etapa_idx = ETAPAS_CRM.index(lead['etapa']) if lead['etapa'] in ETAPAS_CRM else 0
+    implantacao = _q("""SELECT i.*, COUNT(it.id) as total_itens,
+                               COUNT(CASE WHEN it.concluido THEN 1 END) as itens_ok
+                        FROM crm_implantacao i
+                        LEFT JOIN crm_implantacao_item it ON it.implantacao_id = i.id
+                        WHERE i.lead_id = %s
+                        GROUP BY i.id LIMIT 1""", (id,), one=True)
     return render_template('crm/lead.html', lead=lead, interacoes=interacoes,
                            etapas=ETAPAS_CRM, etapa_idx=etapa_idx, cores=ETAPAS_CRM_COR,
                            tipos_interacao=TIPOS_INTERACAO, usuarios=_crm_usuarios(),
-                           pode_ver_todos=_crm_pode_ver_todos())
+                           pode_ver_todos=_crm_pode_ver_todos(),
+                           implantacao=implantacao)
 
 
 @app.route('/crm/lead/<int:id>/editar', methods=['GET', 'POST'])
@@ -2287,6 +2325,11 @@ def crm_lead_etapa(id):
         abort(400)
     _run("UPDATE crm_lead SET etapa=%s, updated_at=NOW() WHERE id=%s", (nova, id))
     flash(f'Etapa alterada para <strong>{nova}</strong>.', 'success')
+    if nova == 'Cliente Ativo':
+        lead = _q("SELECT * FROM crm_lead WHERE id=%s", (id,), one=True)
+        resp_id = lead['responsavel_id'] if lead else current_user.id
+        imp_id = _criar_implantacao(id, resp_id)
+        flash(f'Pipeline de implantação criado. <a href="{url_for("crm_implantacao_detalhe", id=imp_id)}" class="alert-link">Ver pipeline →</a>', 'info')
     return redirect(url_for('crm_lead_detalhe', id=id))
 
 
@@ -2352,6 +2395,129 @@ def crm_indicadores():
                            por_origem=por_origem, por_responsavel=por_responsavel,
                            pode_ver_todos=pode_ver,
                            ultimas_interacoes=ultimas_interacoes)
+
+
+
+# ─── CRM — PIPELINE DE IMPLANTAÇÃO ────────────────────────────────────────────
+
+def _criar_implantacao(lead_id, responsavel_id):
+    """Cria pipeline de implantação com checklist padrão. Ignora se já existir."""
+    existente = _q("SELECT id FROM crm_implantacao WHERE lead_id=%s", (lead_id,), one=True)
+    if existente:
+        return existente['id']
+    _run("INSERT INTO crm_implantacao (lead_id, responsavel_id) VALUES (%s, %s)",
+         (lead_id, responsavel_id))
+    imp = _q("SELECT id FROM crm_implantacao WHERE lead_id=%s ORDER BY id DESC LIMIT 1",
+             (lead_id,), one=True)
+    imp_id = imp['id']
+    for i, titulo in enumerate(ITENS_IMPLANTACAO_PADRAO):
+        _run("INSERT INTO crm_implantacao_item (implantacao_id, titulo, ordem) VALUES (%s,%s,%s)",
+             (imp_id, titulo, i))
+    return imp_id
+
+
+@app.route('/crm/implantacao')
+@crm_required
+def crm_implantacao_lista():
+    if _crm_pode_ver_todos():
+        implantacoes = _q("""
+            SELECT i.*, l.empresa_nome, l.cidade, u.nome as resp_nome,
+                   COUNT(it.id) as total_itens,
+                   COUNT(CASE WHEN it.concluido THEN 1 END) as itens_ok
+            FROM crm_implantacao i
+            JOIN crm_lead l ON l.id = i.lead_id
+            LEFT JOIN usuario u ON u.id = i.responsavel_id
+            LEFT JOIN crm_implantacao_item it ON it.implantacao_id = i.id
+            GROUP BY i.id, l.empresa_nome, l.cidade, u.nome
+            ORDER BY i.updated_at DESC""")
+    else:
+        implantacoes = _q("""
+            SELECT i.*, l.empresa_nome, l.cidade, u.nome as resp_nome,
+                   COUNT(it.id) as total_itens,
+                   COUNT(CASE WHEN it.concluido THEN 1 END) as itens_ok
+            FROM crm_implantacao i
+            JOIN crm_lead l ON l.id = i.lead_id
+            LEFT JOIN usuario u ON u.id = i.responsavel_id
+            LEFT JOIN crm_implantacao_item it ON it.implantacao_id = i.id
+            WHERE i.responsavel_id = %s
+            GROUP BY i.id, l.empresa_nome, l.cidade, u.nome
+            ORDER BY i.updated_at DESC""", (current_user.id,))
+    return render_template('crm/implantacao_lista.html', implantacoes=implantacoes,
+                           pode_ver_todos=_crm_pode_ver_todos())
+
+
+@app.route('/crm/implantacao/<int:id>')
+@crm_required
+def crm_implantacao_detalhe(id):
+    imp = _q("""SELECT i.*, l.empresa_nome, l.cidade, l.id as lead_id,
+                       u.nome as resp_nome
+                FROM crm_implantacao i
+                JOIN crm_lead l ON l.id = i.lead_id
+                LEFT JOIN usuario u ON u.id = i.responsavel_id
+                WHERE i.id = %s""", (id,), one=True)
+    if not imp:
+        abort(404)
+    if not _crm_pode_ver_todos() and str(imp['responsavel_id']) != current_user.id:
+        abort(403)
+    itens = _q("""SELECT it.*, u.nome as concluido_por_nome
+                  FROM crm_implantacao_item it
+                  LEFT JOIN usuario u ON u.id = it.concluido_por
+                  WHERE it.implantacao_id = %s ORDER BY it.ordem, it.id""", (id,))
+    total = len(itens)
+    concluidos = sum(1 for it in itens if it['concluido'])
+    pct = round(concluidos / total * 100) if total else 0
+    return render_template('crm/implantacao_detalhe.html', imp=imp, itens=itens,
+                           total=total, concluidos=concluidos, pct=pct,
+                           pode_ver_todos=_crm_pode_ver_todos(),
+                           usuarios_crm=_crm_usuarios())
+
+
+@app.route('/crm/implantacao/<int:id>/item/<int:item_id>/toggle', methods=['POST'])
+@crm_required
+def crm_implantacao_item_toggle(id, item_id):
+    item = _q("SELECT * FROM crm_implantacao_item WHERE id=%s AND implantacao_id=%s",
+              (item_id, id), one=True)
+    if not item:
+        abort(404)
+    novo = not item['concluido']
+    if novo:
+        _run("""UPDATE crm_implantacao_item SET concluido=TRUE,
+                concluido_em=NOW(), concluido_por=%s WHERE id=%s""",
+             (current_user.id, item_id))
+    else:
+        _run("""UPDATE crm_implantacao_item SET concluido=FALSE,
+                concluido_em=NULL, concluido_por=NULL WHERE id=%s""", (item_id,))
+    _run("UPDATE crm_implantacao SET updated_at=NOW() WHERE id=%s", (id,))
+    return redirect(url_for('crm_implantacao_detalhe', id=id))
+
+
+@app.route('/crm/implantacao/<int:id>/fechar', methods=['POST'])
+@crm_required
+def crm_implantacao_fechar(id):
+    _run("UPDATE crm_implantacao SET status='concluida', updated_at=NOW() WHERE id=%s", (id,))
+    flash('Implantação marcada como concluída!', 'success')
+    return redirect(url_for('crm_implantacao_lista'))
+
+
+@app.route('/crm/implantacao/<int:id>/responsavel', methods=['POST'])
+@crm_required
+def crm_implantacao_responsavel(id):
+    if not _crm_pode_ver_todos():
+        abort(403)
+    resp_id = request.form.get('responsavel_id')
+    _run("UPDATE crm_implantacao SET responsavel_id=%s, updated_at=NOW() WHERE id=%s",
+         (resp_id or None, id))
+    flash('Responsável atualizado.', 'success')
+    return redirect(url_for('crm_implantacao_detalhe', id=id))
+
+
+@app.route('/crm/implantacao/<int:id>/obs', methods=['POST'])
+@crm_required
+def crm_implantacao_obs(id):
+    _run("UPDATE crm_implantacao SET obs=%s, updated_at=NOW() WHERE id=%s",
+         (request.form.get('obs') or None, id))
+    flash('Observação salva.', 'success')
+    return redirect(url_for('crm_implantacao_detalhe', id=id))
 
 
 init_db()

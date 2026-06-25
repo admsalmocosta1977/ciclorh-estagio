@@ -98,6 +98,31 @@
     </div>
     {% endif %}
 
+    {% if implantacao %}
+    {% set pct = (implantacao.itens_ok / implantacao.total_itens * 100) | round | int if implantacao.total_itens else 0 %}
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between">
+        <span><i class="bi bi-rocket-takeoff me-1"></i>Pipeline de Implantação</span>
+        <a href="{{ url_for('crm_implantacao_detalhe', id=implantacao.id) }}"
+           class="btn btn-sm btn-outline-primary py-0" style="font-size:.75rem">Abrir →</a>
+      </div>
+      <div class="card-body py-2">
+        <div class="d-flex justify-content-between mb-1" style="font-size:.8rem;color:#555">
+          <span>{{ implantacao.itens_ok }}/{{ implantacao.total_itens }} etapas concluídas</span>
+          <span class="fw-bold">{{ pct }}%</span>
+        </div>
+        <div class="progress" style="height:8px">
+          <div class="progress-bar
+            {% if pct == 100 %}bg-success{% elif pct >= 50 %}bg-primary{% else %}bg-warning{% endif %}"
+            style="width:{{ pct }}%" role="progressbar"></div>
+        </div>
+        {% if implantacao.status == 'concluida' %}
+        <small class="text-success mt-1 d-block"><i class="bi bi-check-circle me-1"></i>Implantação concluída</small>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Mover etapa -->
     <div class="card">
       <div class="card-header"><i class="bi bi-arrow-right-circle me-1"></i>Mover Etapa</div>

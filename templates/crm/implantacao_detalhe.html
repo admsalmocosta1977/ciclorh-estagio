@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block title %}Implantação — {{ imp.empresa_nome }}{% endblock %}
+{% block content %}
+<style>
+.item-row { display:flex; align-items:center; gap:12px; padding:10px 14px;
+  border-radius:8px; margin-bottom:6px; background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.07); transition:background .15s; }
+.item-row:hover { background:#f8f9fa; }
+.item-row.concluido { opacity:.65; }
+.item-check { width:22px; height:22px; flex-shrink:0; cursor:pointer; }
+.item-titulo { flex:1; font-size:.9rem; }
+.item-titulo.riscado { text-decoration:line-through; color:#999; }
+.item-meta { font-size:.75rem; color:#aaa; white-space:nowrap; }
+</style>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+  <a href="{{ url_for('crm_implantacao_lista') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div>
+    <h4 class="fw-bold mb-0">{{ imp.empresa_nome }}</h4>
+    {% if imp.cidade %}<small class="text-muted"><i class="bi bi-geo-alt"></i> {{ imp.cidade }}</small>{% endif %}
+  </div>
+  <div class="ms-auto d-flex gap-2 align-items-center">
+    {% if imp.status == 'concluida' %}
+      <span class="badge bg-success fs-6 px-3 py-2">
+        <i class="bi bi-check-circle me-1"></i>Concluída
+      </span>
+    {% else %}
+      <span class="badge bg-primary">Em andamento</span>
+      {% if concluidos == total and total > 0 %}
+      <form method="post" action="{{ url_for('crm_implantacao_fechar', id=imp.id) }}">
+        <button class="btn btn-sm btn-success">
+          <i class="bi bi-check-all me-1"></i>Marcar como Concluída
+        </button>
+      </form>
+      {% endif %}
+    {% endif %}
+    <a href="{{ url_for('crm_lead_detalhe', id=imp.lead_id) }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-person-lines-fill me-1"></i>Ver Lead
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- ── Checklist ── -->
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-check me-1"></i>Checklist de Implantação</span>
+        <small class="text-muted">{{ concluidos }}/{{ total }} &nbsp;
+          <span class="fw-bold
+            {% if pct == 100 %}text-success{% elif pct >= 50 %}text-primary{% else %}text-warning{% endif %}">
+            {{ pct }}%
+          </span>
+        </small>
+      </div>
+      <div class="card-body pb-2">
+        <div class="progress mb-3" style="height:10px;border-radius:6px">
+          <div class="progress-bar
+            {% if pct == 100 %}bg-success{% elif pct >= 50 %}bg-primary{% else %}bg-warning{% endif %}"
+            style="width:{{ pct }}%;border-radius:6px" role="progressbar"></div>
+        </div>
+
+        {% for item in itens %}
+        <form method="post"
+              action="{{ url_for('crm_implantacao_item_toggle', id=imp.id, item_id=item.id) }}">
+          <div class="item-row {% if item.concluido %}concluido{% endif %}">
+            <input type="checkbox" class="item-check form-check-input"
+                   {% if item.concluido %}checked{% endif %}
+                   onchange="this.closest('form').submit()"
+                   {% if imp.status == 'concluida' %}disabled{% endif %}>
+            <span class="item-titulo {% if item.concluido %}riscado{% endif %}">
+              {{ item.titulo }}
+            </span>
+            {% if item.concluido and item.concluido_por_nome %}
+            <span class="item-meta">
+              <i class="bi bi-person-check"></i> {{ item.concluido_por_nome }}
+              &nbsp;{{ fmt_date(item.concluido_em) }}
+            </span>
+            {% endif %}
+          </div>
+        </form>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Painel lateral ── -->
+  <div class="col-lg-5">
+
+    <!-- Responsável -->
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-person-badge me-1"></i>Responsável CS</div>
+      <div class="card-body">
+        {% if pode_ver_todos %}
+        <form method="post" action="{{ url_for('crm_implantacao_responsavel', id=imp.id) }}"
+              class="d-flex gap-2">
+          <select name="responsavel_id" class="form-select form-select-sm">
+            <option value="">— sem responsável —</option>
+            {% for u in usuarios_crm %}
+            <option value="{{ u.id }}"
+              {% if u.id == imp.responsavel_id %}selected{% endif %}>
+              {{ u.nome }}
+            </option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-sm btn-primary flex-shrink-0">OK</button>
+        </form>
+        {% else %}
+        <p class="mb-0">{{ imp.resp_nome or '—' }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Observações -->
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-sticky me-1"></i>Observações</div>
+      <div class="card-body">
+        {% if imp.status != 'concluida' %}
+        <form method="post" action="{{ url_for('crm_implantacao_obs', id=imp.id) }}">
+          <textarea name="obs" class="form-control form-control-sm mb-2" rows="3"
+                    placeholder="Anotações sobre o processo…">{{ imp.obs or '' }}</textarea>
+          <button class="btn btn-sm btn-primary">Salvar</button>
+        </form>
+        {% else %}
+        <p class="mb-0 small" style="white-space:pre-wrap">{{ imp.obs or '—' }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Datas -->
+    <div class="card">
+      <div class="card-header"><i class="bi bi-calendar3 me-1"></i>Datas</div>
+      <div class="card-body py-2" style="font-size:.85rem">
+        <div class="d-flex justify-content-between py-1 border-bottom">
+          <span class="text-muted">Criado em</span>
+          <span>{{ fmt_date(imp.created_at) }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-1">
+          <span class="text-muted">Última atualização</span>
+          <span>{{ fmt_date(imp.updated_at) }}</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

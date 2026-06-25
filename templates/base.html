@@ -154,6 +154,9 @@
       <a href="{{ url_for('crm_lead_novo') }}" class="nav-link">
         <i class="bi bi-plus-circle"></i> Novo Lead
       </a>
+      <a href="{{ url_for('crm_implantacao_lista') }}" class="nav-link {% if 'implantacao' in ep %}active{% endif %}">
+        <i class="bi bi-rocket-takeoff"></i> Implantação
+      </a>
       <a href="{{ url_for('crm_indicadores') }}" class="nav-link {% if ep=='crm_indicadores' %}active{% endif %}">
         <i class="bi bi-bar-chart"></i> Indicadores
       </a>
@@ -269,6 +272,9 @@
     </a>
     <a href="{{ url_for('crm_lead_novo') }}" class="nav-link">
       <i class="bi bi-plus-circle"></i> Novo Lead
+    </a>
+    <a href="{{ url_for('crm_implantacao_lista') }}" class="nav-link {% if 'implantacao' in ep %}active{% endif %}">
+      <i class="bi bi-rocket-takeoff"></i> Implantação
     </a>
     <a href="{{ url_for('crm_indicadores') }}" class="nav-link {% if ep=='crm_indicadores' %}active{% endif %}">
       <i class="bi bi-bar-chart"></i> Indicadores
