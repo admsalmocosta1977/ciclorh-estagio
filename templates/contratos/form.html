@@ -870,7 +870,7 @@ document.addEventListener('click', function(e) {
   } else {
     cls.forEach(cl => cont.appendChild(_criarLinhaClausulaEdit(cl.titulo || '', cl.texto || '')));
   }
-  bootstrap.Modal.getOrCreate(document.getElementById('modal-editar-aditivo')).show();
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-editar-aditivo')).show();
 });
 
 function salvarEdicaoAditivo() {
