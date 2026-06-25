@@ -331,8 +331,10 @@
           <td>{{ fmt_date(ad.nova_data_fim) if ad.nova_data_fim else '—' }}</td>
           <td>{{ cls | length }} cláusula(s)</td>
           <td class="text-end">
-            <button type="button" class="btn btn-sm btn-outline-secondary py-0 me-1"
-                    onclick="abrirEdicaoAditivo({{ ad.id }}, '{{ ad.nova_data_fim or '' }}', {{ ad.clausulas or '[]' }})">
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 me-1 btn-editar-aditivo"
+                    data-id="{{ ad.id }}"
+                    data-data="{{ ad.nova_data_fim or '' }}"
+                    data-clausulas="{{ (ad.clausulas or '[]') | e }}">
               <i class="bi bi-pencil"></i>
             </button>
             <form method="post" action="{{ url_for('aditivo_excluir', id=c.id, aditivo_id=ad.id) }}"
@@ -854,20 +856,22 @@ document.getElementById('btn-add-clausula-edit').addEventListener('click', funct
   document.getElementById('edit-clausulas-container').appendChild(_criarLinhaClausulaEdit('', ''));
 });
 
-function abrirEdicaoAditivo(aditiId, dataFim, clausulasJson) {
-  document.getElementById('edit-aditivo-id').value = aditiId;
-  document.getElementById('edit-aditivo-data').value = dataFim || '';
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.btn-editar-aditivo');
+  if (!btn) return;
+  document.getElementById('edit-aditivo-id').value = btn.dataset.id;
+  document.getElementById('edit-aditivo-data').value = btn.dataset.data || '';
   const cont = document.getElementById('edit-clausulas-container');
   cont.innerHTML = '';
   let cls = [];
-  try { cls = typeof clausulasJson === 'string' ? JSON.parse(clausulasJson) : clausulasJson; } catch(e) {}
+  try { cls = JSON.parse(btn.dataset.clausulas); } catch(e) {}
   if (!cls || !cls.length) {
     cont.appendChild(_criarLinhaClausulaEdit('', ''));
   } else {
     cls.forEach(cl => cont.appendChild(_criarLinhaClausulaEdit(cl.titulo || '', cl.texto || '')));
   }
   bootstrap.Modal.getOrCreate(document.getElementById('modal-editar-aditivo')).show();
-}
+});
 
 function salvarEdicaoAditivo() {
   const aditiId = document.getElementById('edit-aditivo-id').value;
