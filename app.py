@@ -938,6 +938,98 @@ def index():
                            total_est=total_est, total_emp=total_emp, total_ie=total_ie)
 
 
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    hoje = date.today()
+    hoje_s = hoje.isoformat()
+    d30_s = (hoje + timedelta(days=30)).isoformat()
+    mes_ini = hoje.replace(day=1).isoformat()
+
+    cte = """WITH ef AS (
+        SELECT c.id,
+               COALESCE(c.data_encerramento,
+                   (SELECT a.nova_data_fim FROM aditivo a
+                    WHERE a.contrato_id = c.id AND a.nova_data_fim IS NOT NULL AND a.nova_data_fim <> ''
+                    ORDER BY a.created_at DESC LIMIT 1),
+                   c.data_fim) AS data_efetiva
+        FROM contrato c)"""
+
+    # ── Estágios ──────────────────────────────────────────────────────────────
+    ativos = _q(cte + " SELECT COUNT(*) n FROM contrato c JOIN ef ON ef.id=c.id"
+                " WHERE c.data_encerramento IS NULL AND ef.data_efetiva >= %s",
+                (hoje_s,), one=True)['n']
+    vencendo_30 = _q(cte + " SELECT COUNT(*) n FROM contrato c JOIN ef ON ef.id=c.id"
+                     " WHERE c.data_encerramento IS NULL AND ef.data_efetiva >= %s AND ef.data_efetiva <= %s",
+                     (hoje_s, d30_s), one=True)['n']
+    encerrados_mes = _q("SELECT COUNT(*) n FROM contrato WHERE data_encerramento >= %s", (mes_ini,), one=True)['n']
+    novos_mes = _q("SELECT COUNT(*) n FROM contrato WHERE created_at >= %s", (mes_ini,), one=True)['n']
+    vencidos_sem_tre = _q(cte + " SELECT COUNT(*) n FROM contrato c JOIN ef ON ef.id=c.id"
+                          " WHERE c.data_encerramento IS NULL AND ef.data_efetiva < %s",
+                          (hoje_s,), one=True)['n']
+
+    # ── CRM ───────────────────────────────────────────────────────────────────
+    crm_total = _q("SELECT COUNT(*) n FROM crm_lead", one=True)['n']
+    crm_ativos = _q("SELECT COUNT(*) n FROM crm_lead WHERE etapa='Cliente Ativo'", one=True)['n']
+    crm_taxa = round(crm_ativos / crm_total * 100, 1) if crm_total else 0
+    crm_novos_mes = _q("SELECT COUNT(*) n FROM crm_lead WHERE created_at >= %s", (mes_ini,), one=True)['n']
+    crm_por_etapa = _q("""SELECT etapa, COUNT(*) as n FROM crm_lead GROUP BY etapa""")
+    crm_etapa_map = {r['etapa']: r['n'] for r in crm_por_etapa}
+
+    # ── Implantações ──────────────────────────────────────────────────────────
+    imp_andamento = _q("SELECT COUNT(*) n FROM crm_implantacao WHERE status='em_andamento'", one=True)['n']
+    imp_concluidas = _q("SELECT COUNT(*) n FROM crm_implantacao WHERE status='concluida'", one=True)['n']
+    imp_progresso = _q("""SELECT AVG(pct) as media FROM (
+        SELECT i.id, CASE WHEN COUNT(it.id)=0 THEN 0
+               ELSE ROUND(COUNT(CASE WHEN it.concluido THEN 1 END)::numeric / COUNT(it.id) * 100)
+               END as pct
+        FROM crm_implantacao i
+        LEFT JOIN crm_implantacao_item it ON it.implantacao_id=i.id
+        WHERE i.status='em_andamento' GROUP BY i.id) sub""", one=True)['media']
+    imp_progresso = round(float(imp_progresso)) if imp_progresso else 0
+    imp_paradas = _q("""SELECT COUNT(*) n FROM crm_implantacao
+                        WHERE status='em_andamento' AND updated_at < NOW() - INTERVAL '30 days'""",
+                     one=True)['n']
+
+    # ── Vagas ─────────────────────────────────────────────────────────────────
+    vagas_abertas = _q("SELECT COUNT(*) n FROM vaga WHERE status IN ('aberta','em_selecao')", one=True)['n']
+    vagas_candidatos = _q("SELECT COUNT(*) n FROM candidatura WHERE status='aprovado'", one=True)['n']
+    total_candidatos = _q("SELECT COUNT(*) n FROM candidato", one=True)['n']
+
+    # ── Alertas ───────────────────────────────────────────────────────────────
+    alertas = []
+    if vencidos_sem_tre:
+        alertas.append({'tipo': 'danger', 'icone': 'bi-exclamation-triangle',
+                        'msg': f'{vencidos_sem_tre} contrato(s) vencido(s) sem TRE emitido.',
+                        'link': url_for('contratos'), 'link_label': 'Ver contratos'})
+    if imp_paradas:
+        alertas.append({'tipo': 'warning', 'icone': 'bi-hourglass-split',
+                        'msg': f'{imp_paradas} implantação(ões) sem atualização há mais de 30 dias.',
+                        'link': url_for('crm_implantacao_lista'), 'link_label': 'Ver implantações'})
+    if vagas_candidatos:
+        alertas.append({'tipo': 'info', 'icone': 'bi-person-check',
+                        'msg': f'{vagas_candidatos} candidato(s) aprovado(s) aguardando contrato.',
+                        'link': url_for('vagas_lista'), 'link_label': 'Ver vagas'})
+    if vencendo_30:
+        alertas.append({'tipo': 'warning', 'icone': 'bi-calendar-x',
+                        'msg': f'{vencendo_30} contrato(s) vencem nos próximos 30 dias.',
+                        'link': url_for('relatorio_vencimentos'), 'link_label': 'Ver TCEs'})
+
+    return render_template('dashboard.html',
+                           ativos=ativos, vencendo_30=vencendo_30,
+                           encerrados_mes=encerrados_mes, novos_mes=novos_mes,
+                           vencidos_sem_tre=vencidos_sem_tre,
+                           crm_total=crm_total, crm_ativos=crm_ativos,
+                           crm_taxa=crm_taxa, crm_novos_mes=crm_novos_mes,
+                           crm_etapa_map=crm_etapa_map, etapas_crm=ETAPAS_CRM,
+                           cores_crm=ETAPAS_CRM_COR,
+                           imp_andamento=imp_andamento, imp_concluidas=imp_concluidas,
+                           imp_progresso=imp_progresso, imp_paradas=imp_paradas,
+                           vagas_abertas=vagas_abertas, vagas_candidatos=vagas_candidatos,
+                           total_candidatos=total_candidatos,
+                           alertas=alertas)
+
+
 @app.route('/contratos/<int:id>/encerrar', methods=['POST'])
 @login_required
 def contrato_encerrar(id):

@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard da Diretoria{% endblock %}
+{% block content %}
+<style>
+.kpi-card { border-radius: 14px; padding: 18px 20px; color: #fff; position: relative; overflow: hidden; }
+.kpi-card .kpi-val { font-size: 2.2rem; font-weight: 800; line-height: 1; }
+.kpi-card .kpi-label { font-size: .78rem; opacity: .85; margin-top: 4px; }
+.kpi-card .kpi-sub { font-size: .75rem; opacity: .7; margin-top: 6px; }
+.kpi-card .kpi-icon { position: absolute; right: 16px; top: 14px; font-size: 2.4rem; opacity: .18; }
+.kpi-card a { color: rgba(255,255,255,.8); font-size: .75rem; text-decoration: none; }
+.kpi-card a:hover { color: #fff; }
+.section-title { font-size: .7rem; text-transform: uppercase; letter-spacing: 1px;
+  color: #8fa8cc; font-weight: 700; margin: 20px 0 10px; }
+.funil-bar { display: flex; height: 28px; border-radius: 6px; overflow: hidden; margin-bottom: 6px; }
+.funil-seg { display: flex; align-items: center; justify-content: center;
+  font-size: .68rem; font-weight: 700; color: #fff; transition: flex .4s; min-width: 0; overflow: hidden; }
+.alert-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  border-radius: 8px; margin-bottom: 8px; font-size: .85rem; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard da Diretoria</h4>
+  <small class="text-muted">Atualizado em tempo real · {{ today.strftime('%d/%m/%Y') }}</small>
+</div>
+
+<!-- ── Alertas ── -->
+{% if alertas %}
+<div class="mb-4">
+  {% for a in alertas %}
+  <div class="alert-item alert-{{ a.tipo }} bg-{{ a.tipo }} bg-opacity-10 border border-{{ a.tipo }} border-opacity-25">
+    <i class="bi {{ a.icone }} text-{{ a.tipo }} fs-5 flex-shrink-0"></i>
+    <span>{{ a.msg }}</span>
+    <a href="{{ a.link }}" class="ms-auto btn btn-sm btn-outline-{{ a.tipo }} py-0">{{ a.link_label }}</a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ── KPIs de Estágios ── -->
+<p class="section-title"><i class="bi bi-file-earmark-text me-1"></i>Estágios</p>
+<div class="row g-3 mb-2">
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="background:linear-gradient(135deg,#1a2845,#2d4070)">
+      <i class="bi bi-file-earmark-check kpi-icon"></i>
+      <div class="kpi-val">{{ ativos }}</div>
+      <div class="kpi-label">Contratos ativos</div>
+      <div class="kpi-sub"><a href="{{ url_for('contratos') }}">Ver todos →</a></div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="background:linear-gradient(135deg,#d97706,#f59e0b)">
+      <i class="bi bi-calendar-x kpi-icon"></i>
+      <div class="kpi-val">{{ vencendo_30 }}</div>
+      <div class="kpi-label">Vencem em 30 dias</div>
+      <div class="kpi-sub"><a href="{{ url_for('relatorio_vencimentos') }}">Ver relatório →</a></div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="background:linear-gradient(135deg,#059669,#10b981)">
+      <i class="bi bi-plus-circle kpi-icon"></i>
+      <div class="kpi-val">{{ novos_mes }}</div>
+      <div class="kpi-label">Novos este mês</div>
+      <div class="kpi-sub">{{ encerrados_mes }} encerrado(s) no mês</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="background:linear-gradient(135deg,#dc2626,#ef4444)">
+      <i class="bi bi-exclamation-triangle kpi-icon"></i>
+      <div class="kpi-val">{{ vencidos_sem_tre }}</div>
+      <div class="kpi-label">Vencidos sem TRE</div>
+      <div class="kpi-sub"><a href="{{ url_for('contratos') }}">Regularizar →</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── KPIs Comercial ── -->
+<p class="section-title"><i class="bi bi-kanban me-1"></i>Comercial</p>
+<div class="row g-3 mb-2">
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="background:linear-gradient(135deg,#0d6efd,#3b82f6)">
+      <i class="bi bi-funnel kpi-icon"></i>
+      <div class="kpi-val">{{ crm_total }}</div>
+      <div class="kpi-label">Leads no funil</div>
+      <div class="kpi-sub">{{ crm_novos_mes }} novo(s) este mês</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="background:linear-gradient(135deg,#198754,#22c55e)">
+      <i class="bi bi-building-check kpi-icon"></i>
+      <div class="kpi-val">{{ crm_ativos }}</div>
+      <div class="kpi-label">Clientes ativos (CRM)</div>
+      <div class="kpi-sub">Taxa de conversão: {{ crm_taxa }}%</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="background:linear-gradient(135deg,#7c3aed,#8b5cf6)">
+      <i class="bi bi-rocket-takeoff kpi-icon"></i>
+      <div class="kpi-val">{{ imp_andamento }}</div>
+      <div class="kpi-label">Implantações em curso</div>
+      <div class="kpi-sub">Progresso médio: {{ imp_progresso }}%</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="background:linear-gradient(135deg,#0891b2,#06b6d4)">
+      <i class="bi bi-briefcase kpi-icon"></i>
+      <div class="kpi-val">{{ vagas_abertas }}</div>
+      <div class="kpi-label">Vagas abertas</div>
+      <div class="kpi-sub">{{ total_candidatos }} candidato(s) no banco</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Funil visual ── -->
+<div class="row g-3 mt-1">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-bar-chart-steps me-1"></i>Distribuição do Funil</span>
+        <a href="{{ url_for('crm_kanban') }}" class="btn btn-sm btn-outline-secondary py-0" style="font-size:.75rem">Abrir funil</a>
+      </div>
+      <div class="card-body">
+        {% if crm_total > 0 %}
+        <div class="funil-bar mb-3">
+          {% for etapa in etapas_crm %}
+          {% set n = crm_etapa_map.get(etapa, 0) %}
+          {% if n > 0 %}
+          <div class="funil-seg" style="flex:{{ n }};background:{{ cores_crm[etapa] }}"
+               title="{{ etapa }}: {{ n }}">
+            {% if n > 1 %}{{ n }}{% endif %}
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% for etapa in etapas_crm %}
+        {% set n = crm_etapa_map.get(etapa, 0) %}
+        <div class="d-flex align-items-center gap-2 mb-1" style="font-size:.82rem">
+          <span style="width:10px;height:10px;border-radius:50%;background:{{ cores_crm[etapa] }};flex-shrink:0"></span>
+          <span class="flex-grow-1 text-truncate">{{ etapa }}</span>
+          <span class="fw-semibold">{{ n }}</span>
+          <div class="progress flex-grow-1" style="height:5px;max-width:80px">
+            <div class="progress-bar" style="width:{{ (n/crm_total*100)|round|int if crm_total else 0 }}%;background:{{ cores_crm[etapa] }}"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-check2-circle me-1"></i>Resumo Operacional</div>
+      <div class="card-body py-2">
+        {% macro kpi_row(icone, label, val, cor='dark') %}
+        <div class="d-flex align-items-center gap-3 py-2 border-bottom">
+          <i class="bi {{ icone }} text-{{ cor }} fs-5 flex-shrink-0" style="width:22px;text-align:center"></i>
+          <span class="flex-grow-1" style="font-size:.85rem">{{ label }}</span>
+          <span class="fw-bold fs-5">{{ val }}</span>
+        </div>
+        {% endmacro %}
+        {{ kpi_row('bi-file-earmark-check', 'Contratos ativos', ativos, 'primary') }}
+        {{ kpi_row('bi-rocket-takeoff', 'Implantações concluídas', imp_concluidas, 'success') }}
+        {{ kpi_row('bi-person-check', 'Aprovados aguard. contrato', vagas_candidatos, 'info') }}
+        {{ kpi_row('bi-building-check', 'Clientes ativos (CRM)', crm_ativos, 'success') }}
+        {% if imp_paradas %}
+        {{ kpi_row('bi-hourglass-split', 'Implantações paradas 30d+', imp_paradas, 'warning') }}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
