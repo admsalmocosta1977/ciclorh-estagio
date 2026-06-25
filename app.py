@@ -32,24 +32,49 @@ class _Agente:
 
 AGENTE = _Agente()
 
+ETAPAS_CRM = [
+    'Lead Captado', 'Primeiro Contato', 'Qualificação',
+    'Apresentação', 'Negociação', 'Contrato Enviado',
+    'Contrato Assinado', 'Cliente Ativo'
+]
+ORIGENS_CRM = ['Site', 'Indicação', 'LinkedIn', 'Prospecção ativa', 'Eventos']
+TIPOS_INTERACAO = ['Ligação', 'WhatsApp', 'E-mail', 'Reunião', 'Nota interna']
+ETAPAS_CRM_COR = {
+    'Lead Captado': '#6c757d',
+    'Primeiro Contato': '#17a2b8',
+    'Qualificação': '#0d6efd',
+    'Apresentação': '#ffc107',
+    'Negociação': '#fd7e14',
+    'Contrato Enviado': '#6610f2',
+    'Contrato Assinado': '#6f42c1',
+    'Cliente Ativo': '#198754',
+}
+
 
 class User(UserMixin):
-    def __init__(self, id, username, nome, role):
+    def __init__(self, id, username, nome, role, acesso_crm=False, crm_role='vendedor'):
         self.id = str(id)
         self.username = username
         self.nome = nome
         self.role = role
+        self.acesso_crm = bool(acesso_crm)
+        self.crm_role = crm_role or 'vendedor'
 
     @property
     def is_admin(self):
         return self.role == 'admin'
+
+    @property
+    def is_crm(self):
+        return self.is_admin or self.acesso_crm
 
 
 @login_manager.user_loader
 def load_user(user_id):
     row = _q("SELECT * FROM usuario WHERE id = %s", (user_id,), one=True)
     if row:
-        return User(row['id'], row['username'], row['nome'], row['role'])
+        return User(row['id'], row['username'], row['nome'], row['role'],
+                    row.get('acesso_crm', False), row.get('crm_role', 'vendedor'))
     return None
 
 
@@ -271,6 +296,37 @@ def init_db():
             numero INTEGER NOT NULL,
             data_inicio TEXT NOT NULL,
             data_fim TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+        cur.execute("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS acesso_crm BOOLEAN DEFAULT FALSE;")
+        cur.execute("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS crm_role TEXT DEFAULT 'vendedor';")
+        cur.execute("UPDATE usuario SET acesso_crm = TRUE WHERE role = 'admin';")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS crm_lead (
+            id SERIAL PRIMARY KEY,
+            empresa_nome TEXT NOT NULL,
+            empresa_cnpj TEXT,
+            cidade TEXT,
+            segmento TEXT,
+            vagas_estimadas INTEGER,
+            etapa TEXT NOT NULL DEFAULT 'Lead Captado',
+            origem TEXT,
+            responsavel_id INTEGER REFERENCES usuario(id),
+            contato_nome TEXT,
+            contato_email TEXT,
+            contato_whatsapp TEXT,
+            obs TEXT,
+            empresa_id INTEGER REFERENCES empresa(id),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS crm_interacao (
+            id SERIAL PRIMARY KEY,
+            lead_id INTEGER NOT NULL REFERENCES crm_lead(id) ON DELETE CASCADE,
+            tipo TEXT NOT NULL,
+            descricao TEXT,
+            usuario_id INTEGER REFERENCES usuario(id),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""")
         cur.execute("""
@@ -613,7 +669,8 @@ def login():
         senha = request.form.get('senha', '')
         row = _q("SELECT * FROM usuario WHERE username = %s", (username,), one=True)
         if row and check_password_hash(row['password_hash'], senha):
-            user = User(row['id'], row['username'], row['nome'], row['role'])
+            user = User(row['id'], row['username'], row['nome'], row['role'],
+                        row.get('acesso_crm', False), row.get('crm_role', 'vendedor'))
             login_user(user, remember=True)
             _log('login', 'sistema', None, f'Login: {username}')
             return redirect(request.args.get('next') or url_for('index'))
@@ -634,7 +691,7 @@ def logout():
 @app.route('/admin/usuarios')
 @admin_required
 def admin_usuarios():
-    rows = _q("SELECT id, username, nome, role FROM usuario ORDER BY role DESC, nome")
+    rows = _q("SELECT id, username, nome, role, acesso_crm, crm_role FROM usuario ORDER BY role DESC, nome")
     return render_template('admin/usuarios.html', usuarios=rows)
 
 
@@ -650,8 +707,10 @@ def admin_usuario_novo():
             flash('Senha deve ter no mínimo 6 caracteres.', 'danger')
         else:
             try:
-                _ins("INSERT INTO usuario (username, password_hash, nome, role) VALUES (%s, %s, %s, %s)",
-                     (username, generate_password_hash(senha), nome, role))
+                acesso_crm_n = 'acesso_crm' in request.form or role == 'admin'
+                crm_role_n = request.form.get('crm_role', 'vendedor')
+                _ins("INSERT INTO usuario (username, password_hash, nome, role, acesso_crm, crm_role) VALUES (%s,%s,%s,%s,%s,%s)",
+                     (username, generate_password_hash(senha), nome, role, acesso_crm_n, crm_role_n))
                 _log('criar', 'usuario', None, f'Criou usuário: {username} ({role})')
                 flash(f'Usuário "{username}" criado!', 'success')
                 return redirect(url_for('admin_usuarios'))
@@ -669,7 +728,10 @@ def admin_usuario_editar(id):
     if request.method == 'POST':
         nome = request.form.get('nome', '').strip()
         role = request.form.get('role', 'operador')
-        _run("UPDATE usuario SET nome = %s, role = %s WHERE id = %s", (nome, role, id))
+        acesso_crm = 'acesso_crm' in request.form or role == 'admin'
+        crm_role = request.form.get('crm_role', 'vendedor')
+        _run("UPDATE usuario SET nome=%s, role=%s, acesso_crm=%s, crm_role=%s WHERE id=%s",
+             (nome, role, acesso_crm, crm_role, id))
         senha = request.form.get('senha', '').strip()
         if senha:
             if len(senha) < 6:
@@ -2086,6 +2148,210 @@ def forbidden(e):
 @app.errorhandler(404)
 def not_found(e):
     return render_template('erro.html', codigo=404, msg='Página não encontrada.'), 404
+
+
+# ─── CRM ──────────────────────────────────────────────────────────────────────
+
+def crm_required(f):
+    @wraps(f)
+    @login_required
+    def decorated(*args, **kwargs):
+        if not current_user.is_crm:
+            abort(403)
+        return f(*args, **kwargs)
+    decorated.__name__ = f.__name__
+    return decorated
+
+
+def _crm_pode_ver_todos():
+    return current_user.is_admin or current_user.crm_role == 'gerente'
+
+
+def _crm_leads():
+    if _crm_pode_ver_todos():
+        return _q("""SELECT l.*, u.nome as resp_nome FROM crm_lead l
+                     LEFT JOIN usuario u ON u.id = l.responsavel_id
+                     ORDER BY l.updated_at DESC""")
+    return _q("""SELECT l.*, u.nome as resp_nome FROM crm_lead l
+                 LEFT JOIN usuario u ON u.id = l.responsavel_id
+                 WHERE l.responsavel_id = %s
+                 ORDER BY l.updated_at DESC""", (current_user.id,))
+
+
+def _crm_usuarios():
+    return _q("SELECT id, nome FROM usuario WHERE acesso_crm=TRUE OR role='admin' ORDER BY nome")
+
+
+@app.route('/crm')
+@crm_required
+def crm_kanban():
+    leads = _crm_leads()
+    por_etapa = {e: [] for e in ETAPAS_CRM}
+    for l in leads:
+        if l['etapa'] in por_etapa:
+            por_etapa[l['etapa']].append(l)
+    return render_template('crm/kanban.html', por_etapa=por_etapa,
+                           etapas=ETAPAS_CRM, cores=ETAPAS_CRM_COR,
+                           total_leads=len(leads))
+
+
+@app.route('/crm/lead/novo', methods=['GET', 'POST'])
+@crm_required
+def crm_lead_novo():
+    if request.method == 'POST':
+        resp_id = request.form.get('responsavel_id') or current_user.id
+        _run("""INSERT INTO crm_lead
+                (empresa_nome, empresa_cnpj, cidade, segmento, vagas_estimadas,
+                 etapa, origem, responsavel_id, contato_nome, contato_email,
+                 contato_whatsapp, obs)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+             (request.form['empresa_nome'].strip(),
+              request.form.get('empresa_cnpj') or None,
+              request.form.get('cidade') or None,
+              request.form.get('segmento') or None,
+              request.form.get('vagas_estimadas') or None,
+              request.form.get('etapa', 'Lead Captado'),
+              request.form.get('origem') or None,
+              resp_id,
+              request.form.get('contato_nome') or None,
+              request.form.get('contato_email') or None,
+              request.form.get('contato_whatsapp') or None,
+              request.form.get('obs') or None))
+        flash('Lead criado!', 'success')
+        return redirect(url_for('crm_kanban'))
+    return render_template('crm/form.html', lead=None, etapas=ETAPAS_CRM,
+                           origens=ORIGENS_CRM, usuarios_crm=_crm_usuarios(),
+                           pode_ver_todos=_crm_pode_ver_todos(),
+                           current_user_id=int(current_user.id))
+
+
+@app.route('/crm/lead/<int:id>')
+@crm_required
+def crm_lead_detalhe(id):
+    lead = _q("""SELECT l.*, u.nome as resp_nome FROM crm_lead l
+                 LEFT JOIN usuario u ON u.id = l.responsavel_id WHERE l.id=%s""", (id,), one=True)
+    if not lead:
+        abort(404)
+    if not _crm_pode_ver_todos() and str(lead['responsavel_id']) != current_user.id:
+        abort(403)
+    interacoes = _q("""SELECT i.*, u.nome as autor FROM crm_interacao i
+                       LEFT JOIN usuario u ON u.id = i.usuario_id
+                       WHERE i.lead_id=%s ORDER BY i.created_at DESC""", (id,))
+    etapa_idx = ETAPAS_CRM.index(lead['etapa']) if lead['etapa'] in ETAPAS_CRM else 0
+    return render_template('crm/lead.html', lead=lead, interacoes=interacoes,
+                           etapas=ETAPAS_CRM, etapa_idx=etapa_idx, cores=ETAPAS_CRM_COR,
+                           tipos_interacao=TIPOS_INTERACAO, usuarios=_crm_usuarios(),
+                           pode_ver_todos=_crm_pode_ver_todos())
+
+
+@app.route('/crm/lead/<int:id>/editar', methods=['GET', 'POST'])
+@crm_required
+def crm_lead_editar(id):
+    lead = _q("SELECT * FROM crm_lead WHERE id=%s", (id,), one=True)
+    if not lead:
+        abort(404)
+    if not _crm_pode_ver_todos() and str(lead['responsavel_id']) != current_user.id:
+        abort(403)
+    if request.method == 'POST':
+        resp_id = request.form.get('responsavel_id') or lead['responsavel_id']
+        _run("""UPDATE crm_lead SET empresa_nome=%s, empresa_cnpj=%s, cidade=%s, segmento=%s,
+                vagas_estimadas=%s, etapa=%s, origem=%s, responsavel_id=%s,
+                contato_nome=%s, contato_email=%s, contato_whatsapp=%s, obs=%s,
+                updated_at=NOW() WHERE id=%s""",
+             (request.form['empresa_nome'].strip(),
+              request.form.get('empresa_cnpj') or None,
+              request.form.get('cidade') or None,
+              request.form.get('segmento') or None,
+              request.form.get('vagas_estimadas') or None,
+              request.form.get('etapa', lead['etapa']),
+              request.form.get('origem') or None,
+              resp_id,
+              request.form.get('contato_nome') or None,
+              request.form.get('contato_email') or None,
+              request.form.get('contato_whatsapp') or None,
+              request.form.get('obs') or None,
+              id))
+        flash('Lead atualizado!', 'success')
+        return redirect(url_for('crm_lead_detalhe', id=id))
+    return render_template('crm/form.html', lead=lead, etapas=ETAPAS_CRM,
+                           origens=ORIGENS_CRM, usuarios_crm=_crm_usuarios(),
+                           pode_ver_todos=_crm_pode_ver_todos(),
+                           current_user_id=int(current_user.id))
+
+
+@app.route('/crm/lead/<int:id>/etapa', methods=['POST'])
+@crm_required
+def crm_lead_etapa(id):
+    nova = request.form.get('etapa')
+    if nova not in ETAPAS_CRM:
+        abort(400)
+    _run("UPDATE crm_lead SET etapa=%s, updated_at=NOW() WHERE id=%s", (nova, id))
+    flash(f'Etapa alterada para <strong>{nova}</strong>.', 'success')
+    return redirect(url_for('crm_lead_detalhe', id=id))
+
+
+@app.route('/crm/lead/<int:id>/interacao', methods=['POST'])
+@crm_required
+def crm_interacao_nova(id):
+    tipo = request.form.get('tipo', '').strip()
+    descricao = request.form.get('descricao', '').strip()
+    if not tipo or not descricao:
+        flash('Tipo e descrição são obrigatórios.', 'danger')
+        return redirect(url_for('crm_lead_detalhe', id=id))
+    _run("INSERT INTO crm_interacao (lead_id, tipo, descricao, usuario_id) VALUES (%s,%s,%s,%s)",
+         (id, tipo, descricao, current_user.id))
+    _run("UPDATE crm_lead SET updated_at=NOW() WHERE id=%s", (id,))
+    flash('Interação registrada.', 'success')
+    return redirect(url_for('crm_lead_detalhe', id=id))
+
+
+@app.route('/crm/lead/<int:id>/excluir', methods=['POST'])
+@crm_required
+def crm_lead_excluir(id):
+    if not _crm_pode_ver_todos():
+        abort(403)
+    _run("DELETE FROM crm_lead WHERE id=%s", (id,))
+    flash('Lead excluído.', 'warning')
+    return redirect(url_for('crm_kanban'))
+
+
+@app.route('/crm/indicadores')
+@crm_required
+def crm_indicadores():
+    leads = _crm_leads()
+    total_leads = len(leads)
+    por_etapa_count = {e: 0 for e in ETAPAS_CRM}
+    for l in leads:
+        if l['etapa'] in por_etapa_count:
+            por_etapa_count[l['etapa']] += 1
+    clientes_ativos = por_etapa_count.get('Cliente Ativo', 0)
+    contratos_enviados = por_etapa_count.get('Contrato Enviado', 0) + por_etapa_count.get('Contrato Assinado', 0)
+    taxa_conversao = round(clientes_ativos / total_leads * 100, 1) if total_leads else 0
+
+    pode_ver = _crm_pode_ver_todos()
+    por_origem = _q("""SELECT origem, COUNT(*) as total FROM crm_lead
+                       GROUP BY origem ORDER BY total DESC""")
+    por_responsavel = None
+    if pode_ver:
+        por_responsavel = _q("""SELECT u.nome as resp_nome,
+                                COUNT(l.id) as total,
+                                COUNT(CASE WHEN l.etapa='Cliente Ativo' THEN 1 END) as clientes
+                                FROM crm_lead l
+                                LEFT JOIN usuario u ON u.id = l.responsavel_id
+                                GROUP BY u.nome ORDER BY total DESC""")
+    ultimas_interacoes = _q("""SELECT i.*, l.empresa_nome, l.id as lead_id
+                               FROM crm_interacao i
+                               JOIN crm_lead l ON l.id = i.lead_id
+                               ORDER BY i.created_at DESC LIMIT 10""")
+    return render_template('crm/indicadores.html',
+                           total_leads=total_leads, por_etapa_count=por_etapa_count,
+                           etapas=ETAPAS_CRM, cores=ETAPAS_CRM_COR,
+                           clientes_ativos=clientes_ativos,
+                           contratos_enviados=contratos_enviados,
+                           taxa_conversao=taxa_conversao,
+                           por_origem=por_origem, por_responsavel=por_responsavel,
+                           pode_ver_todos=pode_ver,
+                           ultimas_interacoes=ultimas_interacoes)
 
 
 init_db()

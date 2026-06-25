@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Funil Comercial{% endblock %}
+{% block content %}
+<style>
+.kanban-wrap { overflow-x: auto; padding-bottom: 12px; }
+.kanban-board { display: flex; gap: 10px; min-width: max-content; }
+.kanban-col { width: 210px; flex-shrink: 0; }
+.kanban-col-head { padding: 7px 10px; border-radius: 8px 8px 0 0; font-weight: 600;
+  font-size: .8rem; display: flex; justify-content: space-between; align-items: center;
+  color: #fff; letter-spacing: .3px; }
+.kanban-body { background: #eef0f5; border-radius: 0 0 8px 8px; padding: 8px;
+  min-height: 80px; }
+.kanban-card { background: #fff; border-radius: 7px; padding: 9px 10px; margin-bottom: 7px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.09); display: block; color: inherit;
+  text-decoration: none; transition: box-shadow .15s; }
+.kanban-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,.15); color: inherit; }
+.kanban-card .kc-nome { font-weight: 600; font-size: .85rem; margin-bottom: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kanban-card .kc-meta { font-size: .72rem; color: #666; line-height: 1.6; }
+.kc-empty { font-size: .75rem; color: #bbb; text-align: center; padding: 14px 0; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="bi bi-kanban me-2"></i>Funil Comercial</h4>
+    <small class="text-muted">{{ total_leads }} lead(s) no funil</small>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('crm_indicadores') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-bar-chart me-1"></i>Indicadores
+    </a>
+    <a href="{{ url_for('crm_lead_novo') }}" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Novo Lead
+    </a>
+  </div>
+</div>
+
+<div class="kanban-wrap">
+  <div class="kanban-board">
+    {% for etapa in etapas %}
+    {% set col = por_etapa[etapa] %}
+    <div class="kanban-col">
+      <div class="kanban-col-head" style="background:{{ cores[etapa] }}">
+        <span>{{ etapa }}</span>
+        <span class="badge" style="background:rgba(255,255,255,.25);font-size:.7rem">{{ col|length }}</span>
+      </div>
+      <div class="kanban-body">
+        {% if col %}
+          {% for l in col %}
+          <a href="{{ url_for('crm_lead_detalhe', id=l.id) }}" class="kanban-card">
+            <div class="kc-nome" title="{{ l.empresa_nome }}">{{ l.empresa_nome }}</div>
+            <div class="kc-meta">
+              {% if l.cidade %}<i class="bi bi-geo-alt"></i> {{ l.cidade }}<br>{% endif %}
+              {% if l.vagas_estimadas %}<i class="bi bi-briefcase"></i> {{ l.vagas_estimadas }} vaga(s)<br>{% endif %}
+              {% if l.resp_nome %}<i class="bi bi-person"></i> {{ l.resp_nome }}<br>{% endif %}
+              {% if l.origem %}<span class="badge bg-light text-secondary" style="font-size:.65rem">{{ l.origem }}</span>{% endif %}
+            </div>
+          </a>
+          {% endfor %}
+        {% else %}
+          <div class="kc-empty">— vazio —</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

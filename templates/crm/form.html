@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% block title %}{% if lead %}Editar Lead{% else %}Novo Lead{% endif %} — CRM{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{{ url_for('crm_kanban') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">
+    {% if lead %}Editar Lead — {{ lead.empresa_nome }}{% else %}Novo Lead{% endif %}
+  </h4>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <form method="post">
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-building me-1"></i>Empresa</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nome da Empresa <span class="text-danger">*</span></label>
+            <input type="text" name="empresa_nome" class="form-control"
+                   value="{{ lead.empresa_nome if lead else '' }}" required>
+          </div>
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label">CNPJ</label>
+              <input type="text" name="empresa_cnpj" class="form-control"
+                     value="{{ lead.empresa_cnpj if lead else '' }}" placeholder="00.000.000/0000-00">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Cidade</label>
+              <input type="text" name="cidade" class="form-control"
+                     value="{{ lead.cidade if lead else '' }}">
+            </div>
+          </div>
+          <div class="row g-3 mt-0">
+            <div class="col-sm-6">
+              <label class="form-label">Segmento</label>
+              <input type="text" name="segmento" class="form-control"
+                     value="{{ lead.segmento if lead else '' }}" placeholder="Ex: Logística, Varejo…">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Vagas estimadas</label>
+              <input type="number" name="vagas_estimadas" class="form-control" min="1"
+                     value="{{ lead.vagas_estimadas if lead else '' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-person me-1"></i>Contato Principal</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-sm-4">
+              <label class="form-label">Nome</label>
+              <input type="text" name="contato_nome" class="form-control"
+                     value="{{ lead.contato_nome if lead else '' }}">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">WhatsApp</label>
+              <input type="text" name="contato_whatsapp" class="form-control"
+                     value="{{ lead.contato_whatsapp if lead else '' }}" placeholder="(77) 99999-9999">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">E-mail</label>
+              <input type="email" name="contato_email" class="form-control"
+                     value="{{ lead.contato_email if lead else '' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-funnel me-1"></i>Funil</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label">Etapa</label>
+              <select name="etapa" class="form-select">
+                {% for e in etapas %}
+                <option value="{{ e }}"
+                  {% if lead and lead.etapa == e %}selected{% elif not lead and loop.first %}selected{% endif %}>
+                  {{ e }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Origem</label>
+              <select name="origem" class="form-select">
+                <option value="">— selecione —</option>
+                {% for o in origens %}
+                <option value="{{ o }}"
+                  {% if lead and lead.origem == o %}selected{% endif %}>
+                  {{ o }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          {% if pode_ver_todos %}
+          <div class="mt-3">
+            <label class="form-label">Responsável</label>
+            <select name="responsavel_id" class="form-select">
+              {% for u in usuarios_crm %}
+              <option value="{{ u.id }}"
+                {% if lead and lead.responsavel_id == u.id %}selected
+                {% elif not lead and u.id == current_user_id %}selected
+                {% endif %}>
+                {{ u.nome }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-sticky me-1"></i>Observações</div>
+        <div class="card-body">
+          <textarea name="obs" class="form-control" rows="3"
+                    placeholder="Informações adicionais…">{{ lead.obs if lead else '' }}</textarea>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>
+          {% if lead %}Salvar alterações{% else %}Criar Lead{% endif %}
+        </button>
+        <a href="{{ url_for('crm_kanban') }}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

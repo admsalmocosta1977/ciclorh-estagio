@@ -89,6 +89,7 @@
   {% set sec_cad = 'estagi' in ep or 'empresa' in ep or ep in ['ies','ie_nova','ie_editar'] or 'area' in ep %}
   {% set sec_con = ep in ['contratos','contrato_novo','contrato_editar'] or 'relatorio' in ep %}
   {% set sec_adm = 'admin' in ep %}
+  {% set sec_crm = 'crm' in ep %}
   <div class="offcanvas-body p-0 offcanvas-nav" style="overflow-y:auto">
     <div class="nav-section" data-bs-toggle="collapse" data-bs-target="#mob-principal"
          aria-expanded="true" aria-controls="mob-principal">
@@ -140,6 +141,24 @@
         <i class="bi bi-person-lines-fill"></i> Lista Estagiários
       </a>
     </div>
+
+    {% if current_user.is_crm %}
+    <div class="nav-section" data-bs-toggle="collapse" data-bs-target="#mob-crm"
+         aria-expanded="{{ 'true' if sec_crm else 'false' }}" aria-controls="mob-crm">
+      Comercial <i class="bi bi-chevron-down chev"></i>
+    </div>
+    <div class="collapse {{ 'show' if sec_crm }}" id="mob-crm">
+      <a href="{{ url_for('crm_kanban') }}" class="nav-link {% if ep=='crm_kanban' %}active{% endif %}">
+        <i class="bi bi-kanban"></i> Funil de Vendas
+      </a>
+      <a href="{{ url_for('crm_lead_novo') }}" class="nav-link">
+        <i class="bi bi-plus-circle"></i> Novo Lead
+      </a>
+      <a href="{{ url_for('crm_indicadores') }}" class="nav-link {% if ep=='crm_indicadores' %}active{% endif %}">
+        <i class="bi bi-bar-chart"></i> Indicadores
+      </a>
+    </div>
+    {% endif %}
 
     {% if current_user.is_admin %}
     <div class="nav-section" data-bs-toggle="collapse" data-bs-target="#mob-adm"
@@ -238,6 +257,24 @@
       <i class="bi bi-person-lines-fill"></i> Lista Estagiários
     </a>
   </div>
+
+  {% if current_user.is_crm %}
+  <div class="nav-section" data-bs-toggle="collapse" data-bs-target="#sb-crm"
+       aria-expanded="{{ 'true' if sec_crm else 'false' }}" aria-controls="sb-crm">
+    Comercial <i class="bi bi-chevron-down chev"></i>
+  </div>
+  <div class="collapse {{ 'show' if sec_crm }}" id="sb-crm">
+    <a href="{{ url_for('crm_kanban') }}" class="nav-link {% if ep=='crm_kanban' %}active{% endif %}">
+      <i class="bi bi-kanban"></i> Funil de Vendas
+    </a>
+    <a href="{{ url_for('crm_lead_novo') }}" class="nav-link">
+      <i class="bi bi-plus-circle"></i> Novo Lead
+    </a>
+    <a href="{{ url_for('crm_indicadores') }}" class="nav-link {% if ep=='crm_indicadores' %}active{% endif %}">
+      <i class="bi bi-bar-chart"></i> Indicadores
+    </a>
+  </div>
+  {% endif %}
 
   {% if current_user.is_admin %}
   <div class="nav-section" data-bs-toggle="collapse" data-bs-target="#sb-adm"

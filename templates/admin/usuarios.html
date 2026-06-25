@@ -12,7 +12,7 @@
   <div class="card-body p-0">
     <table class="table table-hover mb-0">
       <thead class="table-light">
-        <tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th></th></tr>
+        <tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th>CRM</th><th></th></tr>
       </thead>
       <tbody>
       {% for u in usuarios %}
@@ -24,6 +24,15 @@
             <span class="badge" style="background:#1a2845">Administrador</span>
           {% else %}
             <span class="badge bg-secondary">Operador</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if u.role == 'admin' or u.acesso_crm %}
+            <span class="badge bg-success" style="font-size:.7rem">
+              {{ u.crm_role|capitalize if u.role != 'admin' else 'Admin' }}
+            </span>
+          {% else %}
+            <span class="text-muted small">—</span>
           {% endif %}
         </td>
         <td class="text-end">

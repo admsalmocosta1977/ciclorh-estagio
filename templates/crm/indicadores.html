@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% block title %}Indicadores — CRM{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0"><i class="bi bi-bar-chart me-2"></i>Indicadores Comerciais</h4>
+  <a href="{{ url_for('crm_kanban') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-kanban me-1"></i>Funil
+  </a>
+</div>
+
+<!-- Cards de totais -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-primary">{{ total_leads }}</div>
+        <div class="text-muted small">Leads totais</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-success">{{ clientes_ativos }}</div>
+        <div class="text-muted small">Clientes ativos</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold text-warning">{{ contratos_enviados }}</div>
+        <div class="text-muted small">Contratos enviados</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center">
+      <div class="card-body py-3">
+        <div class="fs-2 fw-bold {% if taxa_conversao >= 20 %}text-success{% elif taxa_conversao >= 10 %}text-warning{% else %}text-danger{% endif %}">
+          {{ taxa_conversao }}%
+        </div>
+        <div class="text-muted small">Taxa de conversão</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Distribuição por etapa -->
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-funnel me-1"></i>Leads por Etapa</div>
+      <div class="card-body py-2">
+        {% for etapa in etapas %}
+        {% set count = por_etapa_count.get(etapa, 0) %}
+        {% set pct = ((count / total_leads * 100) | round(0) | int) if total_leads > 0 else 0 %}
+        <div class="mb-2">
+          <div class="d-flex justify-content-between mb-1" style="font-size:.83rem">
+            <span>{{ etapa }}</span>
+            <span class="fw-semibold">{{ count }}</span>
+          </div>
+          <div class="progress" style="height:7px">
+            <div class="progress-bar" style="width:{{ pct }}%;background:{{ cores[etapa] }}" role="progressbar"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Distribuição por origem -->
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-diagram-3 me-1"></i>Leads por Origem</div>
+      <div class="card-body py-2">
+        {% if por_origem %}
+        {% for row in por_origem %}
+        {% set pct = ((row.total / total_leads * 100) | round(0) | int) if total_leads > 0 else 0 %}
+        <div class="mb-2">
+          <div class="d-flex justify-content-between mb-1" style="font-size:.83rem">
+            <span>{{ row.origem or 'Sem origem' }}</span>
+            <span class="fw-semibold">{{ row.total }}</span>
+          </div>
+          <div class="progress" style="height:7px">
+            <div class="progress-bar bg-info" style="width:{{ pct }}%" role="progressbar"></div>
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="text-muted small text-center py-3 mb-0">Nenhum dado de origem registrado.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Leads por responsável -->
+  {% if pode_ver_todos and por_responsavel %}
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-people me-1"></i>Leads por Responsável</div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead><tr><th>Responsável</th><th class="text-end">Leads</th><th class="text-end">Clientes</th></tr></thead>
+          <tbody>
+            {% for row in por_responsavel %}
+            <tr>
+              <td>{{ row.resp_nome or 'Sem responsável' }}</td>
+              <td class="text-end">{{ row.total }}</td>
+              <td class="text-end">{{ row.clientes }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Últimas interações -->
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-clock-history me-1"></i>Últimas Interações</div>
+      <div class="card-body p-0">
+        {% if ultimas_interacoes %}
+        <table class="table table-sm table-hover mb-0">
+          <thead><tr><th>Empresa</th><th>Tipo</th><th>Quando</th></tr></thead>
+          <tbody>
+            {% for it in ultimas_interacoes %}
+            <tr>
+              <td>
+                <a href="{{ url_for('crm_lead_detalhe', id=it.lead_id) }}" class="text-decoration-none">
+                  {{ it.empresa_nome }}
+                </a>
+              </td>
+              <td><small class="badge bg-secondary">{{ it.tipo }}</small></td>
+              <td><small class="text-muted">{{ fmt_date(it.created_at) }}</small></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted small text-center py-3 mb-0">Nenhuma interação registrada.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
