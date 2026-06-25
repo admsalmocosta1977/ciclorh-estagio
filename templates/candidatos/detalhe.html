@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block title %}{{ candidato.nome }} — Candidato{% endblock %}
+{% block content %}
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+  <a href="{{ url_for('candidatos_lista') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">{{ candidato.nome }}</h4>
+  <div class="ms-auto">
+    <a href="{{ url_for('candidato_editar', id=candidato.id) }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- ── Dados do candidato ── -->
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-person me-1"></i>Dados</div>
+      <div class="card-body py-2" style="font-size:.86rem">
+        {% macro row(lbl, val) %}{% if val %}
+        <div class="d-flex gap-2 py-1 border-bottom">
+          <span class="text-muted" style="width:120px;flex-shrink:0">{{ lbl }}</span>
+          <span>{{ val }}</span>
+        </div>{% endif %}{% endmacro %}
+        {{ row('CPF', candidato.cpf) }}
+        {{ row('Nascimento', fmt_date(candidato.data_nascimento) if candidato.data_nascimento else None) }}
+        {{ row('Curso', candidato.curso) }}
+        {{ row('Semestre', candidato.semestre) }}
+        {{ row('Instituição', candidato.ie_nome) }}
+        {{ row('Disponibilidade', candidato.disponibilidade) }}
+        {{ row('Cidade', (candidato.cidade + ('/' + candidato.estado if candidato.estado else '')) if candidato.cidade else None) }}
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-envelope me-1"></i>Contato</div>
+      <div class="card-body py-2" style="font-size:.86rem">
+        {% if candidato.whatsapp %}
+        <div class="py-1 border-bottom">
+          <i class="bi bi-whatsapp text-success me-1"></i>
+          <a href="https://wa.me/55{{ candidato.whatsapp | replace(' ','') | replace('-','') | replace('(','') | replace(')','') }}"
+             target="_blank">{{ candidato.whatsapp }}</a>
+        </div>
+        {% endif %}
+        {% if candidato.email %}
+        <div class="py-1">
+          <i class="bi bi-envelope me-1 text-muted"></i>
+          <a href="mailto:{{ candidato.email }}">{{ candidato.email }}</a>
+        </div>
+        {% endif %}
+        {% if not candidato.whatsapp and not candidato.email %}
+        <p class="text-muted small mb-0">Nenhum contato cadastrado.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if candidato.obs %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-sticky me-1"></i>Observações</div>
+      <div class="card-body"><p class="mb-0 small" style="white-space:pre-wrap">{{ candidato.obs }}</p></div>
+    </div>
+    {% endif %}
+
+    <!-- Inscrever em vaga -->
+    {% if vagas_disponiveis %}
+    <div class="card">
+      <div class="card-header"><i class="bi bi-briefcase me-1"></i>Inscrever em Vaga</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('candidatura_nova') }}" class="d-flex gap-2">
+          <input type="hidden" name="candidato_id" value="{{ candidato.id }}">
+          <input type="hidden" name="origem" value="candidato">
+          <select name="vaga_id" class="form-select form-select-sm">
+            <option value="">Selecionar vaga…</option>
+            {% for v in vagas_disponiveis %}
+            <option value="{{ v.id }}">{{ v.titulo }}{% if v.emp_nome %} — {{ v.emp_nome }}{% endif %}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-sm btn-primary flex-shrink-0"><i class="bi bi-plus"></i></button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Histórico de candidaturas ── -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-clock-history me-1"></i>Candidaturas ({{ candidaturas|length }})</div>
+      <div class="card-body p-0">
+        {% if candidaturas %}
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>Vaga</th><th>Empresa</th><th>Status</th><th>Data</th></tr>
+          </thead>
+          <tbody>
+          {% for c in candidaturas %}
+          <tr>
+            <td>
+              <a href="{{ url_for('vaga_detalhe', id=c.vaga_id) }}" class="text-decoration-none fw-semibold">
+                {{ c.vaga_titulo }}
+              </a>
+            </td>
+            <td><small class="text-muted">{{ c.emp_nome or '—' }}</small></td>
+            <td>
+              <span class="badge bg-{{ status_cor[c.status] }}">
+                {{ c.status | replace('_',' ') }}
+              </span>
+            </td>
+            <td><small class="text-muted">{{ fmt_date(c.created_at) }}</small></td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted text-center py-4 mb-0 small">
+          <i class="bi bi-briefcase me-1"></i>Nenhuma candidatura registrada.
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

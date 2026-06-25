@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% block title %}{% if candidato %}Editar Candidato{% else %}Novo Candidato{% endif %}{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{{ url_for('candidatos_lista') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">{% if candidato %}Editar Candidato{% else %}Novo Candidato{% endif %}</h4>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <form method="post">
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-person me-1"></i>Dados Pessoais</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nome Completo <span class="text-danger">*</span></label>
+            <input type="text" name="nome" class="form-control"
+                   value="{{ candidato.nome if candidato else '' }}" required>
+          </div>
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label">CPF</label>
+              <input type="text" name="cpf" class="form-control form-control-sm"
+                     value="{{ candidato.cpf if candidato else '' }}" placeholder="000.000.000-00">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Data de Nascimento</label>
+              <input type="date" name="data_nascimento" class="form-control form-control-sm"
+                     value="{{ candidato.data_nascimento | string | truncate(10,True,'') if candidato and candidato.data_nascimento else '' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-envelope me-1"></i>Contato</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label">WhatsApp</label>
+              <input type="text" name="whatsapp" class="form-control form-control-sm"
+                     value="{{ candidato.whatsapp if candidato else '' }}" placeholder="(77) 99999-9999">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">E-mail</label>
+              <input type="email" name="email" class="form-control form-control-sm"
+                     value="{{ candidato.email if candidato else '' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-mortarboard me-1"></i>Formação</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label">Curso</label>
+              <input type="text" name="curso" class="form-control form-control-sm"
+                     value="{{ candidato.curso if candidato else '' }}"
+                     placeholder="Ex: Administração">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Semestre / Período</label>
+              <input type="text" name="semestre" class="form-control form-control-sm"
+                     value="{{ candidato.semestre if candidato else '' }}"
+                     placeholder="Ex: 4º semestre">
+            </div>
+            <div class="col-sm-12">
+              <label class="form-label">Instituição de Ensino</label>
+              <select name="ie_id" class="form-select form-select-sm">
+                <option value="">— selecione —</option>
+                {% for ie in ies %}
+                <option value="{{ ie.id }}"
+                  {% if candidato and candidato.ie_id == ie.id %}selected{% endif %}>
+                  {{ ie.nome }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-geo-alt me-1"></i>Localização</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-sm-8">
+              <label class="form-label">Cidade</label>
+              <input type="text" name="cidade" class="form-control form-control-sm"
+                     value="{{ candidato.cidade if candidato else '' }}">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">Estado</label>
+              <input type="text" name="estado" class="form-control form-control-sm"
+                     value="{{ candidato.estado if candidato else '' }}" maxlength="2" placeholder="BA">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-clock me-1"></i>Disponibilidade e Observações</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Disponibilidade</label>
+            <select name="disponibilidade" class="form-select form-select-sm">
+              <option value="">— selecione —</option>
+              {% for d in ['Manhã','Tarde','Integral','Noite'] %}
+              <option value="{{ d }}"
+                {% if candidato and candidato.disponibilidade == d %}selected{% endif %}>
+                {{ d }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Observações</label>
+            <textarea name="obs" class="form-control form-control-sm" rows="2"
+                      placeholder="Experiências, habilidades ou informações relevantes…">{{ candidato.obs if candidato else '' }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>{% if candidato %}Salvar alterações{% else %}Cadastrar{% endif %}
+        </button>
+        <a href="{{ url_for('candidatos_lista') }}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

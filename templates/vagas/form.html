@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block title %}{% if vaga %}Editar Vaga{% else %}Nova Vaga{% endif %}{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{{ url_for('vagas_lista') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="fw-bold mb-0">{% if vaga %}Editar Vaga{% else %}Nova Vaga{% endif %}</h4>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <form method="post">
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-briefcase me-1"></i>Informações da Vaga</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Título da Vaga <span class="text-danger">*</span></label>
+            <input type="text" name="titulo" class="form-control"
+                   value="{{ vaga.titulo if vaga else '' }}" required
+                   placeholder="Ex: Estagiário de Administração">
+          </div>
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label">Empresa</label>
+              <select name="empresa_id" class="form-select">
+                <option value="">— selecione —</option>
+                {% for e in empresas %}
+                <option value="{{ e.id }}"
+                  {% if vaga and vaga.empresa_id == e.id %}selected{% endif %}>
+                  {{ e.nome }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Área de Estágio</label>
+              <select name="area_id" class="form-select">
+                <option value="">— selecione —</option>
+                {% for a in areas %}
+                <option value="{{ a.id }}"
+                  {% if vaga and vaga.area_id == a.id %}selected{% endif %}>
+                  {{ a.nome }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-person-check me-1"></i>Requisitos</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label">Curso desejado</label>
+              <input type="text" name="curso_desejado" class="form-control form-control-sm"
+                     value="{{ vaga.curso_desejado if vaga else '' }}"
+                     placeholder="Ex: Administração, Direito…">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Nível</label>
+              <select name="nivel" class="form-select form-select-sm">
+                {% for n in ['superior','técnico','médio'] %}
+                <option value="{{ n }}"
+                  {% if vaga and vaga.nivel == n %}selected{% elif not vaga and n=='superior' %}selected{% endif %}>
+                  {{ n|capitalize }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Requisitos específicos</label>
+              <textarea name="requisitos" class="form-control form-control-sm" rows="2"
+                        placeholder="Ex: Excel intermediário, disponibilidade matutina…">{{ vaga.requisitos if vaga else '' }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-cash-coin me-1"></i>Condições</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-sm-4">
+              <label class="form-label">Carga horária (h/sem)</label>
+              <input type="number" name="carga_horaria" class="form-control form-control-sm"
+                     value="{{ vaga.carga_horaria if vaga else '' }}" min="1" max="30">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">Bolsa (R$)</label>
+              <input type="number" name="bolsa" class="form-control form-control-sm"
+                     value="{{ vaga.bolsa if vaga else '' }}" step="0.01" min="0">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">Nº de vagas</label>
+              <input type="number" name="vagas_total" class="form-control form-control-sm"
+                     value="{{ vaga.vagas_total if vaga else 1 }}" min="1">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Benefícios</label>
+              <input type="text" name="beneficios" class="form-control form-control-sm"
+                     value="{{ vaga.beneficios if vaga else '' }}"
+                     placeholder="Ex: Vale-transporte, alimentação">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">Data limite de inscrição</label>
+              <input type="date" name="data_limite" class="form-control form-control-sm"
+                     value="{{ vaga.data_limite | string | truncate(10, True, '') if vaga and vaga.data_limite else '' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-text-left me-1"></i>Descrição</div>
+        <div class="card-body">
+          <textarea name="descricao" class="form-control" rows="3"
+                    placeholder="Descrição das atividades que serão realizadas…">{{ vaga.descricao if vaga else '' }}</textarea>
+        </div>
+      </div>
+
+      {% if vaga and usuarios %}
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-person-badge me-1"></i>Responsável Interno</div>
+        <div class="card-body">
+          <select name="responsavel_id" class="form-select form-select-sm">
+            <option value="">— sem responsável —</option>
+            {% for u in usuarios %}
+            <option value="{{ u.id }}" {% if vaga.responsavel_id == u.id %}selected{% endif %}>{{ u.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>{% if vaga %}Salvar alterações{% else %}Criar Vaga{% endif %}
+        </button>
+        <a href="{{ url_for('vagas_lista') }}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

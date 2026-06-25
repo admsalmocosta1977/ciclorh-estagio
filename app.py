@@ -361,6 +361,54 @@ def init_db():
             concluido_por INTEGER REFERENCES usuario(id)
         )""")
         cur.execute("""
+        CREATE TABLE IF NOT EXISTS candidato (
+            id SERIAL PRIMARY KEY,
+            nome TEXT NOT NULL,
+            cpf TEXT,
+            email TEXT,
+            whatsapp TEXT,
+            data_nascimento DATE,
+            cidade TEXT,
+            estado TEXT,
+            curso TEXT,
+            semestre TEXT,
+            ie_id INTEGER REFERENCES ie(id),
+            disponibilidade TEXT,
+            obs TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS vaga (
+            id SERIAL PRIMARY KEY,
+            empresa_id INTEGER REFERENCES empresa(id),
+            area_id INTEGER REFERENCES area_estagio(id),
+            titulo TEXT NOT NULL,
+            descricao TEXT,
+            requisitos TEXT,
+            curso_desejado TEXT,
+            nivel TEXT DEFAULT 'superior',
+            carga_horaria INTEGER,
+            bolsa NUMERIC(10,2),
+            beneficios TEXT,
+            status TEXT DEFAULT 'aberta',
+            vagas_total INTEGER DEFAULT 1,
+            data_limite DATE,
+            responsavel_id INTEGER REFERENCES usuario(id),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS candidatura (
+            id SERIAL PRIMARY KEY,
+            vaga_id INTEGER NOT NULL REFERENCES vaga(id) ON DELETE CASCADE,
+            candidato_id INTEGER NOT NULL REFERENCES candidato(id) ON DELETE CASCADE,
+            status TEXT DEFAULT 'inscrito',
+            obs TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(vaga_id, candidato_id)
+        )""")
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS config (
             chave TEXT PRIMARY KEY,
             valor TEXT
@@ -672,7 +720,13 @@ def _antes_da_requisicao():
     _atualizar_semestres_auto()
 
 
-app.jinja_env.globals.update(fmt_date=fmt_date, calcular_status=calcular_status, fmt_semestre=_fmt_semestre)
+app.jinja_env.globals.update(fmt_date=fmt_date, calcular_status=calcular_status,
+                             fmt_semestre=_fmt_semestre)
+
+
+@app.context_processor
+def inject_today():
+    return {'today': date.today()}
 app.jinja_env.filters['from_json'] = lambda s: json.loads(s) if s else {}
 
 
@@ -2520,7 +2574,297 @@ def crm_implantacao_obs(id):
     return redirect(url_for('crm_implantacao_detalhe', id=id))
 
 
+# ─── GESTÃO DE VAGAS ──────────────────────────────────────────────────────────
+
+STATUS_VAGA = ['aberta', 'em_selecao', 'preenchida', 'cancelada']
+STATUS_VAGA_COR = {'aberta': 'success', 'em_selecao': 'primary',
+                   'preenchida': 'secondary', 'cancelada': 'danger'}
+STATUS_CANDIDATURA = ['inscrito', 'em_entrevista', 'aprovado', 'reprovado', 'desistiu']
+STATUS_CANDIDATURA_COR = {'inscrito': 'secondary', 'em_entrevista': 'primary',
+                           'aprovado': 'success', 'reprovado': 'danger', 'desistiu': 'warning'}
+
+
+# ── Vagas ──────────────────────────────────────────────────────────────────────
+
+@app.route('/vagas')
+@login_required
+def vagas_lista():
+    status_f = request.args.get('status', '')
+    empresa_f = request.args.get('empresa_id', '')
+    q = """SELECT v.*, e.nome as emp_nome, a.nome as area_nome,
+                  u.nome as resp_nome,
+                  (SELECT COUNT(*) FROM candidatura c WHERE c.vaga_id = v.id) as total_cands,
+                  (SELECT COUNT(*) FROM candidatura c WHERE c.vaga_id = v.id AND c.status='aprovado') as aprovados
+           FROM vaga v
+           LEFT JOIN empresa e ON e.id = v.empresa_id
+           LEFT JOIN area_estagio a ON a.id = v.area_id
+           LEFT JOIN usuario u ON u.id = v.responsavel_id
+           WHERE 1=1"""
+    params = []
+    if status_f:
+        q += " AND v.status = %s"; params.append(status_f)
+    if empresa_f:
+        q += " AND v.empresa_id = %s"; params.append(empresa_f)
+    q += " ORDER BY v.created_at DESC"
+    vagas = _q(q, params or None)
+    empresas = _q("SELECT id, nome FROM empresa ORDER BY nome")
+    return render_template('vagas/lista.html', vagas=vagas, empresas=empresas,
+                           status_f=status_f, empresa_f=empresa_f,
+                           status_cor=STATUS_VAGA_COR)
+
+
+@app.route('/vagas/nova', methods=['GET', 'POST'])
+@login_required
+def vaga_nova():
+    if request.method == 'POST':
+        _run("""INSERT INTO vaga (empresa_id, area_id, titulo, descricao, requisitos,
+                curso_desejado, nivel, carga_horaria, bolsa, beneficios,
+                vagas_total, data_limite, responsavel_id)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+             (request.form.get('empresa_id') or None,
+              request.form.get('area_id') or None,
+              request.form['titulo'].strip(),
+              request.form.get('descricao') or None,
+              request.form.get('requisitos') or None,
+              request.form.get('curso_desejado') or None,
+              request.form.get('nivel', 'superior'),
+              request.form.get('carga_horaria') or None,
+              request.form.get('bolsa') or None,
+              request.form.get('beneficios') or None,
+              request.form.get('vagas_total') or 1,
+              request.form.get('data_limite') or None,
+              current_user.id))
+        flash('Vaga criada!', 'success')
+        return redirect(url_for('vagas_lista'))
+    empresas = _q("SELECT id, nome FROM empresa ORDER BY nome")
+    areas = _q("SELECT id, nome FROM area_estagio ORDER BY nome")
+    return render_template('vagas/form.html', vaga=None, empresas=empresas, areas=areas)
+
+
+@app.route('/vagas/<int:id>')
+@login_required
+def vaga_detalhe(id):
+    vaga = _q("""SELECT v.*, e.nome as emp_nome, a.nome as area_nome, u.nome as resp_nome
+                 FROM vaga v
+                 LEFT JOIN empresa e ON e.id = v.empresa_id
+                 LEFT JOIN area_estagio a ON a.id = v.area_id
+                 LEFT JOIN usuario u ON u.id = v.responsavel_id
+                 WHERE v.id = %s""", (id,), one=True)
+    if not vaga:
+        abort(404)
+    candidaturas = _q("""SELECT c.*, ca.nome as cand_nome, ca.curso, ca.whatsapp,
+                                ca.disponibilidade, ca.id as cand_id
+                          FROM candidatura c
+                          JOIN candidato ca ON ca.id = c.candidato_id
+                          WHERE c.vaga_id = %s ORDER BY c.created_at""", (id,))
+    # candidatos disponíveis que ainda não se candidataram
+    inscritos_ids = [c['cand_id'] for c in candidaturas]
+    if inscritos_ids:
+        disponiveis = _q("""SELECT id, nome, curso, whatsapp FROM candidato
+                            WHERE id NOT IN %s ORDER BY nome""", (tuple(inscritos_ids),))
+    else:
+        disponiveis = _q("SELECT id, nome, curso, whatsapp FROM candidato ORDER BY nome")
+    return render_template('vagas/detalhe.html', vaga=vaga, candidaturas=candidaturas,
+                           disponiveis=disponiveis,
+                           status_cor=STATUS_CANDIDATURA_COR,
+                           status_vaga_cor=STATUS_VAGA_COR)
+
+
+@app.route('/vagas/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+def vaga_editar(id):
+    vaga = _q("SELECT * FROM vaga WHERE id=%s", (id,), one=True)
+    if not vaga:
+        abort(404)
+    if request.method == 'POST':
+        _run("""UPDATE vaga SET empresa_id=%s, area_id=%s, titulo=%s, descricao=%s,
+                requisitos=%s, curso_desejado=%s, nivel=%s, carga_horaria=%s,
+                bolsa=%s, beneficios=%s, vagas_total=%s, data_limite=%s,
+                responsavel_id=%s, updated_at=NOW() WHERE id=%s""",
+             (request.form.get('empresa_id') or None,
+              request.form.get('area_id') or None,
+              request.form['titulo'].strip(),
+              request.form.get('descricao') or None,
+              request.form.get('requisitos') or None,
+              request.form.get('curso_desejado') or None,
+              request.form.get('nivel', 'superior'),
+              request.form.get('carga_horaria') or None,
+              request.form.get('bolsa') or None,
+              request.form.get('beneficios') or None,
+              request.form.get('vagas_total') or 1,
+              request.form.get('data_limite') or None,
+              request.form.get('responsavel_id') or None,
+              id))
+        flash('Vaga atualizada!', 'success')
+        return redirect(url_for('vaga_detalhe', id=id))
+    empresas = _q("SELECT id, nome FROM empresa ORDER BY nome")
+    areas = _q("SELECT id, nome FROM area_estagio ORDER BY nome")
+    usuarios = _q("SELECT id, nome FROM usuario ORDER BY nome")
+    return render_template('vagas/form.html', vaga=vaga, empresas=empresas,
+                           areas=areas, usuarios=usuarios)
+
+
+@app.route('/vagas/<int:id>/status', methods=['POST'])
+@login_required
+def vaga_status(id):
+    novo = request.form.get('status')
+    if novo not in STATUS_VAGA:
+        abort(400)
+    _run("UPDATE vaga SET status=%s, updated_at=NOW() WHERE id=%s", (novo, id))
+    flash(f'Status da vaga alterado para <strong>{novo}</strong>.', 'success')
+    return redirect(url_for('vaga_detalhe', id=id))
+
+
+# ── Candidatos ─────────────────────────────────────────────────────────────────
+
+@app.route('/candidatos')
+@login_required
+def candidatos_lista():
+    busca = request.args.get('q', '').strip()
+    q = """SELECT c.*, i.nome as ie_nome,
+                  (SELECT COUNT(*) FROM candidatura ca WHERE ca.candidato_id = c.id) as num_candidaturas,
+                  (SELECT COUNT(*) FROM candidatura ca WHERE ca.candidato_id = c.id AND ca.status='aprovado') as aprovados
+           FROM candidato c LEFT JOIN ie i ON i.id = c.ie_id WHERE 1=1"""
+    params = []
+    if busca:
+        q += " AND (c.nome ILIKE %s OR c.curso ILIKE %s OR c.cidade ILIKE %s)"
+        params += [f'%{busca}%', f'%{busca}%', f'%{busca}%']
+    q += " ORDER BY c.created_at DESC"
+    candidatos = _q(q, params or None)
+    return render_template('candidatos/lista.html', candidatos=candidatos, busca=busca)
+
+
+@app.route('/candidatos/novo', methods=['GET', 'POST'])
+@login_required
+def candidato_novo():
+    if request.method == 'POST':
+        _run("""INSERT INTO candidato (nome, cpf, email, whatsapp, data_nascimento,
+                cidade, estado, curso, semestre, ie_id, disponibilidade, obs)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+             (request.form['nome'].strip(),
+              request.form.get('cpf') or None,
+              request.form.get('email') or None,
+              request.form.get('whatsapp') or None,
+              request.form.get('data_nascimento') or None,
+              request.form.get('cidade') or None,
+              request.form.get('estado') or None,
+              request.form.get('curso') or None,
+              request.form.get('semestre') or None,
+              request.form.get('ie_id') or None,
+              request.form.get('disponibilidade') or None,
+              request.form.get('obs') or None))
+        flash('Candidato cadastrado!', 'success')
+        return redirect(url_for('candidatos_lista'))
+    ies = _q("SELECT id, nome FROM ie ORDER BY nome")
+    return render_template('candidatos/form.html', candidato=None, ies=ies)
+
+
+@app.route('/candidatos/<int:id>')
+@login_required
+def candidato_detalhe(id):
+    c = _q("""SELECT ca.*, i.nome as ie_nome FROM candidato ca
+              LEFT JOIN ie i ON i.id = ca.ie_id WHERE ca.id = %s""", (id,), one=True)
+    if not c:
+        abort(404)
+    candidaturas = _q("""SELECT cu.*, v.titulo as vaga_titulo, e.nome as emp_nome, cu.id as cand_id
+                          FROM candidatura cu
+                          JOIN vaga v ON v.id = cu.vaga_id
+                          LEFT JOIN empresa e ON e.id = v.empresa_id
+                          WHERE cu.candidato_id = %s ORDER BY cu.created_at DESC""", (id,))
+    vagas_disponiveis = _q("""SELECT v.id, v.titulo, e.nome as emp_nome
+                               FROM vaga v LEFT JOIN empresa e ON e.id = v.empresa_id
+                               WHERE v.status IN ('aberta','em_selecao')
+                               AND v.id NOT IN (
+                                   SELECT vaga_id FROM candidatura WHERE candidato_id = %s
+                               ) ORDER BY v.titulo""", (id,))
+    return render_template('candidatos/detalhe.html', candidato=c, candidaturas=candidaturas,
+                           vagas_disponiveis=vagas_disponiveis,
+                           status_cor=STATUS_CANDIDATURA_COR)
+
+
+@app.route('/candidatos/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+def candidato_editar(id):
+    c = _q("SELECT * FROM candidato WHERE id=%s", (id,), one=True)
+    if not c:
+        abort(404)
+    if request.method == 'POST':
+        _run("""UPDATE candidato SET nome=%s, cpf=%s, email=%s, whatsapp=%s,
+                data_nascimento=%s, cidade=%s, estado=%s, curso=%s, semestre=%s,
+                ie_id=%s, disponibilidade=%s, obs=%s WHERE id=%s""",
+             (request.form['nome'].strip(),
+              request.form.get('cpf') or None,
+              request.form.get('email') or None,
+              request.form.get('whatsapp') or None,
+              request.form.get('data_nascimento') or None,
+              request.form.get('cidade') or None,
+              request.form.get('estado') or None,
+              request.form.get('curso') or None,
+              request.form.get('semestre') or None,
+              request.form.get('ie_id') or None,
+              request.form.get('disponibilidade') or None,
+              request.form.get('obs') or None,
+              id))
+        flash('Candidato atualizado!', 'success')
+        return redirect(url_for('candidato_detalhe', id=id))
+    ies = _q("SELECT id, nome FROM ie ORDER BY nome")
+    return render_template('candidatos/form.html', candidato=c, ies=ies)
+
+
+# ── Candidaturas ───────────────────────────────────────────────────────────────
+
+@app.route('/candidatura/nova', methods=['POST'])
+@login_required
+def candidatura_nova():
+    vaga_id = request.form.get('vaga_id')
+    candidato_id = request.form.get('candidato_id')
+    origem = request.form.get('origem', 'vaga')
+    try:
+        _run("INSERT INTO candidatura (vaga_id, candidato_id) VALUES (%s,%s)",
+             (vaga_id, candidato_id))
+        flash('Candidato inscrito na vaga!', 'success')
+    except Exception:
+        flash('Este candidato já está inscrito nesta vaga.', 'warning')
+    if origem == 'candidato':
+        return redirect(url_for('candidato_detalhe', id=candidato_id))
+    return redirect(url_for('vaga_detalhe', id=vaga_id))
+
+
+@app.route('/candidatura/<int:id>/status', methods=['POST'])
+@login_required
+def candidatura_status(id):
+    novo = request.form.get('status')
+    if novo not in STATUS_CANDIDATURA:
+        abort(400)
+    c = _q("SELECT * FROM candidatura WHERE id=%s", (id,), one=True)
+    if not c:
+        abort(404)
+    _run("UPDATE candidatura SET status=%s, updated_at=NOW() WHERE id=%s", (novo, id))
+    _run("UPDATE vaga SET updated_at=NOW() WHERE id=%s", (c['vaga_id'],))
+    if novo == 'aprovado':
+        vaga = _q("SELECT empresa_id FROM vaga WHERE id=%s", (c['vaga_id'],), one=True)
+        link = url_for('contrato_novo')
+        if vaga and vaga['empresa_id']:
+            link += f'?empresa_id={vaga["empresa_id"]}'
+        flash(f'Candidato aprovado! <a href="{link}" class="alert-link">Criar contrato →</a>', 'success')
+    else:
+        flash(f'Status atualizado para <strong>{novo}</strong>.', 'success')
+    return redirect(url_for('vaga_detalhe', id=c['vaga_id']))
+
+
+@app.route('/candidatura/<int:id>/obs', methods=['POST'])
+@login_required
+def candidatura_obs(id):
+    c = _q("SELECT * FROM candidatura WHERE id=%s", (id,), one=True)
+    if not c:
+        abort(404)
+    _run("UPDATE candidatura SET obs=%s, updated_at=NOW() WHERE id=%s",
+         (request.form.get('obs') or None, id))
+    return redirect(url_for('vaga_detalhe', id=c['vaga_id']))
+
+
 init_db()
+
 
 try:
     from apscheduler.schedulers.background import BackgroundScheduler

@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Vagas{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="fw-bold mb-0"><i class="bi bi-briefcase me-2"></i>Vagas</h4>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('candidatos_lista') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-people me-1"></i>Banco de Candidatos
+    </a>
+    <a href="{{ url_for('vaga_nova') }}" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Nova Vaga
+    </a>
+  </div>
+</div>
+
+<!-- Filtros -->
+<form class="row g-2 mb-3" method="get">
+  <div class="col-auto">
+    <select name="status" class="form-select form-select-sm">
+      <option value="">Todos os status</option>
+      <option value="aberta" {% if status_f=='aberta' %}selected{% endif %}>Aberta</option>
+      <option value="em_selecao" {% if status_f=='em_selecao' %}selected{% endif %}>Em seleção</option>
+      <option value="preenchida" {% if status_f=='preenchida' %}selected{% endif %}>Preenchida</option>
+      <option value="cancelada" {% if status_f=='cancelada' %}selected{% endif %}>Cancelada</option>
+    </select>
+  </div>
+  <div class="col-auto">
+    <select name="empresa_id" class="form-select form-select-sm">
+      <option value="">Todas as empresas</option>
+      {% for e in empresas %}
+      <option value="{{ e.id }}" {% if empresa_f == e.id|string %}selected{% endif %}>{{ e.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-sm btn-outline-secondary">Filtrar</button>
+    <a href="{{ url_for('vagas_lista') }}" class="btn btn-sm btn-link text-muted">Limpar</a>
+  </div>
+</form>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Vaga</th>
+          <th>Empresa</th>
+          <th>Área</th>
+          <th>Status</th>
+          <th class="text-center">Candidatos</th>
+          <th class="text-center">Aprovados</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for v in vagas %}
+      <tr>
+        <td>
+          <a href="{{ url_for('vaga_detalhe', id=v.id) }}" class="fw-semibold text-decoration-none">
+            {{ v.titulo }}
+          </a>
+          {% if v.data_limite and v.data_limite < today %}
+          <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem">Prazo vencido</span>
+          {% endif %}
+        </td>
+        <td>{{ v.emp_nome or '—' }}</td>
+        <td><small class="text-muted">{{ v.area_nome or '—' }}</small></td>
+        <td>
+          <span class="badge bg-{{ status_cor[v.status] }}">{{ v.status|replace('_',' ') }}</span>
+        </td>
+        <td class="text-center">{{ v.total_cands }}</td>
+        <td class="text-center">
+          {% if v.aprovados > 0 %}
+          <span class="badge bg-success">{{ v.aprovados }}</span>
+          {% else %}—{% endif %}
+        </td>
+        <td class="text-end">
+          <a href="{{ url_for('vaga_detalhe', id=v.id) }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-eye"></i>
+          </a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-center text-muted py-4">Nenhuma vaga encontrada.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% block title %}{{ vaga.titulo }} — Vaga{% endblock %}
+{% block content %}
+<style>
+.cand-row { background:#fff; border-radius:8px; padding:10px 14px; margin-bottom:8px;
+  box-shadow:0 1px 3px rgba(0,0,0,.07); display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.cand-nome { font-weight:600; font-size:.9rem; flex:1; min-width:160px; }
+.cand-meta { font-size:.78rem; color:#777; }
+</style>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+  <a href="{{ url_for('vagas_lista') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div class="flex-grow-1">
+    <h4 class="fw-bold mb-0">{{ vaga.titulo }}</h4>
+    <small class="text-muted">{{ vaga.emp_nome or 'Empresa não definida' }}
+      {% if vaga.area_nome %} · {{ vaga.area_nome }}{% endif %}
+    </small>
+  </div>
+  <span class="badge bg-{{ status_vaga_cor[vaga.status] }} fs-6 px-3 py-2">
+    {{ vaga.status | replace('_',' ') }}
+  </span>
+  <a href="{{ url_for('vaga_editar', id=vaga.id) }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-pencil me-1"></i>Editar
+  </a>
+</div>
+
+<div class="row g-3">
+
+  <!-- ── Coluna esquerda: dados + pipeline ── -->
+  <div class="col-lg-4">
+
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-info-circle me-1"></i>Detalhes</div>
+      <div class="card-body py-2" style="font-size:.86rem">
+        {% macro row(lbl, val) %}
+        {% if val %}<div class="d-flex justify-content-between py-1 border-bottom">
+          <span class="text-muted">{{ lbl }}</span><span class="text-end">{{ val }}</span>
+        </div>{% endif %}
+        {% endmacro %}
+        {{ row('Nível', vaga.nivel|capitalize) }}
+        {{ row('Curso desejado', vaga.curso_desejado) }}
+        {{ row('Carga horária', (vaga.carga_horaria|string + 'h/sem') if vaga.carga_horaria else None) }}
+        {{ row('Bolsa', ('R$ ' + '%.2f'|format(vaga.bolsa|float)) if vaga.bolsa else None) }}
+        {{ row('Benefícios', vaga.beneficios) }}
+        {{ row('Vagas', vaga.vagas_total|string) }}
+        {{ row('Data limite', fmt_date(vaga.data_limite) if vaga.data_limite else None) }}
+        {{ row('Responsável', vaga.resp_nome) }}
+      </div>
+    </div>
+
+    {% if vaga.descricao or vaga.requisitos %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-text-left me-1"></i>Descrição / Requisitos</div>
+      <div class="card-body" style="font-size:.85rem">
+        {% if vaga.descricao %}<p class="mb-2" style="white-space:pre-wrap">{{ vaga.descricao }}</p>{% endif %}
+        {% if vaga.requisitos %}<p class="mb-0 text-muted" style="white-space:pre-wrap">{{ vaga.requisitos }}</p>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Mudar status da vaga -->
+    {% if vaga.status not in ['preenchida','cancelada'] %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-arrow-repeat me-1"></i>Alterar Status da Vaga</div>
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+          {% if vaga.status == 'aberta' %}
+          <form method="post" action="{{ url_for('vaga_status', id=vaga.id) }}">
+            <input type="hidden" name="status" value="em_selecao">
+            <button class="btn btn-sm btn-primary">Em seleção</button>
+          </form>
+          {% endif %}
+          <form method="post" action="{{ url_for('vaga_status', id=vaga.id) }}">
+            <input type="hidden" name="status" value="preenchida">
+            <button class="btn btn-sm btn-secondary">Marcar preenchida</button>
+          </form>
+          <form method="post" action="{{ url_for('vaga_status', id=vaga.id) }}"
+                onsubmit="return confirm('Cancelar esta vaga?')">
+            <input type="hidden" name="status" value="cancelada">
+            <button class="btn btn-sm btn-outline-danger">Cancelar vaga</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Inscrever candidato -->
+    {% if vaga.status in ['aberta','em_selecao'] and disponiveis %}
+    <div class="card">
+      <div class="card-header"><i class="bi bi-person-plus me-1"></i>Inscrever Candidato</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('candidatura_nova') }}" class="d-flex gap-2">
+          <input type="hidden" name="vaga_id" value="{{ vaga.id }}">
+          <input type="hidden" name="origem" value="vaga">
+          <select name="candidato_id" class="form-select form-select-sm">
+            <option value="">Selecionar candidato…</option>
+            {% for c in disponiveis %}
+            <option value="{{ c.id }}">{{ c.nome }}{% if c.curso %} — {{ c.curso }}{% endif %}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-sm btn-primary flex-shrink-0">
+            <i class="bi bi-plus"></i>
+          </button>
+        </form>
+        <small class="text-muted d-block mt-1">
+          Ou <a href="{{ url_for('candidato_novo') }}">cadastre um novo candidato</a>.
+        </small>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Coluna direita: candidatos ── -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-people me-1"></i>Candidatos ({{ candidaturas|length }})</span>
+      </div>
+      <div class="card-body">
+        {% set grupos = [
+          ('inscrito','Inscritos','secondary'),
+          ('em_entrevista','Em entrevista','primary'),
+          ('aprovado','Aprovados','success'),
+          ('reprovado','Reprovados','danger'),
+          ('desistiu','Desistiram','warning')
+        ] %}
+        {% set ns = namespace(tem_algum=false) %}
+        {% for status_key, label, cor in grupos %}
+          {% set grupo = candidaturas | selectattr('status','equalto',status_key) | list %}
+          {% if grupo %}
+          {% set ns.tem_algum = true %}
+          <h6 class="text-{{ cor }} mb-2 mt-3" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.5px">
+            <i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>{{ label }} ({{ grupo|length }})
+          </h6>
+          {% for c in grupo %}
+          <div class="cand-row">
+            <div>
+              <div class="cand-nome">
+                <a href="{{ url_for('candidato_detalhe', id=c.cand_id) }}" class="text-decoration-none text-dark">
+                  {{ c.cand_nome }}
+                </a>
+              </div>
+              <div class="cand-meta">
+                {% if c.curso %}{{ c.curso }} · {% endif %}
+                {% if c.disponibilidade %}{{ c.disponibilidade }} · {% endif %}
+                {% if c.whatsapp %}
+                <a href="https://wa.me/55{{ c.whatsapp | replace(' ','') | replace('-','') | replace('(','') | replace(')','') }}" target="_blank">
+                  <i class="bi bi-whatsapp"></i> {{ c.whatsapp }}
+                </a>
+                {% endif %}
+              </div>
+              {% if c.obs %}<div class="cand-meta mt-1"><i class="bi bi-sticky"></i> {{ c.obs }}</div>{% endif %}
+            </div>
+            <div class="ms-auto d-flex flex-wrap gap-1 align-items-center">
+              <!-- Ações de status -->
+              {% if status_key == 'inscrito' %}
+              <form method="post" action="{{ url_for('candidatura_status', id=c.id) }}">
+                <input type="hidden" name="status" value="em_entrevista">
+                <button class="btn btn-xs btn-outline-primary" style="font-size:.75rem;padding:2px 8px">Entrevista</button>
+              </form>
+              {% endif %}
+              {% if status_key in ['inscrito','em_entrevista'] %}
+              <form method="post" action="{{ url_for('candidatura_status', id=c.id) }}">
+                <input type="hidden" name="status" value="aprovado">
+                <button class="btn btn-xs btn-success" style="font-size:.75rem;padding:2px 8px">Aprovar</button>
+              </form>
+              <form method="post" action="{{ url_for('candidatura_status', id=c.id) }}">
+                <input type="hidden" name="status" value="reprovado">
+                <button class="btn btn-xs btn-outline-danger" style="font-size:.75rem;padding:2px 8px">Reprovar</button>
+              </form>
+              {% endif %}
+              {% if status_key == 'aprovado' and vaga.empresa_id %}
+              <a href="{{ url_for('contrato_novo') }}?empresa_id={{ vaga.empresa_id }}"
+                 class="btn btn-xs btn-success" style="font-size:.75rem;padding:2px 8px">
+                <i class="bi bi-file-earmark-plus me-1"></i>Criar Contrato
+              </a>
+              {% endif %}
+              <!-- Obs inline -->
+              <button class="btn btn-xs btn-outline-secondary" style="font-size:.75rem;padding:2px 8px"
+                      type="button" data-bs-toggle="collapse"
+                      data-bs-target="#obs-{{ c.id }}">
+                <i class="bi bi-sticky"></i>
+              </button>
+            </div>
+            <!-- Obs collapse -->
+            <div class="collapse w-100 mt-2" id="obs-{{ c.id }}">
+              <form method="post" action="{{ url_for('candidatura_obs', id=c.id) }}"
+                    class="d-flex gap-2">
+                <input type="text" name="obs" class="form-control form-control-sm"
+                       value="{{ c.obs or '' }}" placeholder="Anotação sobre este candidato…">
+                <button class="btn btn-sm btn-primary flex-shrink-0">OK</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+          {% endif %}
+        {% endfor %}
+        {% if not ns.tem_algum %}
+        <p class="text-muted text-center py-4 mb-0 small">
+          <i class="bi bi-people me-1"></i>Nenhum candidato inscrito ainda.
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

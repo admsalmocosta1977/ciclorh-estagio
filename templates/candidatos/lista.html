@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Banco de Candidatos{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="fw-bold mb-0"><i class="bi bi-people me-2"></i>Banco de Candidatos</h4>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('vagas_lista') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-briefcase me-1"></i>Vagas
+    </a>
+    <a href="{{ url_for('candidato_novo') }}" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Novo Candidato
+    </a>
+  </div>
+</div>
+
+<form class="d-flex gap-2 mb-3" method="get">
+  <input type="text" name="q" class="form-control form-control-sm" style="max-width:320px"
+         value="{{ busca }}" placeholder="Buscar por nome, curso ou cidade…">
+  <button type="submit" class="btn btn-sm btn-outline-secondary">Buscar</button>
+  {% if busca %}<a href="{{ url_for('candidatos_lista') }}" class="btn btn-sm btn-link text-muted">Limpar</a>{% endif %}
+</form>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Nome</th>
+          <th>Curso</th>
+          <th>Cidade</th>
+          <th>Disponibilidade</th>
+          <th class="text-center">Candidaturas</th>
+          <th class="text-center">Aprovações</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for c in candidatos %}
+      <tr>
+        <td>
+          <a href="{{ url_for('candidato_detalhe', id=c.id) }}" class="fw-semibold text-decoration-none">
+            {{ c.nome }}
+          </a>
+          {% if c.whatsapp %}
+          <a href="https://wa.me/55{{ c.whatsapp | replace(' ','') | replace('-','') | replace('(','') | replace(')','') }}"
+             target="_blank" class="ms-1 text-success" style="font-size:.85rem">
+            <i class="bi bi-whatsapp"></i>
+          </a>
+          {% endif %}
+        </td>
+        <td><small class="text-muted">{{ c.curso or '—' }}</small></td>
+        <td><small class="text-muted">{{ c.cidade or '—' }}</small></td>
+        <td><small class="text-muted">{{ c.disponibilidade or '—' }}</small></td>
+        <td class="text-center">{{ c.num_candidaturas }}</td>
+        <td class="text-center">
+          {% if c.aprovados > 0 %}
+          <span class="badge bg-success">{{ c.aprovados }}</span>
+          {% else %}—{% endif %}
+        </td>
+        <td class="text-end">
+          <a href="{{ url_for('candidato_detalhe', id=c.id) }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-eye"></i>
+          </a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-center text-muted py-4">
+        {% if busca %}Nenhum candidato encontrado para "{{ busca }}".
+        {% else %}Nenhum candidato cadastrado ainda.{% endif %}
+      </td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

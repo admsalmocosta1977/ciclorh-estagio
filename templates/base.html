@@ -90,6 +90,7 @@
   {% set sec_con = ep in ['contratos','contrato_novo','contrato_editar'] or 'relatorio' in ep %}
   {% set sec_adm = 'admin' in ep %}
   {% set sec_crm = 'crm' in ep %}
+  {% set sec_vagas = 'vaga' in ep or 'candidat' in ep %}
   <div class="offcanvas-body p-0 offcanvas-nav" style="overflow-y:auto">
     <div class="nav-section" data-bs-toggle="collapse" data-bs-target="#mob-principal"
          aria-expanded="true" aria-controls="mob-principal">
@@ -139,6 +140,22 @@
       </a>
       <a href="{{ url_for('relatorio_lista_estagiarios') }}" class="nav-link {% if ep=='relatorio_lista_estagiarios' %}active{% endif %}">
         <i class="bi bi-person-lines-fill"></i> Lista Estagiários
+      </a>
+    </div>
+
+    <div class="nav-section" data-bs-toggle="collapse" data-bs-target="#mob-vagas"
+         aria-expanded="{{ 'true' if sec_vagas else 'false' }}" aria-controls="mob-vagas">
+      Seleção <i class="bi bi-chevron-down chev"></i>
+    </div>
+    <div class="collapse {{ 'show' if sec_vagas }}" id="mob-vagas">
+      <a href="{{ url_for('vagas_lista') }}" class="nav-link {% if 'vaga' in ep %}active{% endif %}">
+        <i class="bi bi-briefcase"></i> Vagas
+      </a>
+      <a href="{{ url_for('candidatos_lista') }}" class="nav-link {% if 'candidat' in ep %}active{% endif %}">
+        <i class="bi bi-people"></i> Candidatos
+      </a>
+      <a href="{{ url_for('vaga_nova') }}" class="nav-link">
+        <i class="bi bi-plus-circle"></i> Nova Vaga
       </a>
     </div>
 
@@ -258,6 +275,22 @@
     </a>
     <a href="{{ url_for('relatorio_lista_estagiarios') }}" class="nav-link {% if ep=='relatorio_lista_estagiarios' %}active{% endif %}">
       <i class="bi bi-person-lines-fill"></i> Lista Estagiários
+    </a>
+  </div>
+
+  <div class="nav-section" data-bs-toggle="collapse" data-bs-target="#sb-vagas"
+       aria-expanded="{{ 'true' if sec_vagas else 'false' }}" aria-controls="sb-vagas">
+    Seleção <i class="bi bi-chevron-down chev"></i>
+  </div>
+  <div class="collapse {{ 'show' if sec_vagas }}" id="sb-vagas">
+    <a href="{{ url_for('vagas_lista') }}" class="nav-link {% if 'vaga' in ep %}active{% endif %}">
+      <i class="bi bi-briefcase"></i> Vagas
+    </a>
+    <a href="{{ url_for('candidatos_lista') }}" class="nav-link {% if 'candidat' in ep %}active{% endif %}">
+      <i class="bi bi-people"></i> Candidatos
+    </a>
+    <a href="{{ url_for('vaga_nova') }}" class="nav-link">
+      <i class="bi bi-plus-circle"></i> Nova Vaga
     </a>
   </div>
 
