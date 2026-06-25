@@ -1,4 +1,4 @@
-import os, json, psycopg2, psycopg2.extras, smtplib
+import os, json, psycopg2, psycopg2.extras, smtplib, calendar
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
@@ -265,6 +265,15 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""")
         cur.execute("""
+        CREATE TABLE IF NOT EXISTS relatorio_periodo (
+            id SERIAL PRIMARY KEY,
+            contrato_id INTEGER NOT NULL REFERENCES contrato(id) ON DELETE CASCADE,
+            numero INTEGER NOT NULL,
+            data_inicio TEXT NOT NULL,
+            data_fim TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS config (
             chave TEXT PRIMARY KEY,
             valor TEXT
@@ -294,6 +303,26 @@ def init_db():
 
 
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
+
+def _add_months(dt, months):
+    month = dt.month - 1 + months
+    year = dt.year + month // 12
+    month = month % 12 + 1
+    max_day = calendar.monthrange(year, month)[1]
+    return dt.replace(year=year, month=month, day=min(dt.day, max_day))
+
+
+def _split_periodos_6meses(inicio, fim):
+    periodos = []
+    atual = inicio
+    while atual <= fim:
+        chunk_fim = _add_months(atual, 6) - timedelta(days=1)
+        if chunk_fim > fim:
+            chunk_fim = fim
+        periodos.append((atual, chunk_fim))
+        atual = chunk_fim + timedelta(days=1)
+    return periodos
+
 
 def fmt_date(d):
     if not d:
@@ -1274,9 +1303,20 @@ def contrato_editar(id):
     ies_list = _q("SELECT * FROM ie ORDER BY COALESCE(NULLIF(TRIM(sigla),''), nome)")
     areas_list = _q("SELECT id, nome FROM area_estagio WHERE status='ativo' ORDER BY nome")
     aditivos = _q("SELECT * FROM aditivo WHERE contrato_id = %s ORDER BY created_at", (id,))
+    relatorios = _q("SELECT * FROM relatorio_periodo WHERE contrato_id=%s ORDER BY numero", (id,))
+    last_rel = relatorios[-1] if relatorios else None
+    if last_rel:
+        prox_inicio = date.fromisoformat(str(last_rel['data_fim'])[:10]) + timedelta(days=1)
+    else:
+        try:
+            prox_inicio = date.fromisoformat(str(c['data_inicio'])[:10])
+        except Exception:
+            prox_inicio = date.today()
+    relatorio_pendente = prox_inicio <= date.today()
     return render_template('contratos/form.html', c=c,
                            estagiarios=estagiarios, empresas=empresas_list, ies=ies_list,
-                           areas=areas_list, aditivos=aditivos)
+                           areas=areas_list, aditivos=aditivos,
+                           relatorios=relatorios, relatorio_pendente=relatorio_pendente)
 
 
 @app.route('/contratos/<int:id>/excluir')
@@ -1459,7 +1499,56 @@ def doc_relatorio(id):
     if not ctx:
         flash('Contrato não encontrado.', 'danger')
         return redirect(url_for('contratos'))
+    ctx['rel_data_inicio'] = request.args.get('data_inicio', '')
+    ctx['rel_data_fim'] = request.args.get('data_fim', '')
+    ctx['rel_numero'] = request.args.get('num', '')
     return render_template('docs/relatorio.html', **ctx)
+
+
+@app.route('/contratos/<int:id>/relatorio/proximo')
+@login_required
+def relatorio_proximo(id):
+    ct = _q("SELECT data_inicio FROM contrato WHERE id=%s", (id,), one=True)
+    if not ct:
+        return jsonify(ok=False), 404
+    last = _q("SELECT numero, data_fim FROM relatorio_periodo WHERE contrato_id=%s ORDER BY numero DESC LIMIT 1", (id,), one=True)
+    if last:
+        prox_inicio = (date.fromisoformat(str(last['data_fim'])[:10]) + timedelta(days=1)).isoformat()
+        prox_num = last['numero'] + 1
+    else:
+        prox_inicio = str(ct['data_inicio'])[:10]
+        prox_num = 1
+    return jsonify(ok=True, data_inicio=prox_inicio, proximo_numero=prox_num)
+
+
+@app.route('/contratos/<int:id>/relatorio/registrar', methods=['POST'])
+@login_required
+def relatorio_registrar(id):
+    data = request.get_json()
+    data_fim_str = (data or {}).get('data_fim')
+    if not data_fim_str:
+        return jsonify(ok=False, erro='data_fim obrigatório'), 400
+    ct = _q("SELECT data_inicio FROM contrato WHERE id=%s", (id,), one=True)
+    if not ct:
+        return jsonify(ok=False, erro='Contrato não encontrado'), 404
+    last = _q("SELECT numero, data_fim FROM relatorio_periodo WHERE contrato_id=%s ORDER BY numero DESC LIMIT 1", (id,), one=True)
+    if last:
+        inicio = date.fromisoformat(str(last['data_fim'])[:10]) + timedelta(days=1)
+        num = last['numero']
+    else:
+        inicio = date.fromisoformat(str(ct['data_inicio'])[:10])
+        num = 0
+    fim = date.fromisoformat(data_fim_str)
+    if fim < inicio:
+        return jsonify(ok=False, erro='Data final anterior ao início do próximo período'), 400
+    periodos = _split_periodos_6meses(inicio, fim)
+    result = []
+    for (ini_dt, fim_dt) in periodos:
+        num += 1
+        _run("INSERT INTO relatorio_periodo (contrato_id, numero, data_inicio, data_fim) VALUES (%s,%s,%s,%s)",
+             (id, num, ini_dt.isoformat(), fim_dt.isoformat()))
+        result.append({'numero': num, 'data_inicio': ini_dt.isoformat(), 'data_fim': fim_dt.isoformat()})
+    return jsonify(ok=True, periodos=result)
 
 
 @app.route('/contratos/<int:id>/aditivo')

@@ -301,9 +301,10 @@
           <a href="{{ url_for('doc_tce', id=c.id) }}" class="btn btn-outline-primary" target="_blank">TCE</a>
           <a href="{{ url_for('doc_plano', id=c.id) }}" class="btn btn-outline-success" target="_blank">Plano</a>
           <a href="{{ url_for('doc_ciencia', id=c.id) }}" class="btn btn-outline-info" target="_blank">Ciência</a>
-          <a href="{{ url_for('doc_tre', id=c.id) }}" class="btn btn-outline-warning" target="_blank">TRE</a>
-          <a href="{{ url_for('doc_relatorio', id=c.id) }}" class="btn btn-outline-secondary" target="_blank">Relatório</a>
-          <a href="#" class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modal-aditivo">Aditivo</a>
+          <a href="{{ url_for('doc_tre', id=c.id) }}" class="btn btn-outline-warning position-relative" target="_blank"
+             {% if relatorio_pendente %}onclick="return confirmarDocSemRelatorio('TRE')"{% endif %}>TRE{% if relatorio_pendente %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:8px;padding:2px 4px">!</span>{% endif %}</a>
+          <button type="button" class="btn btn-outline-secondary position-relative" onclick="abrirModalRelatorio()">Relatório{% if relatorio_pendente %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark" style="font-size:8px;padding:2px 4px">!</span>{% endif %}</button>
+          <a href="#" class="btn btn-outline-dark position-relative" onclick="abrirModalAditivo()">Aditivo{% if relatorio_pendente %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:8px;padding:2px 4px">!</span>{% endif %}</a>
           <a href="{{ url_for('contrato_excluir', id=c.id) }}" class="btn btn-outline-danger"
              onclick="return confirm('Excluir este contrato?')"><i class="bi bi-trash"></i></a>
         </div>
@@ -349,6 +350,42 @@
         {% endfor %}
       </tbody>
     </table>
+  </div>
+</div>
+{% endif %}
+{% if c %}
+<div class="card mt-3">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-file-earmark-text"></i> Relatórios de Estágio Emitidos
+    {% if relatorio_pendente %}
+    <span class="badge bg-warning text-dark ms-auto">Período pendente</span>
+    {% endif %}
+  </div>
+  <div class="card-body p-0">
+    {% if relatorios %}
+    <table class="table table-sm mb-0">
+      <thead class="table-light">
+        <tr><th>#</th><th>Período Coberto</th><th>Emitido em</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for r in relatorios %}
+        <tr>
+          <td>N.º {{ r.numero }}</td>
+          <td>{{ fmt_date(r.data_inicio) }} a {{ fmt_date(r.data_fim) }}</td>
+          <td>{{ fmt_date(r.created_at) }}</td>
+          <td class="text-end">
+            <a href="/contratos/{{ c.id }}/relatorio?data_inicio={{ r.data_inicio }}&data_fim={{ r.data_fim }}&num={{ r.numero }}"
+               class="btn btn-sm btn-outline-secondary py-0" target="_blank" title="Visualizar">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="px-3 py-2 text-muted small"><i class="bi bi-info-circle me-1"></i>Nenhum relatório emitido ainda.</div>
+    {% endif %}
   </div>
 </div>
 {% endif %}
@@ -422,6 +459,38 @@
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-primary" onclick="salvarEdicaoAditivo()">
           <i class="bi bi-check-lg me-1"></i>Salvar Alterações
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal Relatório -->
+<div class="modal fade" id="modal-relatorio" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-text me-2"></i>Emitir Relatório de Estágio</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info py-2 mb-3">
+          <small><strong>Próximo relatório:</strong> N.º <span id="rel-proximo-num">—</span> — a partir de <span id="rel-proximo-inicio">—</span></small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Data Final do Período *</label>
+          <input type="date" id="rel-data-fim" class="form-control">
+          <div class="form-text">Relatórios com mais de 6 meses serão divididos automaticamente (Lei 11.788/2008, art. 9º).</div>
+        </div>
+        <div id="rel-preview" class="d-none">
+          <div class="alert alert-warning py-2 mb-0">
+            <small id="rel-preview-text"></small>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-emitir-relatorio" disabled>
+          <i class="bi bi-check-lg me-1"></i>Confirmar e Emitir
         </button>
       </div>
     </div>
@@ -888,6 +957,132 @@ function salvarEdicaoAditivo() {
     if (d.ok) { location.reload(); }
     else { alert('Erro ao salvar.'); }
   });
+}
+
+// ── Relatório ────────────────────────────────────────────────────────────────
+let _relProximoInicio = null;
+let _relProximoNum = 0;
+
+function _fmtDataBR(iso) {
+  const [y, m, d] = iso.split('-');
+  return d + '/' + m + '/' + y;
+}
+
+function _addMeses(dt, meses) {
+  const year = dt.getFullYear();
+  const month = dt.getMonth();
+  const day = dt.getDate();
+  const targetYear = year + Math.floor((month + meses) / 12);
+  const targetMonth = (month + meses) % 12;
+  const result = new Date(targetYear, targetMonth, day);
+  if (result.getMonth() !== targetMonth) result.setDate(0);
+  return result;
+}
+
+function _splitPeriodos6m(inicioISO, fimISO) {
+  const inicio = new Date(inicioISO + 'T00:00:00');
+  const fim = new Date(fimISO + 'T00:00:00');
+  const periodos = [];
+  let atual = new Date(inicio);
+  while (atual <= fim) {
+    let chunkFim = _addMeses(atual, 6);
+    chunkFim.setDate(chunkFim.getDate() - 1);
+    if (chunkFim > fim) chunkFim = new Date(fim);
+    periodos.push({inicio: new Date(atual), fim: new Date(chunkFim)});
+    atual = new Date(chunkFim);
+    atual.setDate(atual.getDate() + 1);
+  }
+  return periodos;
+}
+
+function _isoDate(dt) {
+  return dt.getFullYear() + '-' +
+    String(dt.getMonth() + 1).padStart(2, '0') + '-' +
+    String(dt.getDate()).padStart(2, '0');
+}
+
+function abrirModalRelatorio() {
+  fetch('/contratos/{{ c.id }}/relatorio/proximo')
+    .then(r => r.json())
+    .then(d => {
+      if (!d.ok) return;
+      _relProximoInicio = d.data_inicio;
+      _relProximoNum = d.proximo_numero;
+      document.getElementById('rel-proximo-num').textContent = d.proximo_numero;
+      document.getElementById('rel-proximo-inicio').textContent = _fmtDataBR(d.data_inicio);
+      document.getElementById('rel-data-fim').min = d.data_inicio;
+      _atualizarPreviewRelatorio();
+    });
+  document.getElementById('rel-data-fim').value = '';
+  document.getElementById('rel-preview').classList.add('d-none');
+  document.getElementById('btn-emitir-relatorio').disabled = true;
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-relatorio')).show();
+}
+
+function _atualizarPreviewRelatorio() {
+  const fimVal = document.getElementById('rel-data-fim').value;
+  const btn = document.getElementById('btn-emitir-relatorio');
+  const preview = document.getElementById('rel-preview');
+  const previewText = document.getElementById('rel-preview-text');
+  if (!fimVal || !_relProximoInicio) { btn.disabled = true; preview.classList.add('d-none'); return; }
+  if (fimVal < _relProximoInicio) {
+    previewText.textContent = 'Data final anterior ao início do próximo período (' + _fmtDataBR(_relProximoInicio) + ').';
+    preview.classList.remove('d-none');
+    btn.disabled = true;
+    return;
+  }
+  const periodos = _splitPeriodos6m(_relProximoInicio, fimVal);
+  let num = _relProximoNum;
+  const linhas = periodos.map(p => 'Relatório N.º ' + num++ + ': ' + _fmtDataBR(_isoDate(p.inicio)) + ' a ' + _fmtDataBR(_isoDate(p.fim)));
+  previewText.innerHTML = 'Serão emitidos <strong>' + periodos.length + '</strong> relatório(s):<br>' + linhas.join('<br>');
+  preview.classList.remove('d-none');
+  btn.disabled = false;
+}
+
+document.getElementById('rel-data-fim').addEventListener('change', _atualizarPreviewRelatorio);
+
+document.getElementById('btn-emitir-relatorio').addEventListener('click', function() {
+  const fimVal = document.getElementById('rel-data-fim').value;
+  if (!fimVal) return;
+  this.disabled = true;
+  this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Processando…';
+  fetch('/contratos/{{ c.id }}/relatorio/registrar', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({data_fim: fimVal})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.ok) {
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-relatorio')).hide();
+      d.periodos.forEach((p, i) => {
+        setTimeout(() => {
+          window.open('/contratos/{{ c.id }}/relatorio?data_inicio=' + p.data_inicio + '&data_fim=' + p.data_fim + '&num=' + p.numero, '_blank');
+        }, i * 400);
+      });
+      setTimeout(() => location.reload(), d.periodos.length * 400 + 600);
+    } else {
+      alert('Erro: ' + (d.erro || 'Falha desconhecida'));
+      this.disabled = false;
+      this.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar e Emitir';
+    }
+  })
+  .catch(() => {
+    alert('Erro ao comunicar com o servidor.');
+    this.disabled = false;
+    this.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar e Emitir';
+  });
+});
+
+function abrirModalAditivo() {
+  {% if relatorio_pendente %}
+  if (!confirm('Atenção: há períodos de relatório pendentes.\nRecomendamos emitir os relatórios antes do aditivo.\nDeseja continuar mesmo assim?')) return;
+  {% endif %}
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-aditivo')).show();
+}
+
+function confirmarDocSemRelatorio(tipo) {
+  return confirm('Atenção: há períodos de relatório pendentes.\nRecomendamos emitir os relatórios antes do ' + tipo + '.\nDeseja continuar mesmo assim?');
 }
 {% endif %}
 </script>

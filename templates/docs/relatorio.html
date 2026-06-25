@@ -40,7 +40,7 @@
 
 <div class="page">
 {% include 'docs/_cabecalho.html' %}
-  <h1>Relatório de Estágio N.º {{ d.num_relatorio or '___' }}</h1>
+  <h1>Relatório de Estágio N.º {{ rel_numero or d.num_relatorio or '___' }}</h1>
   <div class="subtitulo">{{ agente.nome }}</div>
 
   <div class="secao">1. Identificação</div>
@@ -51,7 +51,7 @@
     <tr><td class="label">Instituição de Ensino:</td><td>{{ d.ie_nome }}</td></tr>
     <tr><td class="label">Empresa:</td><td>{{ d.emp_nome }}</td></tr>
     <tr><td class="label">Supervisor:</td><td>{{ d.supervisor_nome or '________________' }}</td></tr>
-    <tr><td class="label">Período do Relatório:</td><td>{{ fmt_date(d.data_inicio) }} a {{ fmt_date(d.data_encerramento or d.data_fim) }}</td></tr>
+    <tr><td class="label">Período do Relatório:</td><td>{{ fmt_date(rel_data_inicio or d.data_inicio) }} a {{ fmt_date(rel_data_fim or d.data_encerramento or d.data_fim) }}</td></tr>
   </table>
 
   <div class="secao">2. Atividades Desenvolvidas no Período</div>
