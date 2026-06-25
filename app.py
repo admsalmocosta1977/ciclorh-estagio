@@ -1312,7 +1312,7 @@ def contrato_editar(id):
             prox_inicio = date.fromisoformat(str(c['data_inicio'])[:10])
         except Exception:
             prox_inicio = date.today()
-    relatorio_pendente = prox_inicio <= date.today()
+    relatorio_pendente = (date.today() - prox_inicio).days >= 180
     return render_template('contratos/form.html', c=c,
                            estagiarios=estagiarios, empresas=empresas_list, ies=ies_list,
                            areas=areas_list, aditivos=aditivos,
