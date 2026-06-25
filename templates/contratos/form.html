@@ -301,8 +301,7 @@
           <a href="{{ url_for('doc_tce', id=c.id) }}" class="btn btn-outline-primary" target="_blank">TCE</a>
           <a href="{{ url_for('doc_plano', id=c.id) }}" class="btn btn-outline-success" target="_blank">Plano</a>
           <a href="{{ url_for('doc_ciencia', id=c.id) }}" class="btn btn-outline-info" target="_blank">Ciência</a>
-          <a href="{{ url_for('doc_tre', id=c.id) }}" class="btn btn-outline-warning position-relative" target="_blank"
-             {% if relatorio_pendente %}onclick="return confirmarDocSemRelatorio('TRE')"{% endif %}>TRE{% if relatorio_pendente %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:8px;padding:2px 4px">!</span>{% endif %}</a>
+          <button type="button" class="btn btn-outline-warning position-relative" onclick="abrirModalTRE()">TRE{% if relatorio_pendente %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:8px;padding:2px 4px">!</span>{% endif %}</button>
           <button type="button" class="btn btn-outline-secondary position-relative" onclick="abrirModalRelatorio()">Relatório{% if relatorio_pendente %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark" style="font-size:8px;padding:2px 4px">!</span>{% endif %}</button>
           <a href="#" class="btn btn-outline-dark position-relative" onclick="abrirModalAditivo()">Aditivo{% if relatorio_pendente %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:8px;padding:2px 4px">!</span>{% endif %}</a>
           <a href="{{ url_for('contrato_excluir', id=c.id) }}" class="btn btn-outline-danger"
@@ -459,6 +458,34 @@
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-primary" onclick="salvarEdicaoAditivo()">
           <i class="bi bi-check-lg me-1"></i>Salvar Alterações
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal TRE -->
+<div class="modal fade" id="modal-tre" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-check me-2"></i>Gerar Termo de Realização de Estágio</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Data de Encerramento do Estágio *</label>
+          <input type="date" id="tre-data-enc" class="form-control">
+        </div>
+        <div id="tre-gap-info" class="d-none">
+          <div id="tre-gap-alert" class="alert py-2 mb-0">
+            <small id="tre-gap-text"></small>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-warning" id="btn-gerar-tre" disabled>
+          <i class="bi bi-file-earmark-check me-1"></i>Gerar TRE
         </button>
       </div>
     </div>
@@ -1072,6 +1099,62 @@ document.getElementById('btn-emitir-relatorio').addEventListener('click', functi
     this.disabled = false;
     this.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar e Emitir';
   });
+});
+
+// ── TRE ──────────────────────────────────────────────────────────────────────
+const _treLastRelFim = {{ ('"' + relatorios[-1].data_fim + '"') | safe if relatorios else 'null' }};
+const _treDataFimContrato = '{{ (c.data_encerramento or c.data_fim or '')[:10] }}';
+
+function abrirModalTRE() {
+  const inp = document.getElementById('tre-data-enc');
+  inp.value = _treDataFimContrato;
+  _atualizarInfoTRE();
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-tre')).show();
+}
+
+function _atualizarInfoTRE() {
+  const enc = document.getElementById('tre-data-enc').value;
+  const btn = document.getElementById('btn-gerar-tre');
+  const gapInfo = document.getElementById('tre-gap-info');
+  const gapAlert = document.getElementById('tre-gap-alert');
+  const gapText = document.getElementById('tre-gap-text');
+
+  if (!enc) { btn.disabled = true; gapInfo.classList.add('d-none'); return; }
+  btn.disabled = false;
+
+  if (!_treLastRelFim) {
+    gapAlert.className = 'alert alert-warning py-2 mb-0';
+    gapText.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Nenhum relatório emitido para este contrato.';
+    gapInfo.classList.remove('d-none');
+    return;
+  }
+
+  const lastFim = new Date(_treLastRelFim + 'T00:00:00');
+  const encDate = new Date(enc + 'T00:00:00');
+  const diffMs = encDate - lastFim;
+  const diffDias = Math.round(diffMs / 86400000);
+
+  if (diffDias <= 0) {
+    gapAlert.className = 'alert alert-success py-2 mb-0';
+    gapText.innerHTML = '<i class="bi bi-check-circle me-1"></i>Relatórios cobrem até ' + _fmtDataBR(_treLastRelFim) + ' — sem gap antes do encerramento.';
+  } else {
+    const gapStart = new Date(_treLastRelFim + 'T00:00:00');
+    gapStart.setDate(gapStart.getDate() + 1);
+    gapAlert.className = 'alert alert-warning py-2 mb-0';
+    gapText.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Período sem relatório: ' +
+      _fmtDataBR(_isoDate(gapStart)) + ' a ' + _fmtDataBR(enc) +
+      ' (' + diffDias + ' dia(s)). Considere emitir um relatório final antes do TRE.';
+  }
+  gapInfo.classList.remove('d-none');
+}
+
+document.getElementById('tre-data-enc').addEventListener('change', _atualizarInfoTRE);
+
+document.getElementById('btn-gerar-tre').addEventListener('click', function() {
+  const enc = document.getElementById('tre-data-enc').value;
+  if (!enc) return;
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-tre')).hide();
+  window.open('/contratos/{{ c.id }}/tre?data_encerramento=' + enc, '_blank');
 });
 
 function abrirModalAditivo() {

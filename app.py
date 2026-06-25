@@ -1489,6 +1489,16 @@ def doc_tre(id):
     if not ctx:
         flash('Contrato não encontrado.', 'danger')
         return redirect(url_for('contratos'))
+    tre_enc = request.args.get('data_encerramento', '').strip()
+    if tre_enc:
+        ctx['d'].data_encerramento = tre_enc
+        try:
+            ini = datetime.strptime(str(ctx['d'].data_inicio)[:10], '%Y-%m-%d').date()
+            enc = datetime.strptime(tre_enc[:10], '%Y-%m-%d').date()
+            meses_real = (enc.year - ini.year) * 12 + enc.month - ini.month + 1
+            ctx['ch_total_real'] = meses_real * 4 * (ctx['d'].ch_semanal or 30)
+        except Exception:
+            pass
     return render_template('docs/tre.html', **ctx)
 
 
