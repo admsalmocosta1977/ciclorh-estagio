@@ -1188,8 +1188,8 @@ def empresas():
     else:
         rows = _q(base_sql + extra + " ORDER BY emp.nome")
 
-    total_ativas = _q("SELECT COUNT(*) n FROM empresa WHERE status='ativo' AND " + ativas_cond, one=True)['n']
-    total_inativas = _q("SELECT COUNT(*) n FROM empresa WHERE status='ativo' AND " + inativas_cond, one=True)['n']
+    total_ativas = _q("SELECT COUNT(*) n FROM empresa emp WHERE emp.status='ativo' AND " + ativas_cond, one=True)['n']
+    total_inativas = _q("SELECT COUNT(*) n FROM empresa emp WHERE emp.status='ativo' AND " + inativas_cond, one=True)['n']
 
     return render_template('empresas/lista.html', empresas=rows, q=q, aba=aba,
                            total_ativas=total_ativas, total_inativas=total_inativas)
