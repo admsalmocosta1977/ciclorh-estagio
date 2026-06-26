@@ -91,6 +91,7 @@
     <div class="card">
       <div class="card-header"><i class="bi bi-person-plus me-1"></i>Encaminhar Candidato</div>
       <div class="card-body">
+        <!-- form oculto — submetido pelo modal de confirmação -->
         <form method="post" action="{{ url_for('candidatura_nova') }}" id="form-encaminhar">
           <input type="hidden" name="vaga_id" value="{{ vaga.id }}">
           <input type="hidden" name="origem" value="vaga">
@@ -98,12 +99,13 @@
             <select name="candidato_id" id="sel-candidato" class="form-select form-select-sm" required>
               <option value="">Selecionar candidato…</option>
               {% for c in disponiveis %}
-              <option value="{{ c.id }}" data-nome="{{ c.nome }}">
+              <option value="{{ c.id }}" data-nome="{{ c.nome }}" data-whatsapp="{{ c.whatsapp or '' }}">
                 {{ c.nome }}{% if c.curso %} — {{ c.curso }}{% endif %}
               </option>
               {% endfor %}
             </select>
-            <button type="submit" class="btn btn-sm btn-primary flex-shrink-0" id="btn-encaminhar">
+            <button type="button" class="btn btn-sm btn-primary flex-shrink-0" id="btn-encaminhar"
+                    data-bs-toggle="modal" data-bs-target="#modalWhatsApp">
               <i class="bi bi-plus"></i>
             </button>
           </div>
@@ -114,8 +116,9 @@
             <strong>{{ vaga.emp_nome or 'esta empresa' }}</strong>:
             <ul id="aviso-lista" class="mb-2 mt-1 ps-3" style="font-size:.8rem"></ul>
             <div class="d-flex gap-2">
-              <button type="submit" class="btn btn-warning btn-sm fw-semibold">
-                <i class="bi bi-check-lg me-1"></i>Confirmar encaminhamento
+              <button type="button" class="btn btn-warning btn-sm fw-semibold"
+                      data-bs-toggle="modal" data-bs-target="#modalWhatsApp">
+                <i class="bi bi-check-lg me-1"></i>Confirmar mesmo assim
               </button>
               <button type="button" id="btn-cancelar-aviso" class="btn btn-outline-secondary btn-sm">
                 Cancelar
@@ -136,6 +139,13 @@
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-people me-1"></i>Candidatos ({{ candidaturas|length }})</span>
+        {% set ativos = candidaturas | selectattr('status','in',['inscrito','em_entrevista','aprovado']) | list %}
+        {% if ativos %}
+        <a href="{{ url_for('vaga_curriculos', id=vaga.id) }}" target="_blank"
+           class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-file-person me-1"></i>Currículos
+        </a>
+        {% endif %}
       </div>
       <div class="card-body">
         {% set grupos = [
@@ -173,6 +183,11 @@
               {% if c.obs %}<div class="cand-meta mt-1"><i class="bi bi-sticky"></i> {{ c.obs }}</div>{% endif %}
             </div>
             <div class="ms-auto d-flex flex-wrap gap-1 align-items-center">
+              <a href="{{ url_for('candidato_curriculo', id=c.cand_id) }}" target="_blank"
+                 class="btn btn-xs btn-outline-secondary" style="font-size:.75rem;padding:2px 8px"
+                 title="Ver currículo">
+                <i class="bi bi-file-person"></i>
+              </a>
               {% if status_key == 'inscrito' %}
               <form method="post" action="{{ url_for('candidatura_status', id=c.id) }}">
                 <input type="hidden" name="status" value="em_entrevista">
@@ -223,28 +238,102 @@
   </div>
 
 </div>
+
+<!-- ── Modal WhatsApp ── -->
+<div class="modal fade" id="modalWhatsApp" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-whatsapp text-success me-2"></i>Mensagem de Encaminhamento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" id="btn-fechar-modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-3">
+          Candidato: <strong id="modal-cand-nome">—</strong>
+        </p>
+        <div class="row g-3 mb-3">
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold">Data da seleção</label>
+            <input type="date" id="inp-data-selecao" class="form-control">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold">Horário</label>
+            <input type="time" id="inp-horario" class="form-control">
+          </div>
+        </div>
+        <label class="form-label fw-semibold">Mensagem para enviar via WhatsApp</label>
+        <textarea id="msg-whatsapp" class="form-control font-monospace" rows="12"
+                  style="font-size:.84rem;line-height:1.6"></textarea>
+        <div class="d-flex gap-2 mt-2">
+          <button type="button" id="btn-copiar-msg" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-clipboard me-1"></i>Copiar mensagem
+          </button>
+          <small class="text-muted my-auto">Cole e envie pelo WhatsApp do candidato.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" id="btn-cancelar-modal">
+          <i class="bi bi-x-lg me-1"></i>Cancelar
+        </button>
+        <button type="button" id="btn-confirmar-encaminhar" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>Confirmar encaminhamento
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 {% block scripts %}
 <script>
 (function() {
-  const sel = document.getElementById('sel-candidato');
-  const aviso = document.getElementById('aviso-historico');
-  const btnEncaminhar = document.getElementById('btn-encaminhar');
-  const btnCancelar = document.getElementById('btn-cancelar-aviso');
-  if (!sel || !aviso) return;
+  const sel       = document.getElementById('sel-candidato');
+  const aviso     = document.getElementById('aviso-historico');
+  const btnEnc    = document.getElementById('btn-encaminhar');
+  const btnCancel = document.getElementById('btn-cancelar-aviso');
+  const form      = document.getElementById('form-encaminhar');
+  if (!sel) return;
 
   const empresaId = {{ vaga.empresa_id or 'null' }};
 
-  sel.addEventListener('change', function() {
-    const candId = this.value;
-    aviso.classList.add('d-none');
-    if (!candId || !empresaId) return;
+  // Dados para montar a mensagem
+  const bairro     = {{ ('"' + vaga.emp_bairro + '"') if vaga.emp_bairro else 'null' }};
+  const cidade     = {{ ('"' + vaga.emp_cidade + '"') if vaga.emp_cidade else 'null' }};
+  const bolsa      = {{ ('"R$ ' + '%.2f'|format(vaga.bolsa|float) + '"') if vaga.bolsa else 'null' }};
+  const beneficios = {{ ('"' + vaga.beneficios + '"') if vaga.beneficios else 'null' }};
+  const empNome    = {{ ('"' + vaga.emp_nome + '"') if vaga.emp_nome else 'null' }};
 
-    const nome = this.options[this.selectedIndex].dataset.nome || '';
-    fetch(`/api/candidato/${candId}/historico-empresa/${empresaId}`)
+  function montarMensagem(candNome, data, hora) {
+    const dataFmt = data ? new Date(data + 'T12:00').toLocaleDateString('pt-BR') : '___/___/______';
+    const horaFmt = hora || '__:__';
+    return `Olá${candNome ? ', ' + candNome.split(' ')[0] : ''}! Você foi selecionado(a) para participar de um processo seletivo de estágio.
+
+${empNome ? 'Empresa: ' + empNome : ''}
+${bairro  ? 'Bairro: '  + bairro  : 'Bairro: —'}
+${cidade  ? 'Cidade: '  + cidade  : 'Cidade: —'}
+
+💰 Bolsa auxílio: ${bolsa || '—'}
+🎁 Benefícios: ${beneficios || '—'}
+
+📅 Data da seleção: ${dataFmt}
+🕐 Horário: ${horaFmt}
+
+Por favor, confirme sua presença respondendo esta mensagem.
+
+Atenciosamente,
+Ciclo RH`.replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  // Checagem de histórico ao selecionar candidato
+  sel.addEventListener('change', function() {
+    aviso.classList.add('d-none');
+    if (btnEnc) btnEnc.disabled = !this.value;
+    if (!this.value || !empresaId) return;
+    fetch(`/api/candidato/${this.value}/historico-empresa/${empresaId}`)
       .then(r => r.json())
       .then(data => {
         if (!data.historico || !data.historico.length) return;
+        const nome = this.options[this.selectedIndex].dataset.nome || '';
         document.getElementById('aviso-nome').textContent = nome;
         const ul = document.getElementById('aviso-lista');
         ul.innerHTML = '';
@@ -254,22 +343,75 @@
           ul.appendChild(li);
         });
         aviso.classList.remove('d-none');
-        // desabilita o botão "+" direto, só deixa confirmar pelo aviso
-        btnEncaminhar.disabled = true;
+        if (btnEnc) btnEnc.disabled = true;
       });
   });
 
-  if (btnCancelar) {
-    btnCancelar.addEventListener('click', function() {
+  if (btnCancel) {
+    btnCancel.addEventListener('click', function() {
       aviso.classList.add('d-none');
       sel.value = '';
-      btnEncaminhar.disabled = false;
+      if (btnEnc) btnEnc.disabled = false;
     });
   }
 
-  document.getElementById('form-encaminhar').addEventListener('submit', function() {
-    btnEncaminhar.disabled = false;
+  // Preencher modal ao abrir
+  document.getElementById('modalWhatsApp').addEventListener('show.bs.modal', function() {
+    if (!sel.value) {
+      // Não abrir sem candidato selecionado
+      const modalEl = bootstrap.Modal.getInstance(this) || new bootstrap.Modal(this);
+      modalEl.hide();
+      return;
+    }
+    const opt      = sel.options[sel.selectedIndex];
+    const candNome = opt.dataset.nome || '';
+    document.getElementById('modal-cand-nome').textContent = candNome;
+    const data = document.getElementById('inp-data-selecao').value;
+    const hora = document.getElementById('inp-horario').value;
+    document.getElementById('msg-whatsapp').value = montarMensagem(candNome, data, hora);
   });
+
+  // Atualizar mensagem ao mudar data/hora
+  function atualizarMsg() {
+    const opt      = sel.options[sel.selectedIndex];
+    const candNome = opt ? (opt.dataset.nome || '') : '';
+    const data     = document.getElementById('inp-data-selecao').value;
+    const hora     = document.getElementById('inp-horario').value;
+    document.getElementById('msg-whatsapp').value = montarMensagem(candNome, data, hora);
+  }
+  document.getElementById('inp-data-selecao').addEventListener('change', atualizarMsg);
+  document.getElementById('inp-horario').addEventListener('change', atualizarMsg);
+
+  // Copiar mensagem
+  document.getElementById('btn-copiar-msg').addEventListener('click', function() {
+    const txt = document.getElementById('msg-whatsapp').value;
+    navigator.clipboard.writeText(txt).then(() => {
+      this.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copiado!';
+      setTimeout(() => { this.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copiar mensagem'; }, 2500);
+    });
+  });
+
+  // Cancelar: limpa seleção
+  document.getElementById('btn-cancelar-modal').addEventListener('click', function() {
+    sel.value = '';
+    aviso.classList.add('d-none');
+    if (btnEnc) btnEnc.disabled = false;
+  });
+  document.getElementById('btn-fechar-modal').addEventListener('click', function() {
+    sel.value = '';
+    aviso.classList.add('d-none');
+    if (btnEnc) btnEnc.disabled = false;
+  });
+
+  // Confirmar: submete o form
+  document.getElementById('btn-confirmar-encaminhar').addEventListener('click', function() {
+    if (!sel.value) return;
+    if (btnEnc) btnEnc.disabled = false;
+    form.submit();
+  });
+
+  // Inicializa botão encaminhar desabilitado se sem seleção
+  if (btnEnc) btnEnc.disabled = !sel.value;
 })();
 </script>
 {% endblock %}

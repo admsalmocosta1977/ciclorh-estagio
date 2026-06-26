@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Currículos — {{ vaga.titulo }}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #222; background: #f4f6fa; }
+
+  .page-header { max-width: 760px; margin: 24px auto 0; padding: 0 0 12px; display: flex; align-items: center; justify-content: space-between; }
+  .page-header h2 { font-size: 1rem; color: #1a3e6c; font-weight: 700; }
+  .page-header small { font-size: .78rem; color: #888; }
+
+  .print-btn { display: block; text-align: center; padding: 10px 0 16px; }
+  .print-btn button { background: #1a3e6c; color: #fff; border: none; padding: 9px 28px;
+                      border-radius: 6px; cursor: pointer; font-size: .9rem; }
+
+  /* ── CV card ── */
+  .cv-wrap { max-width: 760px; margin: 0 auto 30px; background: #fff;
+             box-shadow: 0 4px 20px rgba(0,0,0,.12); border-radius: 10px; overflow: hidden; }
+
+  .cv-header { background: #1a3e6c; color: #fff; padding: 24px 32px 18px; }
+  .cv-header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: .3px; margin-bottom: 3px; }
+  .cv-header .curso { font-size: .88rem; opacity: .85; }
+  .cv-header .meta  { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 14px; font-size: .8rem; opacity: .88; }
+
+  .cv-body { padding: 20px 32px; }
+
+  .section { margin-bottom: 18px; }
+  .section-title { font-size: .68rem; text-transform: uppercase; letter-spacing: 1px;
+                   color: #1a3e6c; font-weight: 700; border-bottom: 2px solid #1a3e6c;
+                   padding-bottom: 4px; margin-bottom: 9px; }
+
+  .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px 20px; }
+  .info-item { display: flex; gap: 6px; }
+  .info-label { color: #888; min-width: 90px; font-size: .78rem; }
+  .info-val   { font-weight: 500; font-size: .8rem; }
+
+  .obs-box { background: #f8f9fa; border-left: 3px solid #1a3e6c; padding: 7px 11px;
+             border-radius: 4px; font-size: .81rem; line-height: 1.5; white-space: pre-wrap; }
+
+  .exp-row { border-left: 3px solid #dee2e6; padding: 5px 11px; margin-bottom: 7px; }
+  .exp-empresa { font-weight: 600; font-size: .83rem; }
+  .exp-meta    { font-size: .76rem; color: #666; margin-top: 2px; }
+
+  .cv-footer { text-align: center; padding: 10px 32px 14px;
+               font-size: .7rem; color: #aaa; border-top: 1px solid #eee; }
+
+  .sem-candidatos { max-width: 760px; margin: 40px auto; text-align: center; color: #aaa; }
+
+  @media print {
+    body { background: #fff; }
+    .print-btn, .page-header { display: none; }
+    .cv-wrap { box-shadow: none; border-radius: 0; margin: 0; page-break-after: always; }
+    .cv-wrap:last-child { page-break-after: avoid; }
+    @page { margin: 12mm 10mm; }
+  }
+</style>
+</head>
+<body>
+
+{% if candidatos %}
+
+<div class="print-btn">
+  <button onclick="window.print()">&#x1F5A8; Imprimir todos / Salvar PDF</button>
+</div>
+
+<div class="page-header">
+  <div>
+    <h2>Currículos — {{ vaga.titulo }}</h2>
+    <small>{{ vaga.emp_nome or '' }}{% if candidatos %} · {{ candidatos|length }} candidato(s){% endif %}</small>
+  </div>
+</div>
+
+{% for item in candidatos %}
+{% set c = item.candidato %}
+{% set experiencias = item.experiencias %}
+<div class="cv-wrap">
+  <div class="cv-header">
+    <h1>{{ c.nome }}</h1>
+    {% if c.curso %}<div class="curso">{{ c.curso }}{% if c.semestre %} · {{ c.semestre }}{% endif %}</div>{% endif %}
+    <div class="meta">
+      {% if c.whatsapp %}<span>&#x1F4F1; {{ c.whatsapp }}</span>{% endif %}
+      {% if c.email %}<span>&#x2709; {{ c.email }}</span>{% endif %}
+      {% if c.cidade %}<span>&#x1F4CD; {{ c.cidade }}{% if c.estado %}/{{ c.estado }}{% endif %}</span>{% endif %}
+      {% if c.disponibilidade %}<span>&#x23F0; {{ c.disponibilidade }}</span>{% endif %}
+    </div>
+  </div>
+
+  <div class="cv-body">
+
+    {% set tem_dados = c.cpf or c.data_nascimento or c.ie_nome %}
+    {% if tem_dados %}
+    <div class="section">
+      <div class="section-title">Dados Pessoais</div>
+      <div class="info-grid">
+        {% if c.cpf %}
+        <div class="info-item">
+          <span class="info-label">CPF:</span>
+          <span class="info-val">{{ c.cpf }}</span>
+        </div>
+        {% endif %}
+        {% if c.data_nascimento %}
+        <div class="info-item">
+          <span class="info-label">Nascimento:</span>
+          <span class="info-val">{{ c.data_nascimento | string | truncate(10,True,'') }}</span>
+        </div>
+        {% endif %}
+        {% if c.ie_nome %}
+        <div class="info-item" style="grid-column:1/-1">
+          <span class="info-label">Instituição:</span>
+          <span class="info-val">{{ c.ie_nome }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if c.obs %}
+    <div class="section">
+      <div class="section-title">Apresentação</div>
+      <div class="obs-box">{{ c.obs }}</div>
+    </div>
+    {% endif %}
+
+    {% if experiencias %}
+    <div class="section">
+      <div class="section-title">Experiência Profissional</div>
+      {% for e in experiencias %}
+      <div class="exp-row">
+        <div class="exp-empresa">{{ e.empresa }}</div>
+        <div class="exp-meta">
+          {% if e.periodo %}{{ e.periodo }}{% endif %}
+          {% if e.periodo and e.funcao %} · {% endif %}
+          {% if e.funcao %}{{ e.funcao }}{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not c.obs and not experiencias %}
+    <p style="color:#aaa;font-size:.8rem;text-align:center;padding:10px 0">
+      Sem informações adicionais cadastradas.
+    </p>
+    {% endif %}
+
+  </div>
+
+  <div class="cv-footer">
+    Ciclo RH · {{ vaga.titulo }}{% if vaga.emp_nome %} — {{ vaga.emp_nome }}{% endif %}
+  </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="print-btn"><button onclick="window.print()">&#x1F5A8; Imprimir</button></div>
+<div class="sem-candidatos">
+  <p>Nenhum candidato ativo nesta vaga.</p>
+</div>
+{% endif %}
+
+</body>
+</html>

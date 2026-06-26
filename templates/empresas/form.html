@@ -23,9 +23,13 @@
           <label class="form-label fw-semibold">Nome Fantasia</label>
           <input type="text" name="nome_fantasia" class="form-control" value="{{ emp.nome_fantasia if emp and emp.nome_fantasia else '' }}" placeholder="Como é conhecida (opcional)">
         </div>
-        <div class="col-md-4">
-          <label class="form-label fw-semibold">Endereço (Logradouro, n.º, Bairro)</label>
-          <input type="text" name="endereco" class="form-control" value="{{ emp.endereco if emp else '' }}" placeholder="Ex: Av. Juracy Magalhães, 100, Centro">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Endereço (Logradouro, n.º)</label>
+          <input type="text" name="endereco" class="form-control" value="{{ emp.endereco if emp else '' }}" placeholder="Ex: Av. Juracy Magalhães, 100">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Bairro</label>
+          <input type="text" name="bairro" class="form-control" value="{{ emp.bairro if emp and emp.bairro else '' }}" placeholder="Ex: Centro">
         </div>
         <div class="col-md-3">
           <label class="form-label fw-semibold">Estado</label>

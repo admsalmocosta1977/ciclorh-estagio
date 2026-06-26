@@ -363,6 +363,7 @@ def init_db():
             concluido_por INTEGER REFERENCES usuario(id)
         )""")
         cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS nps INTEGER;")
+        cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS bairro TEXT;")
         cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS data_vencimento_convenio DATE;")
         cur.execute("""
         CREATE TABLE IF NOT EXISTS relacionamento_contato (
@@ -1209,13 +1210,14 @@ def empresas():
 def empresa_nova():
     if request.method == 'POST':
         emp_id = _ins("""INSERT INTO empresa
-                (nome,nome_fantasia,cnpj,endereco,cidade,estado,telefone,email,ramo,
+                (nome,nome_fantasia,cnpj,endereco,bairro,cidade,estado,telefone,email,ramo,
                  representante,cargo_representante,cpf_representante,
                  bolsa_padrao,aux_transporte_padrao)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['nome'], request.form.get('nome_fantasia') or None,
               request.form.get('cnpj'),
-              request.form.get('endereco'), request.form.get('cidade') or None,
+              request.form.get('endereco'), request.form.get('bairro') or None,
+              request.form.get('cidade') or None,
               request.form.get('estado') or None,
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('ramo'), request.form.get('representante'),
@@ -1244,12 +1246,13 @@ def empresa_editar(id):
         abort(404)
     if request.method == 'POST':
         _run("""UPDATE empresa SET
-                nome=%s,nome_fantasia=%s,cnpj=%s,endereco=%s,cidade=%s,estado=%s,telefone=%s,email=%s,ramo=%s,
+                nome=%s,nome_fantasia=%s,cnpj=%s,endereco=%s,bairro=%s,cidade=%s,estado=%s,telefone=%s,email=%s,ramo=%s,
                 representante=%s,cargo_representante=%s,cpf_representante=%s,
                 bolsa_padrao=%s,aux_transporte_padrao=%s WHERE id=%s""",
              (request.form['nome'], request.form.get('nome_fantasia') or None,
               request.form.get('cnpj'),
-              request.form.get('endereco'), request.form.get('cidade') or None,
+              request.form.get('endereco'), request.form.get('bairro') or None,
+              request.form.get('cidade') or None,
               request.form.get('estado') or None,
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('ramo'), request.form.get('representante'),
@@ -2865,7 +2868,8 @@ def vaga_nova():
 @app.route('/vagas/<int:id>')
 @login_required
 def vaga_detalhe(id):
-    vaga = _q("""SELECT v.*, e.nome as emp_nome, a.nome as area_nome, u.nome as resp_nome
+    vaga = _q("""SELECT v.*, e.nome as emp_nome, e.bairro as emp_bairro, e.cidade as emp_cidade,
+                        a.nome as area_nome, u.nome as resp_nome
                  FROM vaga v
                  LEFT JOIN empresa e ON e.id = v.empresa_id
                  LEFT JOIN area_estagio a ON a.id = v.area_id
@@ -2936,6 +2940,41 @@ def api_candidato_historico_empresa(cand_id, empresa_id):
                  ORDER BY ca.created_at DESC""", (cand_id, empresa_id))
     return jsonify({'historico': [{'titulo': r['titulo'],
                                    'data': fmt_date(r['created_at'])} for r in hist]})
+
+
+@app.route('/candidatos/<int:id>/curriculo')
+@login_required
+def candidato_curriculo(id):
+    c = _q("""SELECT ca.*, i.nome as ie_nome
+              FROM candidato ca
+              LEFT JOIN ie i ON i.id = ca.ie_id
+              WHERE ca.id = %s""", (id,), one=True)
+    if not c:
+        abort(404)
+    experiencias = _q("SELECT * FROM candidato_experiencia WHERE candidato_id=%s ORDER BY ordem", (id,))
+    return render_template('candidatos/curriculo.html', candidato=c, experiencias=experiencias)
+
+
+@app.route('/vagas/<int:id>/curriculos')
+@login_required
+def vaga_curriculos(id):
+    vaga = _q("""SELECT v.*, e.nome as emp_nome
+                 FROM vaga v LEFT JOIN empresa e ON e.id = v.empresa_id
+                 WHERE v.id=%s""", (id,), one=True)
+    if not vaga:
+        abort(404)
+    candidatos_raw = _q("""
+        SELECT ca.*, i.nome as ie_nome, cu.status as status_candidatura, cu.id as cand_id
+        FROM candidatura cu
+        JOIN candidato ca ON ca.id = cu.candidato_id
+        LEFT JOIN ie i ON i.id = ca.ie_id
+        WHERE cu.vaga_id = %s AND cu.status IN ('inscrito','em_entrevista','aprovado')
+        ORDER BY ca.nome""", (id,))
+    candidatos = []
+    for c in candidatos_raw:
+        exp = _q("SELECT * FROM candidato_experiencia WHERE candidato_id=%s ORDER BY ordem", (c['id'],))
+        candidatos.append({'candidato': c, 'experiencias': exp})
+    return render_template('vagas/curriculos.html', vaga=vaga, candidatos=candidatos)
 
 
 @app.route('/vagas/<int:id>/editar', methods=['GET', 'POST'])
