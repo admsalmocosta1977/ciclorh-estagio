@@ -3148,6 +3148,18 @@ def candidato_editar(id):
     return render_template('candidatos/form.html', candidato=c, experiencias=experiencias, ies=ies)
 
 
+@app.route('/candidatos/<int:id>/excluir', methods=['POST'])
+@login_required
+def candidato_excluir(id):
+    c = _q("SELECT nome FROM candidato WHERE id=%s", (id,), one=True)
+    if not c:
+        abort(404)
+    _run("DELETE FROM candidato WHERE id=%s", (id,))
+    _log('excluir', 'candidato', id, f'Excluiu candidato: {c["nome"]}')
+    flash(f'Candidato "{c["nome"]}" excluído.', 'warning')
+    return redirect(url_for('candidatos_lista'))
+
+
 # ── Candidaturas ───────────────────────────────────────────────────────────────
 
 @app.route('/candidatura/nova', methods=['POST'])
