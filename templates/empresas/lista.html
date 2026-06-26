@@ -8,21 +8,49 @@
   </a>
 </div>
 
-<div class="card mb-2">
-  <div class="card-body py-2">
+<!-- Abas -->
+<ul class="nav nav-tabs mb-0" style="border-bottom:none">
+  <li class="nav-item">
+    <a class="nav-link {% if aba=='ativas' %}active{% endif %} d-flex align-items-center gap-1"
+       href="{{ url_for('empresas', aba='ativas', q=q) }}">
+      <i class="bi bi-building-check"></i>
+      Com Estagiários
+      <span class="badge {% if aba=='ativas' %}bg-primary{% else %}bg-secondary{% endif %} ms-1" style="font-size:.65rem">
+        {{ total_ativas }}
+      </span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if aba=='inativas' %}active{% endif %} d-flex align-items-center gap-1"
+       href="{{ url_for('empresas', aba='inativas', q=q) }}">
+      <i class="bi bi-building-slash"></i>
+      Sem Estagiários
+      <span class="badge {% if aba=='inativas' %}bg-warning text-dark{% else %}bg-secondary{% endif %} ms-1" style="font-size:.65rem">
+        {{ total_inativas }}
+      </span>
+    </a>
+  </li>
+</ul>
+
+<div class="card" style="border-top-left-radius:0">
+  <div class="card-body py-2 border-bottom">
     <form method="get" class="row g-2 align-items-center">
+      <input type="hidden" name="aba" value="{{ aba }}">
       <div class="col-md-6">
-        <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Buscar por razão social, nome fantasia ou CNPJ...">
+        <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
+               placeholder="Buscar por razão social, nome fantasia ou CNPJ...">
       </div>
       <div class="col-auto">
-        <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-search me-1"></i>Buscar</button>
-        {% if q %}<a href="{{ url_for('empresas') }}" class="btn btn-sm btn-link text-muted">Limpar</a>{% endif %}
+        <button class="btn btn-sm btn-outline-secondary" type="submit">
+          <i class="bi bi-search me-1"></i>Buscar
+        </button>
+        {% if q %}
+        <a href="{{ url_for('empresas', aba=aba) }}" class="btn btn-sm btn-link text-muted">Limpar</a>
+        {% endif %}
       </div>
     </form>
   </div>
-</div>
 
-<div class="card">
   <div class="card-body p-0">
     <table class="table table-hover table-sm mb-0" style="font-size:0.78rem">
       <thead class="table-light" style="font-size:0.73rem">
@@ -32,13 +60,17 @@
           <th style="width:14%">CNPJ</th>
           <th style="width:12%">Cidade</th>
           <th style="width:18%">Supervisores</th>
-          <th style="width:5%" class="text-center">TCEs</th>
+          {% if aba == 'ativas' %}
+          <th style="width:5%" class="text-center">Ativos</th>
+          {% else %}
+          <th style="width:5%" class="text-center">Histórico</th>
+          {% endif %}
           <th style="width:7%"></th>
         </tr>
       </thead>
       <tbody>
       {% for emp in empresas %}
-      <tr>
+      <tr {% if aba=='inativas' %}class="table-warning"{% endif %}>
         <td class="fw-semibold align-middle">{{ emp.nome }}</td>
         <td class="text-muted align-middle">{{ emp.nome_fantasia or '—' }}</td>
         <td class="align-middle"><code style="font-size:0.72rem">{{ emp.cnpj or '—' }}</code></td>
@@ -54,22 +86,37 @@
           {% endif %}
         </td>
         <td class="text-center align-middle">
-          <span class="badge bg-light text-dark border">{{ emp.qtd_contratos }}</span>
+          {% if aba == 'ativas' %}
+          <span class="badge bg-success text-white">{{ emp.qtd_contratos }}</span>
+          {% else %}
+          <span class="badge bg-light text-dark border" title="Contratos históricos">
+            {{ emp.qtd_contratos }}
+          </span>
+          {% endif %}
         </td>
         <td class="text-end align-middle">
-          <a href="{{ url_for('empresa_detalhe', id=emp.id) }}" class="btn btn-xs btn-outline-primary" style="padding:2px 7px;font-size:0.72rem" title="Ver detalhes">
+          <a href="{{ url_for('empresa_detalhe', id=emp.id) }}" class="btn btn-xs btn-outline-primary"
+             style="padding:2px 7px;font-size:0.72rem" title="Ver detalhes">
             <i class="bi bi-eye"></i>
           </a>
         </td>
       </tr>
       {% else %}
       <tr><td colspan="7" class="text-center text-muted py-4" style="font-size:0.8rem">
-        {% if q %}Nenhum resultado para "{{ q }}".{% else %}Nenhuma empresa cadastrada ainda.{% endif %}
+        {% if aba == 'inativas' %}
+          {% if q %}Nenhum resultado para "{{ q }}".{% else %}Nenhuma empresa sem estagiários ativos.{% endif %}
+        {% else %}
+          {% if q %}Nenhum resultado para "{{ q }}".{% else %}Nenhuma empresa com estagiários ativos.{% endif %}
+        {% endif %}
       </td></tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
-<div class="text-muted mt-2" style="font-size:0.72rem">{{ empresas|length }} empresa(s) encontrada(s)</div>
+<div class="text-muted mt-2" style="font-size:0.72rem">
+  {{ empresas|length }} empresa(s)
+  {% if aba == 'inativas' %} sem estagiários ativos{% else %} com estagiários ativos{% endif %}
+  {% if q %} · filtro: "{{ q }}"{% endif %}
+</div>
 {% endblock %}

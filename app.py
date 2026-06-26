@@ -1169,17 +1169,30 @@ def estagiario_excluir(id):
 @login_required
 def empresas():
     q = request.args.get('q', '')
+    aba = request.args.get('aba', 'ativas')
+
+    ativas_cond = "EXISTS (SELECT 1 FROM contrato WHERE empresa_id=emp.id AND data_encerramento IS NULL)"
+    inativas_cond = "NOT EXISTS (SELECT 1 FROM contrato WHERE empresa_id=emp.id AND data_encerramento IS NULL)"
+
     base_sql = """SELECT emp.*,
-                 (SELECT COUNT(*) FROM contrato WHERE empresa_id = emp.id) qtd_contratos,
+                 (SELECT COUNT(*) FROM contrato WHERE empresa_id = emp.id AND data_encerramento IS NULL) qtd_contratos,
                  (SELECT COUNT(*) FROM empresa_supervisor WHERE empresa_id = emp.id) qtd_supervisores,
                  (SELECT nome FROM empresa_supervisor WHERE empresa_id = emp.id ORDER BY ordem, id LIMIT 1) primeiro_supervisor
                  FROM empresa emp WHERE emp.status = 'ativo'"""
+
+    extra = f" AND {ativas_cond if aba == 'ativas' else inativas_cond}"
+
     if q:
-        rows = _q(base_sql + " AND (emp.nome ILIKE %s OR emp.cnpj ILIKE %s OR emp.nome_fantasia ILIKE %s) ORDER BY emp.nome",
+        rows = _q(base_sql + extra + " AND (emp.nome ILIKE %s OR emp.cnpj ILIKE %s OR emp.nome_fantasia ILIKE %s) ORDER BY emp.nome",
                   (f'%{q}%', f'%{q}%', f'%{q}%'))
     else:
-        rows = _q(base_sql + " ORDER BY emp.nome")
-    return render_template('empresas/lista.html', empresas=rows, q=q)
+        rows = _q(base_sql + extra + " ORDER BY emp.nome")
+
+    total_ativas = _q("SELECT COUNT(*) n FROM empresa WHERE status='ativo' AND " + ativas_cond, one=True)['n']
+    total_inativas = _q("SELECT COUNT(*) n FROM empresa WHERE status='ativo' AND " + inativas_cond, one=True)['n']
+
+    return render_template('empresas/lista.html', empresas=rows, q=q, aba=aba,
+                           total_ativas=total_ativas, total_inativas=total_inativas)
 
 
 @app.route('/empresas/nova', methods=['GET', 'POST'])
