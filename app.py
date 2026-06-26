@@ -3287,6 +3287,12 @@ def _xlsx_fmt_date(v):
     return str(v)
 
 
+@app.route('/manual')
+@login_required
+def manual():
+    return render_template('manual.html')
+
+
 @app.route('/relatorios')
 @login_required
 def relatorios():
