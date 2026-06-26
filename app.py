@@ -2902,16 +2902,25 @@ def vaga_detalhe(id):
 
 @app.route('/candidato/cadastro', methods=['GET', 'POST'])
 def candidato_cadastro_publico():
+    ies = _q("SELECT id, nome FROM ie ORDER BY nome")
     if request.method == 'POST':
         nome = request.form.get('nome', '').strip()
-        email = request.form.get('email', '').strip() or None
-        whatsapp = request.form.get('whatsapp', '').strip() or None
-        curso = request.form.get('curso', '').strip() or None
-        semestre = request.form.get('semestre', '').strip() or None
-        obs = request.form.get('obs', '').strip() or None
-
         if not nome:
-            return render_template('candidatos/cadastro_publico.html', erro='Nome é obrigatório.')
+            return render_template('candidatos/cadastro_publico.html', erro='Nome é obrigatório.', ies=ies)
+
+        email       = request.form.get('email', '').strip() or None
+        whatsapp    = request.form.get('whatsapp', '').strip() or None
+        cpf         = request.form.get('cpf', '').strip() or None
+        dt_nasc     = request.form.get('data_nascimento', '').strip() or None
+        endereco    = request.form.get('endereco', '').strip() or None
+        bairro      = request.form.get('bairro', '').strip() or None
+        cidade      = request.form.get('cidade', '').strip() or None
+        estado      = request.form.get('estado', '').strip() or None
+        curso       = request.form.get('curso', '').strip() or None
+        semestre    = request.form.get('semestre', '').strip() or None
+        ie_id       = request.form.get('ie_id') or None
+        disponib    = request.form.get('disponibilidade') or None
+        obs         = request.form.get('obs', '').strip() or None
 
         cand = None
         if email:
@@ -2920,15 +2929,20 @@ def candidato_cadastro_publico():
             cand = _q("SELECT id FROM candidato WHERE whatsapp=%s", (whatsapp,), one=True)
 
         if not cand:
-            cand_id = _ins("""INSERT INTO candidato (nome, email, whatsapp, curso, semestre, obs)
-                              VALUES (%s,%s,%s,%s,%s,%s)""",
-                           (nome, email, whatsapp, curso, semestre, obs))
+            cand_id = _ins("""INSERT INTO candidato
+                              (nome, cpf, email, whatsapp, data_nascimento,
+                               endereco, bairro, cidade, estado,
+                               curso, semestre, ie_id, disponibilidade, obs)
+                              VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                           (nome, cpf, email, whatsapp, dt_nasc,
+                            endereco, bairro, cidade, estado,
+                            curso, semestre, ie_id, disponib, obs))
             if request.form.get('ja_trabalhou') == 'sim':
                 _save_experiencias(cand_id)
 
         return render_template('candidatos/cadastro_sucesso.html', nome=nome)
 
-    return render_template('candidatos/cadastro_publico.html', erro=None)
+    return render_template('candidatos/cadastro_publico.html', erro=None, ies=ies)
 
 
 @app.route('/api/candidato/<int:cand_id>/historico-empresa/<int:empresa_id>')

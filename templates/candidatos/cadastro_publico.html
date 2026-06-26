@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <style>
   body { background: #f0f4f8; }
-  .page-wrap { max-width: 560px; margin: 0 auto; padding: 2rem 1rem 3rem; }
+  .page-wrap { max-width: 620px; margin: 0 auto; padding: 2rem 1rem 3rem; }
   .brand-bar { text-align: center; margin-bottom: 1.8rem; }
   .brand-icon { width: 64px; height: 64px; border-radius: 16px; background: #1a3e6c;
                 display: flex; align-items: center; justify-content: center; margin: 0 auto .8rem; }
@@ -16,8 +16,11 @@
   .brand-sub  { font-size: .8rem; color: #6c757d; }
   .form-card  { border-radius: 16px; border: none; box-shadow: 0 6px 24px rgba(0,0,0,.10); }
   .required-mark { color: #dc3545; }
-  .section-title { font-size: .72rem; text-transform: uppercase; letter-spacing: .8px;
-                   color: #6c757d; font-weight: 600; margin-bottom: .6rem; margin-top: 1.2rem; }
+  .section-title {
+    font-size: .7rem; text-transform: uppercase; letter-spacing: .8px;
+    color: #1a3e6c; font-weight: 700; border-bottom: 2px solid #1a3e6c;
+    padding-bottom: 4px; margin: 1.4rem 0 .8rem;
+  }
 </style>
 </head>
 <body>
@@ -33,51 +36,112 @@
 
   <div class="card form-card p-4">
     <h5 class="fw-bold mb-1">Cadastro de Candidato</h5>
-    <p class="text-muted small mb-3">
+    <p class="text-muted small mb-1">
       Preencha seus dados para entrar no banco de talentos. Nossa equipe entrará em contato quando houver uma oportunidade compatível com o seu perfil.
     </p>
+    <p class="text-muted small mb-3"><span class="required-mark">*</span> Campo obrigatório</p>
 
     {% if erro %}
     <div class="alert alert-danger py-2 small">{{ erro }}</div>
     {% endif %}
 
     <form method="post">
-      <div class="section-title">Identificação</div>
+
+      <!-- IDENTIFICAÇÃO -->
+      <div class="section-title"><i class="bi bi-person me-1"></i>Identificação</div>
       <div class="mb-3">
         <label class="form-label fw-semibold">Nome completo <span class="required-mark">*</span></label>
         <input type="text" name="nome" class="form-control" placeholder="Seu nome completo" required autofocus>
       </div>
       <div class="row g-2 mb-3">
         <div class="col-sm-6">
-          <label class="form-label fw-semibold">E-mail</label>
-          <input type="email" name="email" class="form-control" placeholder="seu@email.com">
+          <label class="form-label fw-semibold">CPF</label>
+          <input type="text" name="cpf" class="form-control" placeholder="000.000.000-00">
         </div>
         <div class="col-sm-6">
-          <label class="form-label fw-semibold">WhatsApp</label>
-          <input type="tel" name="whatsapp" class="form-control" placeholder="(00) 00000-0000">
+          <label class="form-label fw-semibold">Data de Nascimento</label>
+          <input type="date" name="data_nascimento" class="form-control">
         </div>
       </div>
 
-      <div class="section-title">Formação acadêmica</div>
+      <!-- CONTATO -->
+      <div class="section-title"><i class="bi bi-telephone me-1"></i>Contato</div>
       <div class="row g-2 mb-3">
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">WhatsApp</label>
+          <input type="tel" name="whatsapp" class="form-control" placeholder="(77) 99999-9999">
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">E-mail</label>
+          <input type="email" name="email" class="form-control" placeholder="seu@email.com">
+        </div>
+      </div>
+
+      <!-- ENDEREÇO -->
+      <div class="section-title"><i class="bi bi-geo-alt me-1"></i>Endereço</div>
+      <div class="mb-2">
+        <label class="form-label fw-semibold">Logradouro</label>
+        <input type="text" name="endereco" class="form-control" placeholder="Ex: Rua das Flores, 123">
+      </div>
+      <div class="row g-2 mb-3">
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold">Bairro</label>
+          <input type="text" name="bairro" class="form-control" placeholder="Ex: Centro">
+        </div>
+        <div class="col-sm-5">
+          <label class="form-label fw-semibold">Cidade</label>
+          <input type="text" name="cidade" class="form-control" placeholder="Ex: Vitória da Conquista">
+        </div>
+        <div class="col-sm-3">
+          <label class="form-label fw-semibold">Estado</label>
+          <input type="text" name="estado" class="form-control" placeholder="BA" maxlength="2">
+        </div>
+      </div>
+
+      <!-- FORMAÇÃO -->
+      <div class="section-title"><i class="bi bi-mortarboard me-1"></i>Formação Acadêmica</div>
+      <div class="row g-2 mb-2">
         <div class="col-sm-8">
           <label class="form-label fw-semibold">Curso</label>
-          <input type="text" name="curso" class="form-control" placeholder="Ex: Administração, Engenharia Civil...">
+          <input type="text" name="curso" class="form-control" placeholder="Ex: Administração, Engenharia Civil…">
         </div>
         <div class="col-sm-4">
           <label class="form-label fw-semibold">Semestre</label>
           <input type="text" name="semestre" class="form-control" placeholder="Ex: 4º">
         </div>
       </div>
-
-      <div class="section-title">Sobre você</div>
       <div class="mb-3">
-        <label class="form-label fw-semibold">Apresentação / Observações</label>
-        <textarea name="obs" class="form-control" rows="3"
-                  placeholder="Objetivos profissionais, habilidades ou áreas de interesse (opcional)"></textarea>
+        <label class="form-label fw-semibold">Instituição de Ensino</label>
+        <select name="ie_id" class="form-select">
+          <option value="">— selecione (opcional) —</option>
+          {% for ie in ies %}
+          <option value="{{ ie.id }}">{{ ie.nome }}</option>
+          {% endfor %}
+        </select>
       </div>
 
-      <div class="section-title">Experiência profissional</div>
+      <!-- DISPONIBILIDADE -->
+      <div class="section-title"><i class="bi bi-clock me-1"></i>Disponibilidade</div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Turno disponível</label>
+        <select name="disponibilidade" class="form-select">
+          <option value="">— selecione —</option>
+          {% for d in ['Manhã','Tarde','Integral','Noite'] %}
+          <option value="{{ d }}">{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- APRESENTAÇÃO -->
+      <div class="section-title"><i class="bi bi-chat-text me-1"></i>Apresentação</div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Objetivos / Habilidades</label>
+        <textarea name="obs" class="form-control" rows="3"
+                  placeholder="Conte um pouco sobre seus objetivos profissionais, habilidades ou áreas de interesse (opcional)"></textarea>
+      </div>
+
+      <!-- EXPERIÊNCIA -->
+      <div class="section-title"><i class="bi bi-briefcase me-1"></i>Experiência Profissional</div>
       <div class="mb-3">
         <label class="fw-semibold form-label">Já trabalhou anteriormente?</label>
         <div class="d-flex gap-3 mb-2">
@@ -113,7 +177,7 @@
         </div>
       </div>
 
-      <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+      <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold mt-2">
         <i class="bi bi-send me-2"></i>Enviar cadastro
       </button>
     </form>
