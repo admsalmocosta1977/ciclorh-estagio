@@ -90,14 +90,26 @@
         <div class="card-body">
           <div class="row g-3">
             <div class="col-sm-8">
+              <label class="form-label">Endereço (Logradouro, n.º)</label>
+              <input type="text" name="endereco" class="form-control form-control-sm"
+                     value="{{ candidato.endereco if candidato and candidato.endereco else '' }}"
+                     placeholder="Ex: Rua das Flores, 123">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label">Bairro</label>
+              <input type="text" name="bairro" class="form-control form-control-sm"
+                     value="{{ candidato.bairro if candidato and candidato.bairro else '' }}"
+                     placeholder="Ex: Centro">
+            </div>
+            <div class="col-sm-8">
               <label class="form-label">Cidade</label>
               <input type="text" name="cidade" class="form-control form-control-sm"
-                     value="{{ candidato.cidade if candidato else '' }}">
+                     value="{{ candidato.cidade if candidato and candidato.cidade else '' }}">
             </div>
             <div class="col-sm-4">
               <label class="form-label">Estado</label>
               <input type="text" name="estado" class="form-control form-control-sm"
-                     value="{{ candidato.estado if candidato else '' }}" maxlength="2" placeholder="BA">
+                     value="{{ candidato.estado if candidato and candidato.estado else '' }}" maxlength="2" placeholder="BA">
             </div>
           </div>
         </div>
@@ -121,7 +133,7 @@
           <div>
             <label class="form-label">Observações</label>
             <textarea name="obs" class="form-control form-control-sm" rows="2"
-                      placeholder="Habilidades ou informações relevantes…">{{ candidato.obs if candidato else '' }}</textarea>
+                      placeholder="Habilidades ou informações relevantes…">{{ candidato.obs if candidato and candidato.obs else '' }}</textarea>
           </div>
         </div>
       </div>

@@ -105,10 +105,14 @@
           </span>
         </div>
         {% endif %}
-        {% if candidato.cidade %}
-        <div class="info-item">
+        {% if candidato.endereco or candidato.bairro or candidato.cidade %}
+        <div class="info-item" style="grid-column:1/-1">
           <span class="info-label">Endereço:</span>
-          <span class="info-val">{{ candidato.cidade }}{% if candidato.estado %}/{{ candidato.estado }}{% endif %}</span>
+          <span class="info-val">
+            {% if candidato.endereco %}{{ candidato.endereco }}{% endif %}
+            {% if candidato.bairro %}, {{ candidato.bairro }}{% endif %}
+            {% if candidato.cidade %} — {{ candidato.cidade }}{% if candidato.estado %}/{{ candidato.estado }}{% endif %}{% endif %}
+          </span>
         </div>
         {% endif %}
         {% if candidato.ie_nome %}

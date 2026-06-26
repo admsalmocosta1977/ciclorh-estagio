@@ -364,6 +364,8 @@ def init_db():
         )""")
         cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS nps INTEGER;")
         cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS bairro TEXT;")
+        cur.execute("ALTER TABLE candidato ADD COLUMN IF NOT EXISTS endereco TEXT;")
+        cur.execute("ALTER TABLE candidato ADD COLUMN IF NOT EXISTS bairro TEXT;")
         cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS data_vencimento_convenio DATE;")
         cur.execute("""
         CREATE TABLE IF NOT EXISTS relacionamento_contato (
@@ -3061,13 +3063,15 @@ def _save_experiencias(candidato_id):
 def candidato_novo():
     if request.method == 'POST':
         cand_id = _ins("""INSERT INTO candidato (nome, cpf, email, whatsapp, data_nascimento,
-                cidade, estado, curso, semestre, ie_id, disponibilidade, obs)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                endereco, bairro, cidade, estado, curso, semestre, ie_id, disponibilidade, obs)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['nome'].strip(),
               request.form.get('cpf') or None,
               request.form.get('email') or None,
               request.form.get('whatsapp') or None,
               request.form.get('data_nascimento') or None,
+              request.form.get('endereco') or None,
+              request.form.get('bairro') or None,
               request.form.get('cidade') or None,
               request.form.get('estado') or None,
               request.form.get('curso') or None,
@@ -3116,13 +3120,15 @@ def candidato_editar(id):
         abort(404)
     if request.method == 'POST':
         _run("""UPDATE candidato SET nome=%s, cpf=%s, email=%s, whatsapp=%s,
-                data_nascimento=%s, cidade=%s, estado=%s, curso=%s, semestre=%s,
-                ie_id=%s, disponibilidade=%s, obs=%s WHERE id=%s""",
+                data_nascimento=%s, endereco=%s, bairro=%s, cidade=%s, estado=%s,
+                curso=%s, semestre=%s, ie_id=%s, disponibilidade=%s, obs=%s WHERE id=%s""",
              (request.form['nome'].strip(),
               request.form.get('cpf') or None,
               request.form.get('email') or None,
               request.form.get('whatsapp') or None,
               request.form.get('data_nascimento') or None,
+              request.form.get('endereco') or None,
+              request.form.get('bairro') or None,
               request.form.get('cidade') or None,
               request.form.get('estado') or None,
               request.form.get('curso') or None,
