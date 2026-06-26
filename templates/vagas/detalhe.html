@@ -365,16 +365,28 @@
     }
   }
 
-  // Checagem de histórico ao selecionar candidato
+  // Ao selecionar candidato: checa histórico e abre modal (ou mostra aviso)
   sel.addEventListener('change', function() {
     aviso.classList.add('d-none');
     if (btnEnc) btnEnc.disabled = !this.value;
-    if (!this.value || !empresaId) return;
+    if (!this.value) return;
+
+    if (!empresaId) {
+      // Sem empresa vinculada: abre modal diretamente
+      abrirModal();
+      return;
+    }
+
     fetch(`/api/candidato/${this.value}/historico-empresa/${empresaId}`)
       .then(r => r.json())
       .then(data => {
-        if (!data.historico || !data.historico.length) return;
-        const nome = this.options[this.selectedIndex].dataset.nome || '';
+        if (!data.historico || !data.historico.length) {
+          // Sem histórico de rejeição: abre modal direto
+          abrirModal();
+          return;
+        }
+        // Com histórico: mostra aviso amarelo primeiro
+        const nome = sel.options[sel.selectedIndex].dataset.nome || '';
         document.getElementById('aviso-nome').textContent = nome;
         const ul = document.getElementById('aviso-lista');
         ul.innerHTML = '';
