@@ -1,4 +1,6 @@
-import os, json, psycopg2, psycopg2.extras, smtplib, calendar
+import os, io, json, psycopg2, psycopg2.extras, smtplib, calendar
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
@@ -3058,6 +3060,193 @@ def candidatura_obs(id):
     _run("UPDATE candidatura SET obs=%s, updated_at=NOW() WHERE id=%s",
          (request.form.get('obs') or None, id))
     return redirect(url_for('vaga_detalhe', id=c['vaga_id']))
+
+
+# ─── Relatórios Gerenciais ────────────────────────────────────────────────────
+
+def _xlsx_response(wb, filename):
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return Response(buf.read(),
+                    mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    headers={'Content-Disposition': f'attachment; filename="{filename}"'})
+
+
+def _xlsx_header_style():
+    fill = PatternFill('solid', start_color='1A3E6C', end_color='1A3E6C')
+    font = Font(bold=True, color='FFFFFF', name='Arial', size=10)
+    align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    thin = Side(style='thin', color='DDDDDD')
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    return fill, font, align, border
+
+
+def _xlsx_apply_header(ws, headers):
+    fill, font, align, border = _xlsx_header_style()
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.fill = fill
+        cell.font = font
+        cell.alignment = align
+        cell.border = border
+    ws.row_dimensions[1].height = 28
+
+
+def _xlsx_fmt_date(v):
+    if v is None:
+        return ''
+    if hasattr(v, 'strftime'):
+        return v.strftime('%d/%m/%Y')
+    return str(v)
+
+
+@app.route('/relatorios')
+@login_required
+def relatorios():
+    return render_template('relatorios/index.html')
+
+
+@app.route('/relatorios/contratos.xlsx')
+@login_required
+def relatorio_contratos_xlsx():
+    situacao = request.args.get('situacao', 'ativos')
+    if situacao == 'ativos':
+        rows = _q("""
+            SELECT c.id, e.nome as estagiario, emp.nome as empresa, ie.nome as ie,
+                   c.data_inicio, c.data_termino, c.carga_horaria, c.valor_bolsa,
+                   c.status, c.data_encerramento, a.nome as area
+            FROM contrato c
+            JOIN estagiario e ON e.id=c.estagiario_id
+            JOIN empresa emp ON emp.id=c.empresa_id
+            JOIN ie ON ie.id=c.ie_id
+            LEFT JOIN area_estagio a ON a.id=c.area_id
+            WHERE c.data_encerramento IS NULL
+            ORDER BY e.nome""")
+    else:
+        rows = _q("""
+            SELECT c.id, e.nome as estagiario, emp.nome as empresa, ie.nome as ie,
+                   c.data_inicio, c.data_termino, c.carga_horaria, c.valor_bolsa,
+                   c.status, c.data_encerramento, a.nome as area
+            FROM contrato c
+            JOIN estagiario e ON e.id=c.estagiario_id
+            JOIN empresa emp ON emp.id=c.empresa_id
+            JOIN ie ON ie.id=c.ie_id
+            LEFT JOIN area_estagio a ON a.id=c.area_id
+            ORDER BY c.data_inicio DESC""")
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Contratos'
+    headers = ['ID', 'Estagiário', 'Empresa', 'IE', 'Área', 'Início', 'Término',
+               'CH (h/sem)', 'Bolsa (R$)', 'Status', 'Encerrado em']
+    _xlsx_apply_header(ws, headers)
+
+    data_font = Font(name='Arial', size=10)
+    alt_fill = PatternFill('solid', start_color='F2F6FC', end_color='F2F6FC')
+    for i, r in enumerate(rows, 2):
+        vals = [r['id'], r['estagiario'], r['empresa'], r['ie'], r['area'] or '',
+                _xlsx_fmt_date(r['data_inicio']), _xlsx_fmt_date(r['data_termino']),
+                r['carga_horaria'], float(r['valor_bolsa']) if r['valor_bolsa'] else '',
+                r['status'] or '', _xlsx_fmt_date(r['data_encerramento'])]
+        for col, v in enumerate(vals, 1):
+            cell = ws.cell(row=i, column=col, value=v)
+            cell.font = data_font
+            if i % 2 == 0:
+                cell.fill = alt_fill
+
+    col_widths = [6, 30, 30, 25, 20, 13, 13, 10, 12, 14, 14]
+    for ci, w in enumerate(col_widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(ci)].width = w
+    ws.freeze_panes = 'A2'
+
+    label = 'ativos' if situacao == 'ativos' else 'todos'
+    return _xlsx_response(wb, f'contratos_{label}_{date.today()}.xlsx')
+
+
+@app.route('/relatorios/estagiarios.xlsx')
+@login_required
+def relatorio_estagiarios_xlsx():
+    rows = _q("""
+        SELECT e.id, e.nome, e.cpf, e.email, e.telefone,
+               e.cidade, e.estado, e.curso, e.semestre,
+               (SELECT COUNT(*) FROM contrato WHERE estagiario_id=e.id
+                AND data_encerramento IS NULL) contratos_ativos,
+               (SELECT COUNT(*) FROM contrato WHERE estagiario_id=e.id) total_contratos
+        FROM estagiario e ORDER BY e.nome""")
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Estagiários'
+    headers = ['ID', 'Nome', 'CPF', 'E-mail', 'Telefone', 'Cidade', 'Estado',
+               'Curso', 'Semestre', 'Contratos Ativos', 'Total Contratos']
+    _xlsx_apply_header(ws, headers)
+
+    data_font = Font(name='Arial', size=10)
+    alt_fill = PatternFill('solid', start_color='F2F6FC', end_color='F2F6FC')
+    for i, r in enumerate(rows, 2):
+        vals = [r['id'], r['nome'], r['cpf'] or '', r['email'] or '', r['telefone'] or '',
+                r['cidade'] or '', r['estado'] or '', r['curso'] or '', r['semestre'] or '',
+                r['contratos_ativos'], r['total_contratos']]
+        for col, v in enumerate(vals, 1):
+            cell = ws.cell(row=i, column=col, value=v)
+            cell.font = data_font
+            if i % 2 == 0:
+                cell.fill = alt_fill
+
+    col_widths = [6, 32, 16, 30, 16, 18, 8, 25, 10, 16, 14]
+    for ci, w in enumerate(col_widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(ci)].width = w
+    ws.freeze_panes = 'A2'
+    return _xlsx_response(wb, f'estagiarios_{date.today()}.xlsx')
+
+
+@app.route('/relatorios/indicadores.xlsx')
+@login_required
+def relatorio_indicadores_xlsx():
+    hoje = date.today()
+    d30 = hoje + timedelta(days=30)
+
+    kpis = {
+        'Contratos ativos': _q("SELECT COUNT(*) n FROM contrato WHERE data_encerramento IS NULL", one=True)['n'],
+        'Contratos vencendo 30 dias': _q("SELECT COUNT(*) n FROM contrato WHERE data_encerramento IS NULL AND data_termino BETWEEN %s AND %s", (hoje, d30), one=True)['n'],
+        'Contratos vencidos s/ TRE': _q("SELECT COUNT(*) n FROM contrato WHERE data_encerramento IS NULL AND data_termino < %s", (hoje,), one=True)['n'],
+        'Estagiários cadastrados': _q("SELECT COUNT(*) n FROM estagiario", one=True)['n'],
+        'Empresas cadastradas': _q("SELECT COUNT(*) n FROM empresa", one=True)['n'],
+        'IEs cadastradas': _q("SELECT COUNT(*) n FROM ie", one=True)['n'],
+        'Vagas abertas': _q("SELECT COUNT(*) n FROM vaga WHERE status='aberta'", one=True)['n'],
+        'Leads CRM ativos': _q("SELECT COUNT(*) n FROM crm_lead WHERE status NOT IN ('perdido','cancelado')", one=True)['n'],
+    }
+
+    funil = _q("SELECT etapa, COUNT(*) qtd FROM crm_lead WHERE status NOT IN ('perdido','cancelado') GROUP BY etapa ORDER BY etapa")
+
+    wb = openpyxl.Workbook()
+
+    # Sheet 1 — KPIs
+    ws1 = wb.active
+    ws1.title = 'KPIs'
+    _xlsx_apply_header(ws1, ['Indicador', 'Valor', 'Data de referência'])
+    data_font = Font(name='Arial', size=10)
+    bold_font = Font(name='Arial', size=10, bold=True)
+    for i, (k, v) in enumerate(kpis.items(), 2):
+        ws1.cell(row=i, column=1, value=k).font = data_font
+        ws1.cell(row=i, column=2, value=v).font = bold_font
+        ws1.cell(row=i, column=3, value=hoje.strftime('%d/%m/%Y')).font = data_font
+    ws1.column_dimensions['A'].width = 35
+    ws1.column_dimensions['B'].width = 12
+    ws1.column_dimensions['C'].width = 20
+
+    # Sheet 2 — Funil CRM
+    ws2 = wb.create_sheet('Funil CRM')
+    _xlsx_apply_header(ws2, ['Etapa', 'Quantidade'])
+    for i, r in enumerate(funil, 2):
+        ws2.cell(row=i, column=1, value=r['etapa']).font = data_font
+        ws2.cell(row=i, column=2, value=r['qtd']).font = bold_font
+    ws2.column_dimensions['A'].width = 25
+    ws2.column_dimensions['B'].width = 12
+    ws2.freeze_panes = 'A2'
+
+    return _xlsx_response(wb, f'indicadores_{hoje}.xlsx')
 
 
 init_db()

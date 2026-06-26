@@ -87,7 +87,7 @@
   </div>
   {% set ep = request.endpoint %}
   {% set sec_cad = 'estagi' in ep or 'empresa' in ep or ep in ['ies','ie_nova','ie_editar'] or 'area' in ep %}
-  {% set sec_con = ep in ['contratos','contrato_novo','contrato_editar'] or 'relatorio' in ep %}
+  {% set sec_con = ep in ['contratos','contrato_novo','contrato_editar'] or ('relatorio' in ep and ep != 'relatorios') %}
   {% set sec_adm = 'admin' in ep %}
   {% set sec_crm = 'crm' in ep %}
   {% set sec_vagas = 'vaga' in ep or 'candidat' in ep %}
@@ -159,6 +159,16 @@
       </a>
       <a href="{{ url_for('vaga_nova') }}" class="nav-link">
         <i class="bi bi-plus-circle"></i> Nova Vaga
+      </a>
+    </div>
+
+    <div class="nav-section" data-bs-toggle="collapse" data-bs-target="#mob-rel"
+         aria-expanded="{{ 'true' if ep=='relatorios' else 'false' }}" aria-controls="mob-rel">
+      Relatórios <i class="bi bi-chevron-down chev"></i>
+    </div>
+    <div class="collapse {{ 'show' if ep=='relatorios' }}" id="mob-rel">
+      <a href="{{ url_for('relatorios') }}" class="nav-link {% if ep=='relatorios' %}active{% endif %}">
+        <i class="bi bi-file-earmark-bar-graph"></i> Relatórios Gerenciais
       </a>
     </div>
 
@@ -297,6 +307,16 @@
     </a>
     <a href="{{ url_for('vaga_nova') }}" class="nav-link">
       <i class="bi bi-plus-circle"></i> Nova Vaga
+    </a>
+  </div>
+
+  <div class="nav-section" data-bs-toggle="collapse" data-bs-target="#sb-rel"
+       aria-expanded="{{ 'true' if ep=='relatorios' else 'false' }}" aria-controls="sb-rel">
+    Relatórios <i class="bi bi-chevron-down chev"></i>
+  </div>
+  <div class="collapse {{ 'show' if ep=='relatorios' }}" id="sb-rel">
+    <a href="{{ url_for('relatorios') }}" class="nav-link {% if ep=='relatorios' %}active{% endif %}">
+      <i class="bi bi-file-earmark-bar-graph"></i> Relatórios Gerenciais
     </a>
   </div>
 
