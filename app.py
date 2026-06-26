@@ -2887,14 +2887,18 @@ def vaga_detalhe(id):
                           FROM candidatura c
                           JOIN candidato ca ON ca.id = c.candidato_id
                           WHERE c.vaga_id = %s ORDER BY c.created_at""", (id,))
-    # candidatos disponíveis: sem candidatura ativa (qualquer vaga) e não já nesta vaga
+    # candidatos disponíveis: sem candidatura ativa em QUALQUER vaga
+    # e sem candidatura ativa (inscrito/em_entrevista/aprovado) NESTA vaga
+    # (permite re-encaminhar candidatos com status terminal nesta vaga)
     disponiveis = _q("""SELECT id, nome, curso, whatsapp FROM candidato
                         WHERE id NOT IN (
                             SELECT candidato_id FROM candidatura
                             WHERE status IN ('inscrito','em_entrevista')
                         )
                         AND id NOT IN (
-                            SELECT candidato_id FROM candidatura WHERE vaga_id = %s
+                            SELECT candidato_id FROM candidatura
+                            WHERE vaga_id = %s
+                            AND status IN ('inscrito','em_entrevista','aprovado')
                         )
                         ORDER BY nome""", (id,))
     return render_template('vagas/detalhe.html', vaga=vaga, candidaturas=candidaturas,
@@ -3185,12 +3189,24 @@ def candidatura_nova():
     vaga_id = request.form.get('vaga_id')
     candidato_id = request.form.get('candidato_id')
     origem = request.form.get('origem', 'vaga')
-    try:
+
+    existente = _q("""SELECT id, status FROM candidatura
+                      WHERE vaga_id=%s AND candidato_id=%s""",
+                   (vaga_id, candidato_id), one=True)
+
+    if existente:
+        if existente['status'] in ('inscrito', 'em_entrevista', 'aprovado'):
+            flash('Este candidato já está ativo nesta vaga.', 'warning')
+        else:
+            # Nova rodada: reativa a candidatura existente
+            _run("""UPDATE candidatura SET status='inscrito', obs=NULL, updated_at=NOW()
+                    WHERE id=%s""", (existente['id'],))
+            flash('Candidato reencaminhado para nova rodada!', 'success')
+    else:
         _run("INSERT INTO candidatura (vaga_id, candidato_id) VALUES (%s,%s)",
              (vaga_id, candidato_id))
         flash('Candidato inscrito na vaga!', 'success')
-    except Exception:
-        flash('Este candidato já está inscrito nesta vaga.', 'warning')
+
     if origem == 'candidato':
         return redirect(url_for('candidato_detalhe', id=candidato_id))
     return redirect(url_for('vaga_detalhe', id=vaga_id))
