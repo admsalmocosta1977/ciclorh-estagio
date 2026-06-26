@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ vaga.titulo }} — Candidatura</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  body { background: #f0f4f8; }
+  .page-wrap { max-width: 560px; margin: 0 auto; padding: 2rem 1rem 3rem; }
+  .brand-bar { text-align: center; margin-bottom: 1.5rem; }
+  .brand-bar .brand-name { font-size: 1.1rem; font-weight: 700; color: #1a3e6c; letter-spacing: .5px; }
+  .brand-bar .brand-sub { font-size: .75rem; color: #6c757d; }
+  .vaga-card { border-radius: 14px; border: none; box-shadow: 0 4px 18px rgba(0,0,0,.09); margin-bottom: 1.2rem; }
+  .vaga-titulo { font-size: 1.15rem; font-weight: 700; color: #1a3e6c; }
+  .form-card { border-radius: 14px; border: none; box-shadow: 0 4px 18px rgba(0,0,0,.09); }
+  .required-mark { color: #dc3545; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <div class="brand-bar">
+    <div class="brand-name"><i class="bi bi-briefcase-fill me-1"></i>Ciclo RH</div>
+    <div class="brand-sub">Plataforma de Estágios</div>
+  </div>
+
+  <!-- Detalhes da vaga -->
+  <div class="card vaga-card p-3 mb-3">
+    <div class="vaga-titulo mb-1">{{ vaga.titulo }}</div>
+    {% if vaga.emp_nome %}
+    <div class="text-muted small"><i class="bi bi-building me-1"></i>{{ vaga.emp_nome }}</div>
+    {% endif %}
+    {% if vaga.area_nome %}
+    <div class="text-muted small"><i class="bi bi-tags me-1"></i>{{ vaga.area_nome }}</div>
+    {% endif %}
+
+    {% if vaga.descricao or vaga.requisitos or vaga.bolsa or vaga.carga_horaria %}
+    <hr class="my-2">
+    <div style="font-size:.85rem">
+      {% if vaga.bolsa %}
+      <span class="badge bg-success me-1">Bolsa: R$ {{ '%.2f'|format(vaga.bolsa|float) }}</span>
+      {% endif %}
+      {% if vaga.carga_horaria %}
+      <span class="badge bg-light text-dark border me-1">{{ vaga.carga_horaria }}h/semana</span>
+      {% endif %}
+      {% if vaga.nivel %}
+      <span class="badge bg-light text-dark border me-1">{{ vaga.nivel|capitalize }}</span>
+      {% endif %}
+      {% if vaga.curso_desejado %}
+      <span class="badge bg-light text-dark border">{{ vaga.curso_desejado }}</span>
+      {% endif %}
+    </div>
+    {% if vaga.descricao %}
+    <p class="mt-2 mb-1 small text-muted" style="white-space:pre-wrap">{{ vaga.descricao }}</p>
+    {% endif %}
+    {% if vaga.requisitos %}
+    <p class="mb-0 small text-muted" style="white-space:pre-wrap"><strong>Requisitos:</strong> {{ vaga.requisitos }}</p>
+    {% endif %}
+    {% endif %}
+  </div>
+
+  <!-- Formulário -->
+  <div class="card form-card p-4">
+    <h5 class="fw-bold mb-1">Quero me candidatar</h5>
+    <p class="text-muted small mb-3">Preencha seus dados e entraremos em contato.</p>
+
+    {% if erro %}
+    <div class="alert alert-danger py-2 small">{{ erro }}</div>
+    {% endif %}
+
+    <form method="post">
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Nome completo <span class="required-mark">*</span></label>
+        <input type="text" name="nome" class="form-control" placeholder="Seu nome" required autofocus>
+      </div>
+      <div class="row g-2 mb-3">
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">E-mail</label>
+          <input type="email" name="email" class="form-control" placeholder="seu@email.com">
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">WhatsApp</label>
+          <input type="tel" name="whatsapp" class="form-control" placeholder="(00) 00000-0000">
+        </div>
+      </div>
+      <div class="row g-2 mb-3">
+        <div class="col-sm-8">
+          <label class="form-label fw-semibold">Curso</label>
+          <input type="text" name="curso" class="form-control" placeholder="Ex: Administração, Engenharia...">
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold">Semestre</label>
+          <input type="text" name="semestre" class="form-control" placeholder="Ex: 4º">
+        </div>
+      </div>
+      <div class="mb-4">
+        <label class="form-label fw-semibold">Por que você quer esta vaga?</label>
+        <textarea name="obs" class="form-control" rows="3"
+                  placeholder="Conte um pouco sobre você e sua motivação (opcional)"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+        <i class="bi bi-send me-2"></i>Enviar candidatura
+      </button>
+    </form>
+  </div>
+
+  <p class="text-center text-muted mt-3" style="font-size:.72rem">
+    Seus dados serão utilizados exclusivamente para este processo seletivo.
+  </p>
+</div>
+</body>
+</html>

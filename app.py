@@ -2882,6 +2882,51 @@ def vaga_detalhe(id):
                            status_vaga_cor=STATUS_VAGA_COR)
 
 
+@app.route('/vaga/<int:id>/inscricao', methods=['GET', 'POST'])
+def vaga_inscricao(id):
+    vaga = _q("""SELECT v.*, e.nome as emp_nome, a.nome as area_nome
+                 FROM vaga v
+                 LEFT JOIN empresa e ON e.id = v.empresa_id
+                 LEFT JOIN area_estagio a ON a.id = v.area_id
+                 WHERE v.id = %s AND v.status IN ('aberta','em_selecao')""", (id,), one=True)
+    if not vaga:
+        return render_template('vagas/inscricao_encerrada.html'), 404
+
+    if request.method == 'POST':
+        nome = request.form.get('nome', '').strip()
+        email = request.form.get('email', '').strip() or None
+        whatsapp = request.form.get('whatsapp', '').strip() or None
+        curso = request.form.get('curso', '').strip() or None
+        semestre = request.form.get('semestre', '').strip() or None
+        obs = request.form.get('obs', '').strip() or None
+
+        if not nome:
+            return render_template('vagas/inscricao.html', vaga=vaga, erro='Nome é obrigatório.')
+
+        cand = None
+        if email:
+            cand = _q("SELECT id FROM candidato WHERE email=%s", (email,), one=True)
+        if not cand and whatsapp:
+            cand = _q("SELECT id FROM candidato WHERE whatsapp=%s", (whatsapp,), one=True)
+
+        if cand:
+            cand_id = cand['id']
+        else:
+            cand_id = _ins("""INSERT INTO candidato (nome, email, whatsapp, curso, semestre, obs)
+                              VALUES (%s,%s,%s,%s,%s,%s)""",
+                           (nome, email, whatsapp, curso, semestre, obs))
+
+        try:
+            _run("INSERT INTO candidatura (vaga_id, candidato_id) VALUES (%s,%s)",
+                 (id, cand_id))
+        except Exception:
+            pass  # já inscrito, redireciona para sucesso normalmente
+
+        return render_template('vagas/inscricao_sucesso.html', vaga=vaga, nome=nome)
+
+    return render_template('vagas/inscricao.html', vaga=vaga, erro=None)
+
+
 @app.route('/vagas/<int:id>/editar', methods=['GET', 'POST'])
 @login_required
 def vaga_editar(id):

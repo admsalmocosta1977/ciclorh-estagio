@@ -60,6 +60,33 @@
     </div>
     {% endif %}
 
+    <!-- Link de candidatura + QR Code -->
+    {% if vaga.status in ['aberta','em_selecao'] %}
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-qr-code me-1"></i>Link de Candidatura</span>
+        <a href="{{ url_for('vaga_inscricao', id=vaga.id, _external=True) }}" target="_blank"
+           class="btn btn-xs btn-outline-primary" style="padding:2px 8px;font-size:.72rem">
+          <i class="bi bi-box-arrow-up-right"></i>
+        </a>
+      </div>
+      <div class="card-body text-center py-3">
+        <div id="qrcode" class="d-inline-block mb-2"></div>
+        <div class="d-flex gap-1 justify-content-center mt-1">
+          <button class="btn btn-sm btn-outline-secondary" id="btn-copiar-link" title="Copiar link">
+            <i class="bi bi-clipboard me-1"></i>Copiar link
+          </button>
+          <button class="btn btn-sm btn-outline-primary" id="btn-baixar-qr" title="Baixar QR Code">
+            <i class="bi bi-download me-1"></i>Baixar QR
+          </button>
+        </div>
+        <small class="text-muted d-block mt-2" style="font-size:.7rem;word-break:break-all" id="link-text">
+          {{ url_for('vaga_inscricao', id=vaga.id, _external=True) }}
+        </small>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Mudar status da vaga -->
     {% if vaga.status not in ['preenchida','cancelada'] %}
     <div class="card mb-3">
@@ -207,4 +234,41 @@
   </div>
 
 </div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+(function() {
+  const el = document.getElementById('qrcode');
+  if (!el) return;
+  const link = document.getElementById('link-text').textContent.trim();
+  const qr = new QRCode(el, {
+    text: link,
+    width: 160,
+    height: 160,
+    colorDark: '#1a3e6c',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+
+  document.getElementById('btn-copiar-link').addEventListener('click', function() {
+    navigator.clipboard.writeText(link).then(() => {
+      this.innerHTML = '<i class="bi bi-check me-1"></i>Copiado!';
+      setTimeout(() => { this.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copiar link'; }, 2000);
+    });
+  });
+
+  document.getElementById('btn-baixar-qr').addEventListener('click', function() {
+    const img = el.querySelector('img') || el.querySelector('canvas');
+    let src;
+    if (img && img.tagName === 'IMG') src = img.src;
+    else if (img && img.tagName === 'CANVAS') src = img.toDataURL('image/png');
+    if (!src) return;
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = 'qr-vaga-{{ vaga.id }}.png';
+    a.click();
+  });
+})();
+</script>
 {% endblock %}
