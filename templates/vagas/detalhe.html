@@ -150,7 +150,9 @@
           ('inscrito','Inscritos','secondary'),
           ('em_entrevista','Em entrevista','primary'),
           ('aprovado','Aprovados','success'),
-          ('reprovado','Reprovados','danger'),
+          ('reprovado','Não aprovados','danger'),
+          ('nao_compareceu_j','Não compareceu (justificou)','warning'),
+          ('nao_compareceu_nj','Não compareceu (sem justificativa)','danger'),
           ('desistiu','Desistiram','warning')
         ] %}
         {% set ns = namespace(tem_algum=false) %}
@@ -195,11 +197,20 @@
               {% if status_key in ['inscrito','em_entrevista'] %}
               <form method="post" action="{{ url_for('candidatura_status', id=c.id) }}">
                 <input type="hidden" name="status" value="aprovado">
-                <button class="btn btn-xs btn-success" style="font-size:.75rem;padding:2px 8px">Aprovar</button>
+                <button class="btn btn-xs btn-success" style="font-size:.75rem;padding:2px 8px">Aprovado</button>
               </form>
               <form method="post" action="{{ url_for('candidatura_status', id=c.id) }}">
                 <input type="hidden" name="status" value="reprovado">
-                <button class="btn btn-xs btn-outline-danger" style="font-size:.75rem;padding:2px 8px">Reprovar</button>
+                <button class="btn btn-xs btn-outline-danger" style="font-size:.75rem;padding:2px 8px">Não aprovado</button>
+              </form>
+              <form method="post" action="{{ url_for('candidatura_status', id=c.id) }}">
+                <input type="hidden" name="status" value="nao_compareceu_j">
+                <button class="btn btn-xs btn-outline-warning" style="font-size:.75rem;padding:2px 8px" title="Não compareceu — justificou">N/C justif.</button>
+              </form>
+              <form method="post" action="{{ url_for('candidatura_status', id=c.id) }}"
+                    onsubmit="return confirm('Registrar falta SEM justificativa? Na 2ª vez o candidato será excluído automaticamente.')">
+                <input type="hidden" name="status" value="nao_compareceu_nj">
+                <button class="btn btn-xs btn-danger" style="font-size:.75rem;padding:2px 8px" title="Não compareceu — sem justificativa">N/C s/ justif.</button>
               </form>
               {% endif %}
               {% if status_key == 'aprovado' and vaga.empresa_id %}

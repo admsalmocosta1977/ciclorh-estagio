@@ -2805,9 +2805,12 @@ def crm_implantacao_obs(id):
 STATUS_VAGA = ['aberta', 'em_selecao', 'preenchida', 'cancelada']
 STATUS_VAGA_COR = {'aberta': 'success', 'em_selecao': 'primary',
                    'preenchida': 'secondary', 'cancelada': 'danger'}
-STATUS_CANDIDATURA = ['inscrito', 'em_entrevista', 'aprovado', 'reprovado', 'desistiu']
+STATUS_CANDIDATURA = ['inscrito', 'em_entrevista', 'aprovado', 'reprovado',
+                      'nao_compareceu_j', 'nao_compareceu_nj', 'desistiu']
 STATUS_CANDIDATURA_COR = {'inscrito': 'secondary', 'em_entrevista': 'primary',
-                           'aprovado': 'success', 'reprovado': 'danger', 'desistiu': 'warning'}
+                           'aprovado': 'success', 'reprovado': 'danger',
+                           'nao_compareceu_j': 'warning', 'nao_compareceu_nj': 'danger',
+                           'desistiu': 'warning'}
 
 
 # ── Vagas ──────────────────────────────────────────────────────────────────────
@@ -3202,6 +3205,25 @@ def candidatura_status(id):
     c = _q("SELECT * FROM candidatura WHERE id=%s", (id,), one=True)
     if not c:
         abort(404)
+
+    # Regra: 2ª falta sem justificativa → exclusão automática do candidato
+    if novo == 'nao_compareceu_nj':
+        prev = _q("""SELECT COUNT(*) as n FROM candidatura
+                     WHERE candidato_id=%s AND status='nao_compareceu_nj' AND id != %s""",
+                  (c['candidato_id'], id), one=True)
+        _run("UPDATE candidatura SET status=%s, updated_at=NOW() WHERE id=%s", (novo, id))
+        _run("UPDATE vaga SET updated_at=NOW() WHERE id=%s", (c['vaga_id'],))
+        if prev and prev['n'] >= 1:
+            info = _q("SELECT nome FROM candidato WHERE id=%s", (c['candidato_id'],), one=True)
+            nome_cand = info['nome'] if info else f'Candidato {c["candidato_id"]}'
+            _run("DELETE FROM candidato WHERE id=%s", (c['candidato_id'],))
+            _log('excluir', 'candidato', c['candidato_id'],
+                 f'Auto-excluído por 2 faltas sem justificativa: {nome_cand}')
+            flash(f'<strong>{nome_cand}</strong> foi excluído do banco por 2 faltas sem justificativa.', 'danger')
+        else:
+            flash('Falta registrada. Na próxima falta sem justificativa o candidato será excluído automaticamente.', 'warning')
+        return redirect(url_for('vaga_detalhe', id=c['vaga_id']))
+
     _run("UPDATE candidatura SET status=%s, updated_at=NOW() WHERE id=%s", (novo, id))
     _run("UPDATE vaga SET updated_at=NOW() WHERE id=%s", (c['vaga_id'],))
     if novo == 'aprovado':
@@ -3211,7 +3233,7 @@ def candidatura_status(id):
             link += f'?empresa_id={vaga["empresa_id"]}'
         flash(f'Candidato aprovado! <a href="{link}" class="alert-link">Criar contrato →</a>', 'success')
     else:
-        flash(f'Status atualizado para <strong>{novo}</strong>.', 'success')
+        flash('Status atualizado.', 'info')
     return redirect(url_for('vaga_detalhe', id=c['vaga_id']))
 
 
