@@ -348,6 +348,12 @@
       <strong>Aviso amarelo:</strong> Se o candidato já participou de uma seleção anterior na mesma empresa e foi reprovado, o sistema exibirá um aviso antes de abrir o modal. Você pode confirmar mesmo assim ou cancelar.
     </div>
 
+    <h3>Nova rodada de entrevistas</h3>
+    <p>Se um candidato já participou dessa vaga mas teve um resultado terminal (não aprovado, não compareceu, desistiu), ele <strong>voltará a aparecer no dropdown</strong> para ser encaminhado novamente. O sistema reconhece a situação e <strong>reativa a candidatura existente</strong> em vez de criar uma duplicata — o histórico da rodada anterior é preservado.</p>
+    <div class="info">
+      <strong>Exemplo:</strong> Um candidato não compareceu à primeira entrevista (justificou). Após nova tentativa de agendamento, basta selecioná-lo novamente no dropdown da mesma vaga — ele aparecerá disponível e será reencaminhado para nova rodada.
+    </div>
+
     <h3>A mensagem do WhatsApp</h3>
     <p>A mensagem é montada automaticamente com as informações da vaga e da empresa:</p>
     <ul>
@@ -392,6 +398,14 @@
       <div class="flow-step">Não aprovado ❌</div>
       <div class="flow-arrow">ou</div>
       <div class="flow-step">Não compareceu ⚠️</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Nova rodada 🔄</div>
+    </div>
+
+    <h3>Nova rodada</h3>
+    <p>Após registrar um resultado terminal (não aprovado, não compareceu), o candidato pode ser reencaminhado para a mesma vaga quantas vezes for necessário. Basta selecioná-lo novamente no card <strong>"Encaminhar Candidato"</strong> — o sistema reativa a candidatura automaticamente para uma nova rodada, preservando o histórico anterior.</p>
+    <div class="tip">
+      <strong>Exceção:</strong> Candidatos <strong>aprovados</strong> não podem ser reencaminhados para a mesma vaga. Para eles, o próximo passo é a criação do contrato.
     </div>
   </div>
 
@@ -497,6 +511,10 @@
       <tr>
         <td>2ª falta sem justificativa</td>
         <td>Candidato é excluído automaticamente do banco</td>
+      </tr>
+      <tr>
+        <td>Candidato reencaminhado para a mesma vaga</td>
+        <td>Candidatura anterior é reativada (nova rodada), sem criar duplicata</td>
       </tr>
       <tr>
         <td>Convênio de IE vencido</td>
