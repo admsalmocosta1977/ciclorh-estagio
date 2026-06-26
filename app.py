@@ -2869,29 +2869,24 @@ def vaga_detalhe(id):
                           FROM candidatura c
                           JOIN candidato ca ON ca.id = c.candidato_id
                           WHERE c.vaga_id = %s ORDER BY c.created_at""", (id,))
-    # candidatos disponíveis que ainda não se candidataram
-    inscritos_ids = [c['cand_id'] for c in candidaturas]
-    if inscritos_ids:
-        disponiveis = _q("""SELECT id, nome, curso, whatsapp FROM candidato
-                            WHERE id NOT IN %s ORDER BY nome""", (tuple(inscritos_ids),))
-    else:
-        disponiveis = _q("SELECT id, nome, curso, whatsapp FROM candidato ORDER BY nome")
+    # candidatos disponíveis: sem candidatura ativa (qualquer vaga) e não já nesta vaga
+    disponiveis = _q("""SELECT id, nome, curso, whatsapp FROM candidato
+                        WHERE id NOT IN (
+                            SELECT candidato_id FROM candidatura
+                            WHERE status IN ('inscrito','em_entrevista')
+                        )
+                        AND id NOT IN (
+                            SELECT candidato_id FROM candidatura WHERE vaga_id = %s
+                        )
+                        ORDER BY nome""", (id,))
     return render_template('vagas/detalhe.html', vaga=vaga, candidaturas=candidaturas,
                            disponiveis=disponiveis,
                            status_cor=STATUS_CANDIDATURA_COR,
                            status_vaga_cor=STATUS_VAGA_COR)
 
 
-@app.route('/vaga/<int:id>/inscricao', methods=['GET', 'POST'])
-def vaga_inscricao(id):
-    vaga = _q("""SELECT v.*, e.nome as emp_nome, a.nome as area_nome
-                 FROM vaga v
-                 LEFT JOIN empresa e ON e.id = v.empresa_id
-                 LEFT JOIN area_estagio a ON a.id = v.area_id
-                 WHERE v.id = %s AND v.status IN ('aberta','em_selecao')""", (id,), one=True)
-    if not vaga:
-        return render_template('vagas/inscricao_encerrada.html'), 404
-
+@app.route('/candidato/cadastro', methods=['GET', 'POST'])
+def candidato_cadastro_publico():
     if request.method == 'POST':
         nome = request.form.get('nome', '').strip()
         email = request.form.get('email', '').strip() or None
@@ -2901,7 +2896,7 @@ def vaga_inscricao(id):
         obs = request.form.get('obs', '').strip() or None
 
         if not nome:
-            return render_template('vagas/inscricao.html', vaga=vaga, erro='Nome é obrigatório.')
+            return render_template('candidatos/cadastro_publico.html', erro='Nome é obrigatório.')
 
         cand = None
         if email:
@@ -2909,22 +2904,27 @@ def vaga_inscricao(id):
         if not cand and whatsapp:
             cand = _q("SELECT id FROM candidato WHERE whatsapp=%s", (whatsapp,), one=True)
 
-        if cand:
-            cand_id = cand['id']
-        else:
-            cand_id = _ins("""INSERT INTO candidato (nome, email, whatsapp, curso, semestre, obs)
-                              VALUES (%s,%s,%s,%s,%s,%s)""",
-                           (nome, email, whatsapp, curso, semestre, obs))
+        if not cand:
+            _ins("""INSERT INTO candidato (nome, email, whatsapp, curso, semestre, obs)
+                    VALUES (%s,%s,%s,%s,%s,%s)""",
+                 (nome, email, whatsapp, curso, semestre, obs))
 
-        try:
-            _run("INSERT INTO candidatura (vaga_id, candidato_id) VALUES (%s,%s)",
-                 (id, cand_id))
-        except Exception:
-            pass  # já inscrito, redireciona para sucesso normalmente
+        return render_template('candidatos/cadastro_sucesso.html', nome=nome)
 
-        return render_template('vagas/inscricao_sucesso.html', vaga=vaga, nome=nome)
+    return render_template('candidatos/cadastro_publico.html', erro=None)
 
-    return render_template('vagas/inscricao.html', vaga=vaga, erro=None)
+
+@app.route('/api/candidato/<int:cand_id>/historico-empresa/<int:empresa_id>')
+@login_required
+def api_candidato_historico_empresa(cand_id, empresa_id):
+    hist = _q("""SELECT ca.status, v.titulo, ca.created_at
+                 FROM candidatura ca
+                 JOIN vaga v ON v.id = ca.vaga_id
+                 WHERE ca.candidato_id = %s AND v.empresa_id = %s
+                 AND ca.status = 'reprovado'
+                 ORDER BY ca.created_at DESC""", (cand_id, empresa_id))
+    return jsonify({'historico': [{'titulo': r['titulo'],
+                                   'data': fmt_date(r['created_at'])} for r in hist]})
 
 
 @app.route('/vagas/<int:id>/editar', methods=['GET', 'POST'])

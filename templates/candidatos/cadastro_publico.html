@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cadastro de Candidato — Ciclo RH</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  body { background: #f0f4f8; }
+  .page-wrap { max-width: 560px; margin: 0 auto; padding: 2rem 1rem 3rem; }
+  .brand-bar { text-align: center; margin-bottom: 1.8rem; }
+  .brand-icon { width: 64px; height: 64px; border-radius: 16px; background: #1a3e6c;
+                display: flex; align-items: center; justify-content: center; margin: 0 auto .8rem; }
+  .brand-name { font-size: 1.2rem; font-weight: 700; color: #1a3e6c; }
+  .brand-sub  { font-size: .8rem; color: #6c757d; }
+  .form-card  { border-radius: 16px; border: none; box-shadow: 0 6px 24px rgba(0,0,0,.10); }
+  .required-mark { color: #dc3545; }
+  .section-title { font-size: .72rem; text-transform: uppercase; letter-spacing: .8px;
+                   color: #6c757d; font-weight: 600; margin-bottom: .6rem; margin-top: 1.2rem; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <div class="brand-bar">
+    <div class="brand-icon">
+      <i class="bi bi-person-badge text-white" style="font-size:1.8rem"></i>
+    </div>
+    <div class="brand-name">Ciclo RH</div>
+    <div class="brand-sub">Plataforma de Estágios — Cadastre-se no banco de talentos</div>
+  </div>
+
+  <div class="card form-card p-4">
+    <h5 class="fw-bold mb-1">Cadastro de Candidato</h5>
+    <p class="text-muted small mb-3">
+      Preencha seus dados para entrar no banco de talentos. Nossa equipe entrará em contato quando houver uma oportunidade compatível com o seu perfil.
+    </p>
+
+    {% if erro %}
+    <div class="alert alert-danger py-2 small">{{ erro }}</div>
+    {% endif %}
+
+    <form method="post">
+      <div class="section-title">Identificação</div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Nome completo <span class="required-mark">*</span></label>
+        <input type="text" name="nome" class="form-control" placeholder="Seu nome completo" required autofocus>
+      </div>
+      <div class="row g-2 mb-3">
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">E-mail</label>
+          <input type="email" name="email" class="form-control" placeholder="seu@email.com">
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">WhatsApp</label>
+          <input type="tel" name="whatsapp" class="form-control" placeholder="(00) 00000-0000">
+        </div>
+      </div>
+
+      <div class="section-title">Formação acadêmica</div>
+      <div class="row g-2 mb-3">
+        <div class="col-sm-8">
+          <label class="form-label fw-semibold">Curso</label>
+          <input type="text" name="curso" class="form-control" placeholder="Ex: Administração, Engenharia Civil...">
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold">Semestre</label>
+          <input type="text" name="semestre" class="form-control" placeholder="Ex: 4º">
+        </div>
+      </div>
+
+      <div class="section-title">Sobre você</div>
+      <div class="mb-4">
+        <label class="form-label fw-semibold">Apresentação / Observações</label>
+        <textarea name="obs" class="form-control" rows="3"
+                  placeholder="Conte um pouco sobre seus objetivos profissionais, habilidades ou áreas de interesse (opcional)"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+        <i class="bi bi-send me-2"></i>Enviar cadastro
+      </button>
+    </form>
+  </div>
+
+  <p class="text-center text-muted mt-3" style="font-size:.72rem">
+    Seus dados serão utilizados exclusivamente para fins de seleção de estágio.
+  </p>
+</div>
+</body>
+</html>

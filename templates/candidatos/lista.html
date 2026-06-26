@@ -5,12 +5,41 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h4 class="fw-bold mb-0"><i class="bi bi-people me-2"></i>Banco de Candidatos</h4>
   <div class="d-flex gap-2">
-    <a href="{{ url_for('vagas_lista') }}" class="btn btn-sm btn-outline-secondary">
-      <i class="bi bi-briefcase me-1"></i>Vagas
-    </a>
+    <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalQR"
+            title="Link de cadastro para divulgação">
+      <i class="bi bi-qr-code me-1"></i>Link de Cadastro
+    </button>
     <a href="{{ url_for('candidato_novo') }}" class="btn btn-sm btn-primary">
       <i class="bi bi-plus-lg me-1"></i>Novo Candidato
     </a>
+  </div>
+</div>
+
+<!-- Modal QR Code -->
+<div class="modal fade" id="modalQR" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-qr-code me-2"></i>Link de Cadastro de Candidatos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <p class="text-muted small mb-3">
+          Compartilhe este QR Code nas suas mídias. Ao escanear, o candidato preenche o formulário de cadastro e entra automaticamente no banco de talentos.
+        </p>
+        <div id="qr-candidatos" class="d-inline-block mb-3"></div>
+        <div class="input-group input-group-sm mb-3" style="max-width:360px;margin:0 auto">
+          <input type="text" id="link-cadastro" class="form-control" readonly
+                 value="{{ url_for('candidato_cadastro_publico', _external=True) }}">
+          <button class="btn btn-outline-secondary" id="btn-copiar" type="button">
+            <i class="bi bi-clipboard"></i>
+          </button>
+        </div>
+        <button class="btn btn-outline-primary btn-sm" id="btn-baixar-qr">
+          <i class="bi bi-download me-1"></i>Baixar QR Code (PNG)
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -74,4 +103,32 @@
     </table>
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+document.getElementById('modalQR').addEventListener('shown.bs.modal', function() {
+  const el = document.getElementById('qr-candidatos');
+  if (el.children.length) return;
+  const link = document.getElementById('link-cadastro').value;
+  new QRCode(el, {
+    text: link, width: 180, height: 180,
+    colorDark: '#1a3e6c', colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M
+  });
+});
+document.getElementById('btn-copiar').addEventListener('click', function() {
+  navigator.clipboard.writeText(document.getElementById('link-cadastro').value).then(() => {
+    this.innerHTML = '<i class="bi bi-check"></i>';
+    setTimeout(() => { this.innerHTML = '<i class="bi bi-clipboard"></i>'; }, 2000);
+  });
+});
+document.getElementById('btn-baixar-qr').addEventListener('click', function() {
+  const el = document.getElementById('qr-candidatos');
+  const img = el.querySelector('img') || el.querySelector('canvas');
+  if (!img) return;
+  const src = img.tagName === 'IMG' ? img.src : img.toDataURL('image/png');
+  const a = document.createElement('a'); a.href = src; a.download = 'qr-cadastro-candidatos.png'; a.click();
+});
+</script>
 {% endblock %}
