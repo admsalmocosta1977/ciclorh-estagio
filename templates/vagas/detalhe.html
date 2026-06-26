@@ -104,8 +104,7 @@
               </option>
               {% endfor %}
             </select>
-            <button type="button" class="btn btn-sm btn-primary flex-shrink-0" id="btn-encaminhar"
-                    data-bs-toggle="modal" data-bs-target="#modalWhatsApp">
+            <button type="button" class="btn btn-sm btn-primary flex-shrink-0" id="btn-encaminhar">
               <i class="bi bi-plus"></i>
             </button>
           </div>
@@ -116,8 +115,7 @@
             <strong>{{ vaga.emp_nome or 'esta empresa' }}</strong>:
             <ul id="aviso-lista" class="mb-2 mt-1 ps-3" style="font-size:.8rem"></ul>
             <div class="d-flex gap-2">
-              <button type="button" class="btn btn-warning btn-sm fw-semibold"
-                      data-bs-toggle="modal" data-bs-target="#modalWhatsApp">
+              <button type="button" class="btn btn-warning btn-sm fw-semibold" id="btn-confirmar-aviso">
                 <i class="bi bi-check-lg me-1"></i>Confirmar mesmo assim
               </button>
               <button type="button" id="btn-cancelar-aviso" class="btn btn-outline-secondary btn-sm">
@@ -264,11 +262,15 @@
         <label class="form-label fw-semibold">Mensagem para enviar via WhatsApp</label>
         <textarea id="msg-whatsapp" class="form-control font-monospace" rows="12"
                   style="font-size:.84rem;line-height:1.6"></textarea>
-        <div class="d-flex gap-2 mt-2">
+        <div class="d-flex flex-wrap gap-2 mt-2 align-items-center">
           <button type="button" id="btn-copiar-msg" class="btn btn-sm btn-outline-success">
             <i class="bi bi-clipboard me-1"></i>Copiar mensagem
           </button>
-          <small class="text-muted my-auto">Cole e envie pelo WhatsApp do candidato.</small>
+          <a id="btn-abrir-whatsapp" href="#" target="_blank"
+             class="btn btn-sm btn-success d-none">
+            <i class="bi bi-whatsapp me-1"></i>Abrir no WhatsApp
+          </a>
+          <small class="text-muted my-auto" id="hint-whatsapp">Cole e envie pelo WhatsApp do candidato.</small>
         </div>
       </div>
       <div class="modal-footer">
@@ -287,41 +289,80 @@
 {% block scripts %}
 <script>
 (function() {
-  const sel       = document.getElementById('sel-candidato');
-  const aviso     = document.getElementById('aviso-historico');
-  const btnEnc    = document.getElementById('btn-encaminhar');
-  const btnCancel = document.getElementById('btn-cancelar-aviso');
-  const form      = document.getElementById('form-encaminhar');
+  const sel            = document.getElementById('sel-candidato');
+  const aviso          = document.getElementById('aviso-historico');
+  const btnEnc         = document.getElementById('btn-encaminhar');
+  const btnCancelAviso = document.getElementById('btn-cancelar-aviso');
+  const btnConfAviso   = document.getElementById('btn-confirmar-aviso');
+  const form           = document.getElementById('form-encaminhar');
   if (!sel) return;
 
   const empresaId = {{ vaga.empresa_id or 'null' }};
 
-  // Dados para montar a mensagem
-  const bairro     = {{ ('"' + vaga.emp_bairro + '"') if vaga.emp_bairro else 'null' }};
-  const cidade     = {{ ('"' + vaga.emp_cidade + '"') if vaga.emp_cidade else 'null' }};
-  const bolsa      = {{ ('"R$ ' + '%.2f'|format(vaga.bolsa|float) + '"') if vaga.bolsa else 'null' }};
-  const beneficios = {{ ('"' + vaga.beneficios + '"') if vaga.beneficios else 'null' }};
-  const empNome    = {{ ('"' + vaga.emp_nome + '"') if vaga.emp_nome else 'null' }};
+  // Dados da vaga para a mensagem
+  const bairro     = {{ ('`' + vaga.emp_bairro|replace('`','\\`') + '`') if vaga.emp_bairro else 'null' }};
+  const cidade     = {{ ('`' + vaga.emp_cidade|replace('`','\\`') + '`') if vaga.emp_cidade else 'null' }};
+  const bolsa      = {{ ('`R$ ' + '%.2f'|format(vaga.bolsa|float) + '`') if vaga.bolsa else 'null' }};
+  const beneficios = {{ ('`' + vaga.beneficios|replace('`','\\`') + '`') if vaga.beneficios else 'null' }};
+  const empNome    = {{ ('`' + vaga.emp_nome|replace('`','\\`') + '`') if vaga.emp_nome else 'null' }};
+
+  let modalBS = null;
+
+  function getModal() {
+    if (!modalBS) modalBS = new bootstrap.Modal(document.getElementById('modalWhatsApp'));
+    return modalBS;
+  }
 
   function montarMensagem(candNome, data, hora) {
     const dataFmt = data ? new Date(data + 'T12:00').toLocaleDateString('pt-BR') : '___/___/______';
     const horaFmt = hora || '__:__';
-    return `Olá${candNome ? ', ' + candNome.split(' ')[0] : ''}! Você foi selecionado(a) para participar de um processo seletivo de estágio.
+    const linhas = [
+      `Olá${candNome ? ', ' + candNome.split(' ')[0] : ''}! Você foi selecionado(a) para participar de um processo seletivo de vaga de estágio.`,
+      '',
+      empNome    ? `🏢 Empresa: ${empNome}`         : null,
+      bairro     ? `📍 Bairro: ${bairro}`            : null,
+      cidade     ? `🏙️ Cidade: ${cidade}`            : null,
+      '',
+      `💰 Bolsa auxílio: ${bolsa || '—'}`,
+      `🎁 Benefícios: ${beneficios || '—'}`,
+      '',
+      `📅 Data da seleção: ${dataFmt}`,
+      `🕐 Horário: ${horaFmt}`,
+      '',
+      'Por favor, confirme sua presença respondendo esta mensagem.',
+      '',
+      'Atenciosamente,\nCiclo RH'
+    ].filter(l => l !== null);
+    return linhas.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
 
-${empNome ? 'Empresa: ' + empNome : ''}
-${bairro  ? 'Bairro: '  + bairro  : 'Bairro: —'}
-${cidade  ? 'Cidade: '  + cidade  : 'Cidade: —'}
+  function abrirModal() {
+    const opt      = sel.options[sel.selectedIndex];
+    const candNome = opt ? (opt.dataset.nome || '') : '';
+    const whatsapp = opt ? (opt.dataset.whatsapp || '') : '';
+    const data     = document.getElementById('inp-data-selecao').value;
+    const hora     = document.getElementById('inp-horario').value;
+    const msg      = montarMensagem(candNome, data, hora);
 
-💰 Bolsa auxílio: ${bolsa || '—'}
-🎁 Benefícios: ${beneficios || '—'}
+    document.getElementById('modal-cand-nome').textContent = candNome || '—';
+    document.getElementById('msg-whatsapp').value = msg;
+    atualizarBtnWA(whatsapp, msg);
+    getModal().show();
+  }
 
-📅 Data da seleção: ${dataFmt}
-🕐 Horário: ${horaFmt}
-
-Por favor, confirme sua presença respondendo esta mensagem.
-
-Atenciosamente,
-Ciclo RH`.replace(/\n{3,}/g, '\n\n').trim();
+  function atualizarBtnWA(whatsapp, msg) {
+    const btnWA   = document.getElementById('btn-abrir-whatsapp');
+    const hintWA  = document.getElementById('hint-whatsapp');
+    const num     = (whatsapp || '').replace(/\D/g, '');
+    if (num.length >= 8) {
+      const url = `https://wa.me/55${num}?text=${encodeURIComponent(msg)}`;
+      btnWA.href = url;
+      btnWA.classList.remove('d-none');
+      hintWA.classList.add('d-none');
+    } else {
+      btnWA.classList.add('d-none');
+      hintWA.classList.remove('d-none');
+    }
   }
 
   // Checagem de histórico ao selecionar candidato
@@ -347,40 +388,50 @@ Ciclo RH`.replace(/\n{3,}/g, '\n\n').trim();
       });
   });
 
-  if (btnCancel) {
-    btnCancel.addEventListener('click', function() {
+  // Botão "+" — abre modal somente se candidato selecionado
+  if (btnEnc) {
+    btnEnc.addEventListener('click', function() {
+      if (!sel.value) { sel.focus(); return; }
+      abrirModal();
+    });
+  }
+
+  // "Confirmar mesmo assim" no aviso de histórico
+  if (btnConfAviso) {
+    btnConfAviso.addEventListener('click', function() {
+      if (!sel.value) return;
+      abrirModal();
+    });
+  }
+
+  if (btnCancelAviso) {
+    btnCancelAviso.addEventListener('click', function() {
       aviso.classList.add('d-none');
       sel.value = '';
       if (btnEnc) btnEnc.disabled = false;
     });
   }
 
-  // Preencher modal ao abrir
-  document.getElementById('modalWhatsApp').addEventListener('show.bs.modal', function() {
-    if (!sel.value) {
-      // Não abrir sem candidato selecionado
-      const modalEl = bootstrap.Modal.getInstance(this) || new bootstrap.Modal(this);
-      modalEl.hide();
-      return;
-    }
-    const opt      = sel.options[sel.selectedIndex];
-    const candNome = opt.dataset.nome || '';
-    document.getElementById('modal-cand-nome').textContent = candNome;
-    const data = document.getElementById('inp-data-selecao').value;
-    const hora = document.getElementById('inp-horario').value;
-    document.getElementById('msg-whatsapp').value = montarMensagem(candNome, data, hora);
-  });
-
-  // Atualizar mensagem ao mudar data/hora
+  // Atualizar mensagem ao mudar data/hora dentro do modal
   function atualizarMsg() {
     const opt      = sel.options[sel.selectedIndex];
     const candNome = opt ? (opt.dataset.nome || '') : '';
+    const whatsapp = opt ? (opt.dataset.whatsapp || '') : '';
     const data     = document.getElementById('inp-data-selecao').value;
     const hora     = document.getElementById('inp-horario').value;
-    document.getElementById('msg-whatsapp').value = montarMensagem(candNome, data, hora);
+    const msg      = montarMensagem(candNome, data, hora);
+    document.getElementById('msg-whatsapp').value = msg;
+    atualizarBtnWA(whatsapp, msg);
   }
   document.getElementById('inp-data-selecao').addEventListener('change', atualizarMsg);
   document.getElementById('inp-horario').addEventListener('change', atualizarMsg);
+
+  // Atualizar link WA ao editar textarea manualmente
+  document.getElementById('msg-whatsapp').addEventListener('input', function() {
+    const opt      = sel.options[sel.selectedIndex];
+    const whatsapp = opt ? (opt.dataset.whatsapp || '') : '';
+    atualizarBtnWA(whatsapp, this.value);
+  });
 
   // Copiar mensagem
   document.getElementById('btn-copiar-msg').addEventListener('click', function() {
@@ -391,26 +442,23 @@ Ciclo RH`.replace(/\n{3,}/g, '\n\n').trim();
     });
   });
 
-  // Cancelar: limpa seleção
-  document.getElementById('btn-cancelar-modal').addEventListener('click', function() {
+  // Cancelar/fechar modal: limpa seleção
+  function limparModal() {
     sel.value = '';
     aviso.classList.add('d-none');
     if (btnEnc) btnEnc.disabled = false;
-  });
-  document.getElementById('btn-fechar-modal').addEventListener('click', function() {
-    sel.value = '';
-    aviso.classList.add('d-none');
-    if (btnEnc) btnEnc.disabled = false;
-  });
+  }
+  document.getElementById('btn-cancelar-modal').addEventListener('click', limparModal);
+  document.getElementById('btn-fechar-modal').addEventListener('click', limparModal);
 
-  // Confirmar: submete o form
+  // Confirmar encaminhamento
   document.getElementById('btn-confirmar-encaminhar').addEventListener('click', function() {
     if (!sel.value) return;
     if (btnEnc) btnEnc.disabled = false;
     form.submit();
   });
 
-  // Inicializa botão encaminhar desabilitado se sem seleção
+  // Estado inicial
   if (btnEnc) btnEnc.disabled = !sel.value;
 })();
 </script>
