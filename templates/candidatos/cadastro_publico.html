@@ -71,10 +71,46 @@
       </div>
 
       <div class="section-title">Sobre você</div>
-      <div class="mb-4">
+      <div class="mb-3">
         <label class="form-label fw-semibold">Apresentação / Observações</label>
         <textarea name="obs" class="form-control" rows="3"
-                  placeholder="Conte um pouco sobre seus objetivos profissionais, habilidades ou áreas de interesse (opcional)"></textarea>
+                  placeholder="Objetivos profissionais, habilidades ou áreas de interesse (opcional)"></textarea>
+      </div>
+
+      <div class="section-title">Experiência profissional</div>
+      <div class="mb-3">
+        <label class="fw-semibold form-label">Já trabalhou anteriormente?</label>
+        <div class="d-flex gap-3 mb-2">
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="ja_trabalhou" id="exp_nao" value="nao" checked>
+            <label class="form-check-label" for="exp_nao">Não</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="ja_trabalhou" id="exp_sim" value="sim">
+            <label class="form-check-label" for="exp_sim">Sim</label>
+          </div>
+        </div>
+        <div id="bloco-experiencias" style="display:none">
+          <div id="lista-exp">
+            <div class="exp-row border rounded p-2 mb-2 bg-light">
+              <div class="mb-2">
+                <input type="text" name="exp_empresa[]" class="form-control form-control-sm" placeholder="Empresa">
+              </div>
+              <div class="mb-2">
+                <input type="text" name="exp_periodo[]" class="form-control form-control-sm" placeholder="Período (ex: jan/2022 – dez/2023)">
+              </div>
+              <div class="d-flex gap-2">
+                <input type="text" name="exp_funcao[]" class="form-control form-control-sm" placeholder="Cargo / resumo das atividades">
+                <button type="button" class="btn btn-sm btn-outline-danger remover-exp flex-shrink-0">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-add-exp">
+            <i class="bi bi-plus me-1"></i>Adicionar outra experiência
+          </button>
+        </div>
       </div>
 
       <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
@@ -87,5 +123,40 @@
     Seus dados serão utilizados exclusivamente para fins de seleção de estágio.
   </p>
 </div>
+<script>
+const expTpl = `
+<div class="exp-row border rounded p-2 mb-2 bg-light">
+  <div class="mb-2"><input type="text" name="exp_empresa[]" class="form-control form-control-sm" placeholder="Empresa"></div>
+  <div class="mb-2"><input type="text" name="exp_periodo[]" class="form-control form-control-sm" placeholder="Período (ex: jan/2022 – dez/2023)"></div>
+  <div class="d-flex gap-2">
+    <input type="text" name="exp_funcao[]" class="form-control form-control-sm" placeholder="Cargo / resumo das atividades">
+    <button type="button" class="btn btn-sm btn-outline-danger remover-exp flex-shrink-0"><i class="bi bi-x-lg"></i></button>
+  </div>
+</div>`;
+
+document.querySelectorAll('input[name="ja_trabalhou"]').forEach(r => {
+  r.addEventListener('change', function() {
+    document.getElementById('bloco-experiencias').style.display = this.value === 'sim' ? '' : 'none';
+  });
+});
+
+document.getElementById('btn-add-exp').addEventListener('click', function() {
+  const div = document.createElement('div');
+  div.innerHTML = expTpl.trim();
+  const row = div.firstChild;
+  row.querySelector('.remover-exp').addEventListener('click', () => removeExp(row));
+  document.getElementById('lista-exp').appendChild(row);
+});
+
+function removeExp(row) {
+  const lista = document.getElementById('lista-exp');
+  if (lista.querySelectorAll('.exp-row').length > 1) row.remove();
+  else row.querySelectorAll('input').forEach(i => i.value = '');
+}
+
+document.querySelectorAll('.remover-exp').forEach(btn => {
+  btn.addEventListener('click', function() { removeExp(this.closest('.exp-row')); });
+});
+</script>
 </body>
 </html>

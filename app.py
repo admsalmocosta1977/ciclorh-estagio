@@ -423,6 +423,15 @@ def init_db():
             UNIQUE(vaga_id, candidato_id)
         )""")
         cur.execute("""
+        CREATE TABLE IF NOT EXISTS candidato_experiencia (
+            id SERIAL PRIMARY KEY,
+            candidato_id INTEGER NOT NULL REFERENCES candidato(id) ON DELETE CASCADE,
+            empresa TEXT NOT NULL,
+            periodo TEXT,
+            funcao TEXT,
+            ordem INTEGER DEFAULT 0
+        )""")
+        cur.execute("""
         CREATE TABLE IF NOT EXISTS config (
             chave TEXT PRIMARY KEY,
             valor TEXT
@@ -2905,9 +2914,11 @@ def candidato_cadastro_publico():
             cand = _q("SELECT id FROM candidato WHERE whatsapp=%s", (whatsapp,), one=True)
 
         if not cand:
-            _ins("""INSERT INTO candidato (nome, email, whatsapp, curso, semestre, obs)
-                    VALUES (%s,%s,%s,%s,%s,%s)""",
-                 (nome, email, whatsapp, curso, semestre, obs))
+            cand_id = _ins("""INSERT INTO candidato (nome, email, whatsapp, curso, semestre, obs)
+                              VALUES (%s,%s,%s,%s,%s,%s)""",
+                           (nome, email, whatsapp, curso, semestre, obs))
+            if request.form.get('ja_trabalhou') == 'sim':
+                _save_experiencias(cand_id)
 
         return render_template('candidatos/cadastro_sucesso.html', nome=nome)
 
@@ -2991,11 +3002,26 @@ def candidatos_lista():
     return render_template('candidatos/lista.html', candidatos=candidatos, busca=busca)
 
 
+def _save_experiencias(candidato_id):
+    _run("DELETE FROM candidato_experiencia WHERE candidato_id=%s", (candidato_id,))
+    empresas  = request.form.getlist('exp_empresa[]')
+    periodos  = request.form.getlist('exp_periodo[]')
+    funcoes   = request.form.getlist('exp_funcao[]')
+    for i, emp in enumerate(empresas):
+        if emp.strip():
+            _run("""INSERT INTO candidato_experiencia (candidato_id, empresa, periodo, funcao, ordem)
+                    VALUES (%s,%s,%s,%s,%s)""",
+                 (candidato_id, emp.strip(),
+                  periodos[i].strip() if i < len(periodos) else '',
+                  funcoes[i].strip()  if i < len(funcoes)  else '',
+                  i))
+
+
 @app.route('/candidatos/novo', methods=['GET', 'POST'])
 @login_required
 def candidato_novo():
     if request.method == 'POST':
-        _run("""INSERT INTO candidato (nome, cpf, email, whatsapp, data_nascimento,
+        cand_id = _ins("""INSERT INTO candidato (nome, cpf, email, whatsapp, data_nascimento,
                 cidade, estado, curso, semestre, ie_id, disponibilidade, obs)
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['nome'].strip(),
@@ -3010,10 +3036,12 @@ def candidato_novo():
               request.form.get('ie_id') or None,
               request.form.get('disponibilidade') or None,
               request.form.get('obs') or None))
+        if request.form.get('ja_trabalhou') == 'sim':
+            _save_experiencias(cand_id)
         flash('Candidato cadastrado!', 'success')
         return redirect(url_for('candidatos_lista'))
     ies = _q("SELECT id, nome FROM ie ORDER BY nome")
-    return render_template('candidatos/form.html', candidato=None, ies=ies)
+    return render_template('candidatos/form.html', candidato=None, experiencias=[], ies=ies)
 
 
 @app.route('/candidatos/<int:id>')
@@ -3034,8 +3062,10 @@ def candidato_detalhe(id):
                                AND v.id NOT IN (
                                    SELECT vaga_id FROM candidatura WHERE candidato_id = %s
                                ) ORDER BY v.titulo""", (id,))
+    experiencias = _q("SELECT * FROM candidato_experiencia WHERE candidato_id=%s ORDER BY ordem", (id,))
     return render_template('candidatos/detalhe.html', candidato=c, candidaturas=candidaturas,
                            vagas_disponiveis=vagas_disponiveis,
+                           experiencias=experiencias,
                            status_cor=STATUS_CANDIDATURA_COR)
 
 
@@ -3062,10 +3092,15 @@ def candidato_editar(id):
               request.form.get('disponibilidade') or None,
               request.form.get('obs') or None,
               id))
+        if request.form.get('ja_trabalhou') == 'sim':
+            _save_experiencias(id)
+        else:
+            _run("DELETE FROM candidato_experiencia WHERE candidato_id=%s", (id,))
         flash('Candidato atualizado!', 'success')
         return redirect(url_for('candidato_detalhe', id=id))
     ies = _q("SELECT id, nome FROM ie ORDER BY nome")
-    return render_template('candidatos/form.html', candidato=c, ies=ies)
+    experiencias = _q("SELECT * FROM candidato_experiencia WHERE candidato_id=%s ORDER BY ordem", (id,))
+    return render_template('candidatos/form.html', candidato=c, experiencias=experiencias, ies=ies)
 
 
 # ── Candidaturas ───────────────────────────────────────────────────────────────

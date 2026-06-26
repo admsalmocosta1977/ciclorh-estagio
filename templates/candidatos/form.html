@@ -103,7 +103,7 @@
         </div>
       </div>
 
-      <div class="card mb-4">
+      <div class="card mb-3">
         <div class="card-header"><i class="bi bi-clock me-1"></i>Disponibilidade e Observações</div>
         <div class="card-body">
           <div class="mb-3">
@@ -121,7 +121,81 @@
           <div>
             <label class="form-label">Observações</label>
             <textarea name="obs" class="form-control form-control-sm" rows="2"
-                      placeholder="Experiências, habilidades ou informações relevantes…">{{ candidato.obs if candidato else '' }}</textarea>
+                      placeholder="Habilidades ou informações relevantes…">{{ candidato.obs if candidato else '' }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Experiência profissional -->
+      {% set tem_exp = experiencias and experiencias|length > 0 %}
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-briefcase me-1"></i>Experiência Profissional</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="fw-semibold form-label">Já trabalhou anteriormente?</label>
+            <div class="d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="ja_trabalhou" id="exp_nao"
+                       value="nao" {% if not tem_exp %}checked{% endif %}>
+                <label class="form-check-label" for="exp_nao">Não</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="ja_trabalhou" id="exp_sim"
+                       value="sim" {% if tem_exp %}checked{% endif %}>
+                <label class="form-check-label" for="exp_sim">Sim</label>
+              </div>
+            </div>
+          </div>
+          <div id="bloco-experiencias" {% if not tem_exp %}style="display:none"{% endif %}>
+            <div id="lista-exp">
+              {% if tem_exp %}
+                {% for e in experiencias %}
+                <div class="exp-row border rounded p-2 mb-2">
+                  <div class="row g-2 align-items-start">
+                    <div class="col-md-4">
+                      <input type="text" name="exp_empresa[]" class="form-control form-control-sm"
+                             placeholder="Empresa" value="{{ e.empresa }}">
+                    </div>
+                    <div class="col-md-3">
+                      <input type="text" name="exp_periodo[]" class="form-control form-control-sm"
+                             placeholder="Período (ex: 2022–2023)" value="{{ e.periodo or '' }}">
+                    </div>
+                    <div class="col-md-4">
+                      <input type="text" name="exp_funcao[]" class="form-control form-control-sm"
+                             placeholder="Cargo / atividades" value="{{ e.funcao or '' }}">
+                    </div>
+                    <div class="col-auto">
+                      <button type="button" class="btn btn-sm btn-outline-danger remover-exp">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="exp-row border rounded p-2 mb-2">
+                  <div class="row g-2 align-items-start">
+                    <div class="col-md-4">
+                      <input type="text" name="exp_empresa[]" class="form-control form-control-sm" placeholder="Empresa">
+                    </div>
+                    <div class="col-md-3">
+                      <input type="text" name="exp_periodo[]" class="form-control form-control-sm" placeholder="Período (ex: 2022–2023)">
+                    </div>
+                    <div class="col-md-4">
+                      <input type="text" name="exp_funcao[]" class="form-control form-control-sm" placeholder="Cargo / atividades">
+                    </div>
+                    <div class="col-auto">
+                      <button type="button" class="btn btn-sm btn-outline-danger remover-exp">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-add-exp">
+              <i class="bi bi-plus me-1"></i>Adicionar experiência
+            </button>
           </div>
         </div>
       </div>
@@ -135,4 +209,41 @@
     </form>
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+const expTemplate = `
+<div class="exp-row border rounded p-2 mb-2">
+  <div class="row g-2 align-items-start">
+    <div class="col-md-4"><input type="text" name="exp_empresa[]" class="form-control form-control-sm" placeholder="Empresa"></div>
+    <div class="col-md-3"><input type="text" name="exp_periodo[]" class="form-control form-control-sm" placeholder="Período (ex: 2022–2023)"></div>
+    <div class="col-md-4"><input type="text" name="exp_funcao[]" class="form-control form-control-sm" placeholder="Cargo / atividades"></div>
+    <div class="col-auto"><button type="button" class="btn btn-sm btn-outline-danger remover-exp"><i class="bi bi-x-lg"></i></button></div>
+  </div>
+</div>`;
+
+document.querySelectorAll('input[name="ja_trabalhou"]').forEach(r => {
+  r.addEventListener('change', function() {
+    document.getElementById('bloco-experiencias').style.display = this.value === 'sim' ? '' : 'none';
+  });
+});
+
+document.getElementById('btn-add-exp').addEventListener('click', function() {
+  const div = document.createElement('div');
+  div.innerHTML = expTemplate.trim();
+  const row = div.firstChild;
+  row.querySelector('.remover-exp').addEventListener('click', () => removeExp(row));
+  document.getElementById('lista-exp').appendChild(row);
+});
+
+function removeExp(row) {
+  const lista = document.getElementById('lista-exp');
+  if (lista.querySelectorAll('.exp-row').length > 1) row.remove();
+  else row.querySelectorAll('input').forEach(i => i.value = '');
+}
+
+document.querySelectorAll('.remover-exp').forEach(btn => {
+  btn.addEventListener('click', function() { removeExp(this.closest('.exp-row')); });
+});
+</script>
 {% endblock %}
