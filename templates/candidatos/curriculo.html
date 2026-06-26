@@ -82,7 +82,7 @@
   <div class="cv-body">
 
     <!-- Dados complementares -->
-    {% set tem_dados = candidato.cpf or candidato.data_nascimento or candidato.ie_nome %}
+    {% set tem_dados = candidato.cpf or candidato.data_nascimento or candidato.ie_nome or candidato.cidade %}
     {% if tem_dados %}
     <div class="section">
       <div class="section-title">Dados Pessoais</div>
@@ -96,7 +96,19 @@
         {% if candidato.data_nascimento %}
         <div class="info-item">
           <span class="info-label">Nascimento:</span>
-          <span class="info-val">{{ candidato.data_nascimento | string | truncate(10,True,'') }}</span>
+          <span class="info-val">
+            {% if candidato.data_nascimento.strftime is defined %}
+              {{ candidato.data_nascimento.strftime('%d/%m/%Y') }}
+            {% else %}
+              {{ candidato.data_nascimento | string | truncate(10,True,'') }}
+            {% endif %}
+          </span>
+        </div>
+        {% endif %}
+        {% if candidato.cidade %}
+        <div class="info-item">
+          <span class="info-label">Endereço:</span>
+          <span class="info-val">{{ candidato.cidade }}{% if candidato.estado %}/{{ candidato.estado }}{% endif %}</span>
         </div>
         {% endif %}
         {% if candidato.ie_nome %}
@@ -110,10 +122,11 @@
     {% endif %}
 
     <!-- Apresentação -->
-    {% if candidato.obs %}
+    {% set obs_val = candidato.obs | string if candidato.obs else '' %}
+    {% if obs_val and obs_val != 'None' %}
     <div class="section">
       <div class="section-title">Apresentação</div>
-      <div class="obs-box">{{ candidato.obs }}</div>
+      <div class="obs-box">{{ obs_val }}</div>
     </div>
     {% endif %}
 
