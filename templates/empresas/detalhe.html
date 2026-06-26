@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% block title %}{{ emp.nome }} — Empresa{% endblock %}
+{% block content %}
+<style>
+.contato-item { display:flex; gap:10px; margin-bottom:10px; }
+.contato-dot { width:30px; height:30px; border-radius:50%; display:flex; align-items:center;
+  justify-content:center; color:#fff; font-size:.8rem; flex-shrink:0; margin-top:2px; }
+.contato-body { flex:1; background:#f8f9fa; border-radius:8px; padding:7px 11px; }
+.contato-body .ch { font-size:.75rem; color:#888; margin-bottom:2px; }
+.contato-body .ct { font-size:.86rem; }
+.star-btn { background:none; border:none; font-size:1.4rem; cursor:pointer; padding:0 2px; }
+</style>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+  <a href="{{ url_for('empresas') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div class="flex-grow-1">
+    <h4 class="fw-bold mb-0">{{ emp.nome }}</h4>
+    {% if emp.nome_fantasia %}<small class="text-muted">{{ emp.nome_fantasia }}</small>{% endif %}
+  </div>
+  <a href="{{ url_for('empresa_editar', id=emp.id) }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-pencil me-1"></i>Editar
+  </a>
+</div>
+
+<div class="row g-3">
+
+  <!-- ── Coluna esquerda ── -->
+  <div class="col-lg-4">
+
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-building me-1"></i>Dados</div>
+      <div class="card-body py-2" style="font-size:.85rem">
+        {% macro row(lbl, val) %}{% if val %}
+        <div class="d-flex gap-2 py-1 border-bottom">
+          <span class="text-muted" style="width:120px;flex-shrink:0">{{ lbl }}</span>
+          <span>{{ val }}</span>
+        </div>{% endif %}{% endmacro %}
+        {{ row('CNPJ', emp.cnpj) }}
+        {{ row('Cidade', (emp.cidade + '/' + emp.estado) if emp.cidade and emp.estado else emp.cidade) }}
+        {{ row('Ramo', emp.ramo) }}
+        {{ row('Telefone', emp.telefone) }}
+        {{ row('E-mail', emp.email) }}
+        {{ row('Representante', emp.representante) }}
+        <div class="d-flex gap-2 py-1 border-bottom">
+          <span class="text-muted" style="width:120px;flex-shrink:0">Contratos ativos</span>
+          <span class="fw-bold text-primary">{{ emp.contratos_ativos }}</span>
+          <span class="text-muted">({{ emp.total_contratos }} total)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- NPS -->
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-star me-1"></i>Satisfação (NPS)</div>
+      <div class="card-body text-center py-3">
+        <form method="post" action="{{ url_for('empresa_nps_set', id=emp.id) }}"
+              id="nps-form">
+          {% for i in range(1, 6) %}
+          <button type="submit" name="nps" value="{{ i }}" class="star-btn"
+                  title="{{ i }} estrela(s)">
+            <i class="bi bi-star{% if emp.nps and i <= emp.nps %}-fill text-warning{% endif %}"></i>
+          </button>
+          {% endfor %}
+        </form>
+        <small class="text-muted d-block mt-1">
+          {% if emp.nps %}{{ emp.nps }}/5 estrelas{% else %}Sem avaliação{% endif %}
+        </small>
+      </div>
+    </div>
+
+    <!-- Supervisores -->
+    {% if supervisores %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-person-check me-1"></i>Supervisores</div>
+      <div class="card-body py-2">
+        {% for s in supervisores %}
+        <div class="d-flex align-items-center gap-2 py-1 {% if not loop.last %}border-bottom{% endif %}" style="font-size:.84rem">
+          <i class="bi bi-person-circle text-muted"></i>
+          <div>
+            <div class="fw-semibold">{{ s.nome }}</div>
+            {% if s.cargo %}<small class="text-muted">{{ s.cargo }}</small>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Vagas abertas -->
+    {% if vagas %}
+    <div class="card">
+      <div class="card-header"><i class="bi bi-briefcase me-1"></i>Vagas Abertas ({{ vagas|length }})</div>
+      <div class="card-body p-0">
+        {% for v in vagas %}
+        <a href="{{ url_for('vaga_detalhe', id=v.id) }}"
+           class="d-flex align-items-center gap-2 px-3 py-2 text-decoration-none {% if not loop.last %}border-bottom{% endif %}"
+           style="font-size:.84rem;color:inherit">
+          <div class="flex-grow-1">
+            <div class="fw-semibold">{{ v.titulo }}</div>
+            {% if v.area_nome %}<small class="text-muted">{{ v.area_nome }}</small>{% endif %}
+          </div>
+          <span class="badge bg-success">{{ v.status }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- ── Coluna direita: histórico ── -->
+  <div class="col-lg-8">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-chat-left-text me-1"></i>Registrar Contato</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('empresa_contato_novo', id=emp.id) }}">
+          <div class="row g-2 mb-2">
+            <div class="col-sm-4">
+              <select name="tipo" class="form-select form-select-sm" required>
+                <option value="">Tipo…</option>
+                {% for t in tipos_contato %}
+                <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-8">
+              <input type="text" name="descricao" class="form-control form-control-sm"
+                     placeholder="Descreva o contato…" required>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm">
+            <i class="bi bi-plus me-1"></i>Registrar
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-clock-history me-1"></i>Histórico de Contatos ({{ contatos|length }})</div>
+      <div class="card-body">
+        {% set tipo_cores = {'Ligação':'#0d6efd','WhatsApp':'#25d366','E-mail':'#fd7e14','Reunião':'#6f42c1','Nota interna':'#6c757d'} %}
+        {% set tipo_icones = {'Ligação':'bi-telephone','WhatsApp':'bi-whatsapp','E-mail':'bi-envelope','Reunião':'bi-calendar-event','Nota interna':'bi-sticky'} %}
+        {% if contatos %}
+        {% for c in contatos %}
+        <div class="contato-item">
+          <div class="contato-dot" style="background:{{ tipo_cores.get(c.tipo,'#6c757d') }}">
+            <i class="bi {{ tipo_icones.get(c.tipo,'bi-chat') }}"></i>
+          </div>
+          <div class="contato-body">
+            <div class="ch"><strong>{{ c.tipo }}</strong> · {{ c.autor or 'Usuário' }} · {{ fmt_date(c.created_at) }}</div>
+            <div class="ct">{{ c.descricao }}</div>
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="text-muted text-center py-3 mb-0 small">
+          <i class="bi bi-chat-left me-1"></i>Nenhum contato registrado ainda.
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

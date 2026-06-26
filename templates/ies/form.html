@@ -47,6 +47,12 @@
         <label class="form-label fw-semibold">E-mail</label>
         <input type="email" name="email" class="form-control" value="{{ ie.email if ie else '' }}">
       </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Vencimento do Convênio</label>
+        <input type="date" name="data_vencimento_convenio" class="form-control"
+               value="{{ ie.data_vencimento_convenio.strftime('%Y-%m-%d') if ie and ie.data_vencimento_convenio else '' }}">
+        <div class="form-text text-muted">Data de vencimento do convênio com a IE</div>
+      </div>
     </div>
   </div>
 </div>

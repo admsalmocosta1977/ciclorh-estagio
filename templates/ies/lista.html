@@ -12,7 +12,7 @@
   <div class="card-body p-0">
     <table class="table table-hover mb-0">
       <thead class="table-light">
-        <tr><th>Nome</th><th>Sigla</th><th>Cidade</th><th>Coordenador</th><th>Contratos</th><th></th></tr>
+        <tr><th>Nome</th><th>Sigla</th><th>Cidade</th><th>Coordenador</th><th>Convênio</th><th>Contratos</th><th></th></tr>
       </thead>
       <tbody>
       {% for ie in ies %}
@@ -21,15 +21,30 @@
         <td><span class="badge bg-secondary">{{ ie.sigla or '—' }}</span></td>
         <td>{{ ie.cidade or '—' }}</td>
         <td>{{ ie.coordenador or '—' }}</td>
+        <td>
+          {% if ie.data_vencimento_convenio %}
+            {% if ie.data_vencimento_convenio < today %}
+              <span class="badge bg-danger" title="Convênio vencido">
+                <i class="bi bi-exclamation-triangle me-1"></i>{{ fmt_date(ie.data_vencimento_convenio) }}
+              </span>
+            {% elif ie.data_vencimento_convenio <= today %}
+              <span class="badge bg-warning text-dark">{{ fmt_date(ie.data_vencimento_convenio) }}</span>
+            {% else %}
+              <span class="text-muted small">{{ fmt_date(ie.data_vencimento_convenio) }}</span>
+            {% endif %}
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
         <td><span class="badge bg-light text-dark border">{{ ie.qtd_contratos }}</span></td>
         <td class="text-end">
-          <a href="{{ url_for('ie_editar', id=ie.id) }}" class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-pencil"></i>
+          <a href="{{ url_for('ie_detalhe', id=ie.id) }}" class="btn btn-sm btn-outline-primary" title="Ver detalhes">
+            <i class="bi bi-eye"></i>
           </a>
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="6" class="text-center text-muted py-5">Nenhuma instituição cadastrada ainda.</td></tr>
+      <tr><td colspan="7" class="text-center text-muted py-5">Nenhuma instituição cadastrada ainda.</td></tr>
       {% endfor %}
       </tbody>
     </table>

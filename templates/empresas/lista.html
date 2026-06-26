@@ -57,8 +57,8 @@
           <span class="badge bg-light text-dark border">{{ emp.qtd_contratos }}</span>
         </td>
         <td class="text-end align-middle">
-          <a href="{{ url_for('empresa_editar', id=emp.id) }}" class="btn btn-xs btn-outline-secondary" style="padding:2px 7px;font-size:0.72rem">
-            <i class="bi bi-pencil"></i>
+          <a href="{{ url_for('empresa_detalhe', id=emp.id) }}" class="btn btn-xs btn-outline-primary" style="padding:2px 7px;font-size:0.72rem" title="Ver detalhes">
+            <i class="bi bi-eye"></i>
           </a>
         </td>
       </tr>

@@ -360,6 +360,18 @@ def init_db():
             concluido_em TIMESTAMP,
             concluido_por INTEGER REFERENCES usuario(id)
         )""")
+        cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS nps INTEGER;")
+        cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS data_vencimento_convenio DATE;")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS relacionamento_contato (
+            id SERIAL PRIMARY KEY,
+            entidade_tipo TEXT NOT NULL,
+            entidade_id INTEGER NOT NULL,
+            tipo TEXT NOT NULL,
+            descricao TEXT,
+            usuario_id INTEGER REFERENCES usuario(id),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
         cur.execute("""
         CREATE TABLE IF NOT EXISTS candidato (
             id SERIAL PRIMARY KEY,
@@ -1015,6 +1027,17 @@ def dashboard():
                         'msg': f'{vencendo_30} contrato(s) vencem nos próximos 30 dias.',
                         'link': url_for('relatorio_vencimentos'), 'link_label': 'Ver TCEs'})
 
+    ies_vencendo = _q("""SELECT id, nome, sigla, data_vencimento_convenio FROM ie
+                         WHERE data_vencimento_convenio IS NOT NULL
+                           AND data_vencimento_convenio <= CURRENT_DATE + INTERVAL '60 days'
+                           AND data_vencimento_convenio >= CURRENT_DATE
+                         ORDER BY data_vencimento_convenio""")
+    for ie in ies_vencendo:
+        dias = (ie['data_vencimento_convenio'] - date.today()).days
+        alertas.append({'tipo': 'warning', 'icone': 'bi-mortarboard',
+                        'msg': f'Convênio com {ie["sigla"] or ie["nome"]} vence em {dias} dia(s).',
+                        'link': url_for('ie_detalhe', id=ie['id']), 'link_label': 'Ver IE'})
+
     return render_template('dashboard.html',
                            ativos=ativos, vencendo_30=vencendo_30,
                            encerrados_mes=encerrados_mes, novos_mes=novos_mes,
@@ -1235,6 +1258,51 @@ def empresa_excluir(id):
     return redirect(url_for('empresas'))
 
 
+@app.route('/empresas/<int:id>')
+@login_required
+def empresa_detalhe(id):
+    emp = _q("""SELECT emp.*,
+                (SELECT COUNT(*) FROM contrato WHERE empresa_id=emp.id AND data_encerramento IS NULL) contratos_ativos,
+                (SELECT COUNT(*) FROM contrato WHERE empresa_id=emp.id) total_contratos
+                FROM empresa emp WHERE emp.id=%s""", (id,), one=True)
+    if not emp:
+        abort(404)
+    supervisores = _q("SELECT * FROM empresa_supervisor WHERE empresa_id=%s ORDER BY ordem,id", (id,))
+    contatos = _q("""SELECT rc.*, u.nome as autor FROM relacionamento_contato rc
+                     LEFT JOIN usuario u ON u.id=rc.usuario_id
+                     WHERE rc.entidade_tipo='empresa' AND rc.entidade_id=%s
+                     ORDER BY rc.created_at DESC""", (id,))
+    vagas = _q("""SELECT v.*, a.nome as area_nome FROM vaga v
+                  LEFT JOIN area_estagio a ON a.id=v.area_id
+                  WHERE v.empresa_id=%s AND v.status IN ('aberta','em_selecao')
+                  ORDER BY v.created_at DESC""", (id,))
+    return render_template('empresas/detalhe.html', emp=emp, supervisores=supervisores,
+                           contatos=contatos, vagas=vagas,
+                           tipos_contato=TIPOS_INTERACAO)
+
+
+@app.route('/empresas/<int:id>/contato', methods=['POST'])
+@login_required
+def empresa_contato_novo(id):
+    tipo = request.form.get('tipo', '').strip()
+    descricao = request.form.get('descricao', '').strip()
+    if tipo and descricao:
+        _run("""INSERT INTO relacionamento_contato (entidade_tipo,entidade_id,tipo,descricao,usuario_id)
+                VALUES ('empresa',%s,%s,%s,%s)""", (id, tipo, descricao, current_user.id))
+        flash('Contato registrado.', 'success')
+    return redirect(url_for('empresa_detalhe', id=id))
+
+
+@app.route('/empresas/<int:id>/nps', methods=['POST'])
+@login_required
+def empresa_nps_set(id):
+    nps = request.form.get('nps')
+    if nps and nps.isdigit() and 1 <= int(nps) <= 5:
+        _run("UPDATE empresa SET nps=%s WHERE id=%s", (int(nps), id))
+        flash('NPS atualizado.', 'success')
+    return redirect(url_for('empresa_detalhe', id=id))
+
+
 @app.route('/api/ie_professores/<int:ie_id>')
 @login_required
 def api_ie_professores(ie_id):
@@ -1273,8 +1341,8 @@ def ie_nova():
     if request.method == 'POST':
         ie_id = _ins("""INSERT INTO ie
                 (nome,sigla,cnpj,endereco,cidade,estado,telefone,email,coordenador,coordenador_cargo,
-                 representante_legal,cargo_representante_legal,signatario_tce)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                 representante_legal,cargo_representante_legal,signatario_tce,data_vencimento_convenio)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['nome'], request.form.get('sigla'),
               request.form.get('cnpj') or None,
               request.form.get('endereco'), request.form.get('cidade') or None,
@@ -1282,7 +1350,8 @@ def ie_nova():
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('coordenador'), request.form.get('coordenador_cargo'),
               request.form.get('representante_legal'), request.form.get('cargo_representante_legal'),
-              request.form.get('signatario_tce', 'coordenador')))
+              request.form.get('signatario_tce', 'coordenador'),
+              request.form.get('data_vencimento_convenio') or None))
         nomes_p = request.form.getlist('prof_nome[]')
         cargos_p = request.form.getlist('prof_cargo[]')
         for i, np in enumerate(nomes_p):
@@ -1305,7 +1374,8 @@ def ie_editar(id):
     if request.method == 'POST':
         _run("""UPDATE ie SET nome=%s,sigla=%s,cnpj=%s,endereco=%s,cidade=%s,estado=%s,telefone=%s,email=%s,
                 coordenador=%s,coordenador_cargo=%s,representante_legal=%s,
-                cargo_representante_legal=%s,signatario_tce=%s WHERE id=%s""",
+                cargo_representante_legal=%s,signatario_tce=%s,
+                data_vencimento_convenio=%s WHERE id=%s""",
              (request.form['nome'], request.form.get('sigla'),
               request.form.get('cnpj') or None,
               request.form.get('endereco'), request.form.get('cidade') or None,
@@ -1313,7 +1383,8 @@ def ie_editar(id):
               request.form.get('telefone'), request.form.get('email'),
               request.form.get('coordenador'), request.form.get('coordenador_cargo'),
               request.form.get('representante_legal'), request.form.get('cargo_representante_legal'),
-              request.form.get('signatario_tce', 'coordenador'), id))
+              request.form.get('signatario_tce', 'coordenador'),
+              request.form.get('data_vencimento_convenio') or None, id))
         _run("DELETE FROM ie_professor WHERE ie_id = %s", (id,))
         nomes_p = request.form.getlist('prof_nome[]')
         cargos_p = request.form.getlist('prof_cargo[]')
@@ -1337,6 +1408,40 @@ def ie_excluir(id):
     _log('excluir', 'ie', id, f'Excluiu instituição: {reg["nome"] if reg else id}')
     flash('Excluída.', 'warning')
     return redirect(url_for('ies'))
+
+
+@app.route('/ies/<int:id>')
+@login_required
+def ie_detalhe(id):
+    ie = _q("""SELECT ie.*,
+               (SELECT COUNT(*) FROM contrato WHERE ie_id=ie.id AND data_encerramento IS NULL) contratos_ativos,
+               (SELECT COUNT(*) FROM contrato WHERE ie_id=ie.id) total_contratos
+               FROM ie WHERE ie.id=%s""", (id,), one=True)
+    if not ie:
+        abort(404)
+    professores = _q("SELECT * FROM ie_professor WHERE ie_id=%s ORDER BY ordem,id", (id,))
+    contatos = _q("""SELECT rc.*, u.nome as autor FROM relacionamento_contato rc
+                     LEFT JOIN usuario u ON u.id=rc.usuario_id
+                     WHERE rc.entidade_tipo='ie' AND rc.entidade_id=%s
+                     ORDER BY rc.created_at DESC""", (id,))
+    dias_venc = None
+    if ie.get('data_vencimento_convenio'):
+        dias_venc = (ie['data_vencimento_convenio'] - date.today()).days
+    return render_template('ies/detalhe.html', ie=ie, professores=professores,
+                           contatos=contatos, dias_venc=dias_venc,
+                           tipos_contato=TIPOS_INTERACAO)
+
+
+@app.route('/ies/<int:id>/contato', methods=['POST'])
+@login_required
+def ie_contato_novo(id):
+    tipo = request.form.get('tipo', '').strip()
+    descricao = request.form.get('descricao', '').strip()
+    if tipo and descricao:
+        _run("""INSERT INTO relacionamento_contato (entidade_tipo,entidade_id,tipo,descricao,usuario_id)
+                VALUES ('ie',%s,%s,%s,%s)""", (id, tipo, descricao, current_user.id))
+        flash('Contato registrado.', 'success')
+    return redirect(url_for('ie_detalhe', id=id))
 
 
 # ─── ÁREAS DE ESTÁGIO ────────────────────────────────────────────────────────
