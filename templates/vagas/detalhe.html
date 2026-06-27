@@ -24,6 +24,12 @@
   <a href="{{ url_for('vaga_editar', id=vaga.id) }}" class="btn btn-sm btn-outline-secondary">
     <i class="bi bi-pencil me-1"></i>Editar
   </a>
+  <form method="post" action="{{ url_for('vaga_excluir', id=vaga.id) }}" class="d-inline"
+        onsubmit="return confirm('Excluir a vaga &quot;{{ vaga.titulo }}&quot;? Todas as candidaturas associadas também serão excluídas. Esta ação não pode ser desfeita.')">
+    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir vaga">
+      <i class="bi bi-trash me-1"></i>Excluir
+    </button>
+  </form>
 </div>
 
 <div class="row g-3">

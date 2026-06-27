@@ -3034,6 +3034,18 @@ def vaga_editar(id):
                            areas=areas, usuarios=usuarios)
 
 
+@app.route('/vagas/<int:id>/excluir', methods=['POST'])
+@login_required
+def vaga_excluir(id):
+    v = _q("SELECT titulo FROM vaga WHERE id=%s", (id,), one=True)
+    if not v:
+        abort(404)
+    _run("DELETE FROM vaga WHERE id=%s", (id,))
+    _log('excluir', 'vaga', id, f'Excluiu vaga: {v["titulo"]}')
+    flash(f'Vaga "{v["titulo"]}" excluída.', 'warning')
+    return redirect(url_for('vagas_lista'))
+
+
 @app.route('/vagas/<int:id>/status', methods=['POST'])
 @login_required
 def vaga_status(id):
