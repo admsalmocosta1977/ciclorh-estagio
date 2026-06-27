@@ -450,7 +450,9 @@ def init_db():
             entidade_id INTEGER,
             descricao TEXT
         )""")
-        for chave in ['seg_seguradora', 'seg_apolice', 'seg_coberturas', 'seg_vigencia']:
+        for chave in ['seg_seguradora', 'seg_apolice', 'seg_coberturas', 'seg_vigencia',
+                      'int_nome', 'int_cnpj', 'int_endereco', 'int_cidade', 'int_estado',
+                      'int_representante', 'int_cargo']:
             cur.execute(
                 "INSERT INTO config (chave, valor) VALUES (%s, '') ON CONFLICT (chave) DO NOTHING",
                 (chave,))
@@ -1471,6 +1473,26 @@ def ie_contato_novo(id):
                 VALUES ('ie',%s,%s,%s,%s)""", (id, tipo, descricao, current_user.id))
         flash('Contato registrado.', 'success')
     return redirect(url_for('ie_detalhe', id=id))
+
+
+@app.route('/ies/<int:id>/convenio')
+@login_required
+def ie_convenio(id):
+    ie = _q("SELECT * FROM ie WHERE id = %s", (id,), one=True)
+    if not ie:
+        abort(404)
+    prazo = request.args.get('prazo', 'determinado')
+    data_fim_str = request.args.get('data_fim', '')
+    data_fim = None
+    if prazo == 'determinado' and data_fim_str:
+        try:
+            from datetime import datetime as _dt
+            data_fim = _dt.strptime(data_fim_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    cfg = _get_config()
+    return render_template('ies/convenio.html', ie=ie, prazo=prazo,
+                           data_fim=data_fim, cfg=cfg, hoje=date.today())
 
 
 # ─── ÁREAS DE ESTÁGIO ────────────────────────────────────────────────────────

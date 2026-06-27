@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Convênio de Estágio — {{ ie.nome }}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 12pt;
+    color: #000;
+    background: #e8e8e8;
+    line-height: 1.8;
+  }
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 20px auto;
+    background: #fff;
+    padding: 25mm 20mm 25mm 25mm;
+    box-shadow: 0 4px 20px rgba(0,0,0,.2);
+  }
+  /* ── Cabeçalho ── */
+  .doc-header {
+    text-align: center;
+    border-bottom: 3px double #000;
+    padding-bottom: 14px;
+    margin-bottom: 22px;
+  }
+  .doc-logo-row {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    margin-bottom: 8px;
+  }
+  .doc-logo-icon {
+    width: 52px; height: 52px; border-radius: 10px; background: #1a3e6c;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .doc-logo-icon svg { width: 34px; height: 34px; }
+  .doc-brand { text-align: left; }
+  .doc-brand-name { font-size: 18pt; font-weight: 900; color: #1a3e6c; font-family: Arial, sans-serif; line-height: 1.1; }
+  .doc-brand-sub  { font-size: 8pt; color: #555; font-family: Arial, sans-serif; letter-spacing: .5px; }
+  .doc-title {
+    font-size: 14pt; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.5px; margin-top: 10px; color: #000;
+  }
+  .doc-subtitle { font-size: 9pt; color: #555; margin-top: 3px; font-family: Arial, sans-serif; }
+
+  /* ── Corpo ── */
+  .intro {
+    text-align: justify;
+    margin-bottom: 20px;
+    font-size: 11.5pt;
+  }
+  .intro strong { font-weight: 700; }
+
+  .clausula {
+    margin-bottom: 18px;
+  }
+  .clausula-titulo {
+    font-weight: 700;
+    font-size: 12pt;
+    text-align: center;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .clausula p {
+    text-align: justify;
+    margin-bottom: 8px;
+    font-size: 11.5pt;
+  }
+  .clausula ol {
+    padding-left: 22px;
+    margin: 6px 0;
+  }
+  .clausula li {
+    text-align: justify;
+    margin-bottom: 6px;
+    font-size: 11.5pt;
+  }
+
+  /* ── Assinaturas ── */
+  .assinaturas {
+    margin-top: 40px;
+    page-break-inside: avoid;
+  }
+  .ass-local-data {
+    text-align: right;
+    margin-bottom: 30px;
+    font-size: 11pt;
+  }
+  .ass-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-top: 10px;
+  }
+  .ass-bloco { text-align: center; }
+  .ass-linha {
+    border-top: 1px solid #000;
+    margin: 50px 10px 6px;
+  }
+  .ass-nome { font-weight: 700; font-size: 11pt; }
+  .ass-cargo { font-size: 10pt; color: #333; }
+  .ass-empresa { font-size: 10pt; font-style: italic; }
+
+  .testemunhas {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-top: 40px;
+  }
+  .test-titulo {
+    grid-column: 1 / -1;
+    font-size: 10pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    border-top: 1px solid #ccc;
+    padding-top: 8px;
+    margin-bottom: 6px;
+  }
+
+  /* ── Badge prazo ── */
+  .prazo-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 20px;
+    font-size: 9pt; font-weight: 700;
+    background: #e8f0fb; color: #1a3e6c; border: 1px solid #b6d0f7;
+    font-family: Arial, sans-serif; margin-left: 4px;
+  }
+
+  /* ── Botão impressão ── */
+  .print-btn {
+    display: block; text-align: center; margin: 16px auto;
+    max-width: 210mm;
+  }
+  .print-btn button {
+    background: #1a3e6c; color: #fff; border: none; padding: 9px 28px;
+    border-radius: 6px; cursor: pointer; font-size: .9rem; font-family: Arial, sans-serif;
+  }
+  .print-btn button:hover { background: #2a5298; }
+
+  /* ── Rodapé ── */
+  .doc-footer {
+    margin-top: 30px;
+    border-top: 1px solid #ccc;
+    padding-top: 6px;
+    font-size: 8pt;
+    color: #888;
+    text-align: center;
+    font-family: Arial, sans-serif;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page { box-shadow: none; margin: 0; padding: 20mm 15mm 20mm 20mm; }
+    .print-btn { display: none; }
+    @page { size: A4; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-btn">
+  <button onclick="window.print()">&#128424; Imprimir / Salvar PDF</button>
+</div>
+
+<div class="page">
+
+  <!-- ══ CABEÇALHO ══ -->
+  <div class="doc-header">
+    <div class="doc-logo-row">
+      <div class="doc-logo-icon">
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" stroke="rgba(255,255,255,0.3)" stroke-width="2.5"/>
+          <path d="M32 12 A20 20 0 1 1 14 38" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+          <polyline points="10,34 14,38 18,34" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <text x="20" y="37" font-family="Arial" font-weight="900" font-size="14" fill="white">RH</text>
+        </svg>
+      </div>
+      <div class="doc-brand">
+        <div class="doc-brand-name">Ciclo RH</div>
+        <div class="doc-brand-sub">PLATAFORMA DE GESTÃO DE ESTÁGIOS</div>
+      </div>
+    </div>
+    <div class="doc-title">Termo de Convênio para Realização de Estágios</div>
+    <div class="doc-subtitle">
+      Celebrado nos termos da Lei Federal n.º 11.788, de 25 de setembro de 2008
+      &nbsp;·&nbsp;
+      Prazo:
+      {% if prazo == 'indeterminado' %}
+        <span class="prazo-badge">Indeterminado</span>
+      {% else %}
+        <span class="prazo-badge">Determinado</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ══ PARTES ══ -->
+  {% set int_nome = cfg.int_nome if cfg.int_nome else 'CICLO RH GESTÃO DE ESTÁGIOS LTDA' %}
+  {% set int_cnpj = cfg.int_cnpj if cfg.int_cnpj else '__.___.___/____-__' %}
+  {% set int_end  = cfg.int_endereco if cfg.int_endereco else '___________________________' %}
+  {% set int_cid  = (cfg.int_cidade + '/' + cfg.int_estado) if cfg.int_cidade else '________________________' %}
+  {% set int_rep  = cfg.int_representante if cfg.int_representante else '____________________________' %}
+  {% set int_cargo = cfg.int_cargo if cfg.int_cargo else '__________________________' %}
+
+  {% set ie_rep   = ie.representante_legal if ie.representante_legal else '____________________________' %}
+  {% set ie_cargo = ie.cargo_representante_legal if ie.cargo_representante_legal else '____________________________' %}
+  {% set ie_end   = ie.endereco if ie.endereco else '___________________________' %}
+  {% set ie_cid   = (ie.cidade + '/' + ie.estado) if ie.cidade else '________________________' %}
+  {% set ie_cnpj  = ie.cnpj if ie.cnpj else '__.___.___/____-__' %}
+
+  <div class="intro">
+    <p>
+      Por este instrumento particular, de um lado, a empresa integradora de estágios
+      <strong>{{ int_nome }}</strong>,
+      inscrita no CNPJ sob o n.º <strong>{{ int_cnpj }}</strong>,
+      com sede na <strong>{{ int_end }}</strong>, <strong>{{ int_cid }}</strong>,
+      neste ato representada por <strong>{{ int_rep }}</strong>,
+      <strong>{{ int_cargo }}</strong>,
+      doravante denominada simplesmente <strong>INTEGRADORA</strong>;
+    </p>
+    <p style="margin-top:10px">
+      e, de outro lado, a instituição de ensino
+      <strong>{{ ie.nome }}</strong>
+      {% if ie_cnpj != '__.___.___/____-__' %}, inscrita no CNPJ sob o n.º <strong>{{ ie_cnpj }}</strong>{% endif %},
+      com sede na <strong>{{ ie_end }}</strong>, <strong>{{ ie_cid }}</strong>,
+      neste ato representada por <strong>{{ ie_rep }}</strong>,
+      <strong>{{ ie_cargo }}</strong>,
+      doravante denominada simplesmente <strong>INSTITUIÇÃO DE ENSINO</strong>;
+    </p>
+    <p style="margin-top:10px">
+      têm entre si, justo e convencionado, o presente Termo de Convênio para Realização
+      de Estágios, que se regerá pelas cláusulas e condições seguintes:
+    </p>
+  </div>
+
+  <!-- ══ CLÁUSULAS ══ -->
+  <div class="clausula">
+    <div class="clausula-titulo">Cláusula Primeira — Do Objeto</div>
+    <p>
+      O presente convênio tem por objeto estabelecer as condições gerais para a realização
+      de <strong>estágios curriculares</strong> de alunos regularmente matriculados e com frequência efetiva
+      em cursos de educação superior, educação profissional, ensino médio, educação especial e
+      dos anos finais do ensino fundamental, na modalidade profissional da educação de jovens e adultos,
+      oferecidos pela <strong>INSTITUIÇÃO DE ENSINO</strong>, em empresas concedentes, sendo a
+      <strong>INTEGRADORA</strong> responsável pela intermediação, registro e acompanhamento dos
+      referidos estágios, nos termos da Lei Federal n.º 11.788/2008.
+    </p>
+  </div>
+
+  <div class="clausula">
+    <div class="clausula-titulo">Cláusula Segunda — Das Obrigações da Integradora</div>
+    <p>Compete à <strong>INTEGRADORA</strong>:</p>
+    <ol>
+      <li>Providenciar termo de compromisso de estágio (TCE) a ser firmado entre a empresa
+          concedente, o estudante e a INSTITUIÇÃO DE ENSINO, por ocasião do início de cada
+          estágio, conforme o art. 7.º da Lei n.º 11.788/2008;</li>
+      <li>Manter seguro contra acidentes pessoais em favor dos estagiários durante o
+          período de estágio, conforme exige o art. 9.º, IV, da Lei n.º 11.788/2008;</li>
+      <li>Selecionar e intermediar estagiários junto a empresas concedentes, observando
+          a compatibilidade das atividades com o currículo e etapa de formação do estudante;</li>
+      <li>Encaminhar à INSTITUIÇÃO DE ENSINO cópia do TCE e de eventuais aditivos,
+          bem como comunicar o encerramento antecipado de qualquer estágio;</li>
+      <li>Zelar pelo cumprimento das disposições legais que regulamentam os estágios, em
+          especial a jornada máxima prevista no art. 10 da Lei n.º 11.788/2008;</li>
+      <li>Fornecer à INSTITUIÇÃO DE ENSINO, quando solicitado, relatório das atividades
+          desenvolvidas pelos estagiários.</li>
+    </ol>
+  </div>
+
+  <div class="clausula">
+    <div class="clausula-titulo">Cláusula Terceira — Das Obrigações da Instituição de Ensino</div>
+    <p>Compete à <strong>INSTITUIÇÃO DE ENSINO</strong>:</p>
+    <ol>
+      <li>Indicar professor orientador, da área a ser desenvolvida no estágio, como
+          responsável pelo acompanhamento e avaliação das atividades do estagiário,
+          conforme o art. 7.º, I, da Lei n.º 11.788/2008;</li>
+      <li>Exigir do estudante a apresentação periódica, em prazo não superior a seis meses,
+          de relatório das atividades, com vista do supervisor da parte concedente;</li>
+      <li>Comunicar à INTEGRADORA quaisquer situações que impliquem irregularidade no
+          vínculo ou no desempenho do estagiário;</li>
+      <li>Inserir, no histórico escolar do aluno, as informações relativas ao estágio,
+          com indicação da carga horária, do período e da avaliação de desempenho;</li>
+      <li>Certificar-se de que o estágio decorre de processo pedagógico adequado à
+          proposta pedagógica do curso de que o estudante é aluno;</li>
+      <li>Fornecer à INTEGRADORA declaração de matrícula e frequência do estudante, quando
+          solicitado, bem como comunicar prontamente a interrupção ou conclusão do curso.</li>
+    </ol>
+  </div>
+
+  <div class="clausula">
+    <div class="clausula-titulo">Cláusula Quarta — Das Obrigações do Estagiário</div>
+    <p>
+      O estudante estagiário, sem prejuízo das obrigações previstas no TCE individual,
+      compromete-se a:
+    </p>
+    <ol>
+      <li>Cumprir fielmente as atividades previstas no plano de atividades do estágio;</li>
+      <li>Manter matrícula e frequência regular no curso para o qual o estágio está sendo
+          realizado, comunicando à INTEGRADORA qualquer alteração em sua situação acadêmica;</li>
+      <li>Zelar pelo sigilo das informações e documentos a que tiver acesso no âmbito das
+          atividades de estágio;</li>
+      <li>Elaborar e entregar à INSTITUIÇÃO DE ENSINO os relatórios de atividades nos prazos
+          estabelecidos pelo professor orientador.</li>
+    </ol>
+  </div>
+
+  <div class="clausula">
+    <div class="clausula-titulo">Cláusula Quinta — Da Vigência</div>
+    {% if prazo == 'indeterminado' %}
+    <p>
+      O presente convênio entra em vigor na data de sua assinatura e vigorará por
+      <strong>prazo indeterminado</strong>, podendo ser rescindido por qualquer das partes
+      mediante notificação prévia de <strong>30 (trinta) dias</strong>, sem prejuízo dos
+      termos de compromisso já em vigor, que permanecerão válidos até o seu término natural.
+    </p>
+    {% else %}
+    <p>
+      O presente convênio entra em vigor na data de sua assinatura e terá vigência até
+      <strong>
+        {% if data_fim %}
+          {{ data_fim.strftime('%d/%m/%Y') }}
+        {% else %}
+          ___/___/______
+        {% endif %}
+      </strong>,
+      podendo ser renovado por mútuo acordo das partes mediante termo aditivo.
+      Findo o prazo de vigência, os termos de compromisso já em vigor permanecerão
+      válidos até o seu término natural, não podendo ser celebrados novos TCEs após o
+      encerramento deste convênio.
+    </p>
+    {% endif %}
+    <p>
+      A assinatura de Termos de Compromisso de Estágio individuais durante a vigência deste
+      instrumento condiciona-se à manutenção de vínculo acadêmico do estudante com a
+      INSTITUIÇÃO DE ENSINO.
+    </p>
+  </div>
+
+  <div class="clausula">
+    <div class="clausula-titulo">Cláusula Sexta — Da Rescisão</div>
+    <p>
+      O presente convênio poderá ser rescindido, de pleno direito, independentemente de
+      notificação judicial ou extrajudicial, nos seguintes casos:
+    </p>
+    <ol>
+      <li>Por descumprimento de quaisquer das cláusulas aqui estabelecidas;</li>
+      <li>Por iniciativa de qualquer das partes, mediante notificação escrita com antecedência
+          mínima de <strong>30 (trinta) dias</strong>;</li>
+      <li>Por força maior ou caso fortuito que impeça a manutenção do convênio;</li>
+      <li>Por determinação legal ou judicial.</li>
+    </ol>
+    <p>
+      A rescisão deste convênio não afetará os Termos de Compromisso de Estágio já assinados
+      e em vigor, que seguirão até o término previsto em cada instrumento individual.
+    </p>
+  </div>
+
+  <div class="clausula">
+    <div class="clausula-titulo">Cláusula Sétima — Da Proteção de Dados</div>
+    <p>
+      As partes se comprometem a tratar os dados pessoais dos estudantes estagiários
+      em conformidade com a <strong>Lei Geral de Proteção de Dados Pessoais (Lei n.º 13.709/2018 — LGPD)</strong>,
+      utilizando-os exclusivamente para as finalidades previstas neste convênio e nos
+      Termos de Compromisso de Estágio individuais, adotando as medidas técnicas e
+      organizacionais adequadas para garantir a segurança das informações.
+    </p>
+  </div>
+
+  <div class="clausula">
+    <div class="clausula-titulo">Cláusula Oitava — Do Foro</div>
+    <p>
+      As partes elegem o foro da Comarca de
+      <strong>{{ cfg.int_cidade if cfg.int_cidade else '____________________' }}</strong>
+      para dirimir quaisquer dúvidas ou litígios decorrentes do presente convênio,
+      renunciando a qualquer outro, por mais privilegiado que seja.
+    </p>
+  </div>
+
+  <p style="text-align:justify; font-size:11.5pt; margin-top:6px">
+    E, por estarem assim justas e convencionadas, as partes assinam o presente instrumento
+    em <strong>2 (duas) vias de igual teor e forma</strong>, juntamente com as testemunhas
+    abaixo identificadas.
+  </p>
+
+  <!-- ══ ASSINATURAS ══ -->
+  <div class="assinaturas">
+    <div class="ass-local-data">
+      {{ cfg.int_cidade if cfg.int_cidade else '____________________' }},
+      ______ de ________________________ de __________.
+    </div>
+
+    <div class="ass-grid">
+      <div class="ass-bloco">
+        <div class="ass-linha"></div>
+        <div class="ass-nome">{{ int_rep }}</div>
+        <div class="ass-cargo">{{ int_cargo }}</div>
+        <div class="ass-empresa">{{ int_nome }}</div>
+        <div class="ass-cargo" style="margin-top:2px">INTEGRADORA</div>
+      </div>
+      <div class="ass-bloco">
+        <div class="ass-linha"></div>
+        <div class="ass-nome">{{ ie_rep }}</div>
+        <div class="ass-cargo">{{ ie_cargo }}</div>
+        <div class="ass-empresa">{{ ie.nome }}</div>
+        <div class="ass-cargo" style="margin-top:2px">INSTITUIÇÃO DE ENSINO</div>
+      </div>
+    </div>
+
+    <div class="testemunhas">
+      <div class="test-titulo">Testemunhas</div>
+      <div class="ass-bloco">
+        <div class="ass-linha"></div>
+        <div class="ass-nome">_________________________________</div>
+        <div class="ass-cargo">CPF: ______._______._______-____</div>
+      </div>
+      <div class="ass-bloco">
+        <div class="ass-linha"></div>
+        <div class="ass-nome">_________________________________</div>
+        <div class="ass-cargo">CPF: ______._______._______-____</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-footer">
+    Gerado automaticamente pelo sistema Ciclo RH em {{ hoje.strftime('%d/%m/%Y') }}
+    &nbsp;·&nbsp; Lei Federal n.º 11.788/2008
+  </div>
+
+</div>
+
+</body>
+</html>

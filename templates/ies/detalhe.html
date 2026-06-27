@@ -29,9 +29,55 @@
     </span>
     {% endif %}
   {% endif %}
+  <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalConvenio">
+    <i class="bi bi-file-earmark-text me-1"></i>Gerar Convênio
+  </button>
   <a href="{{ url_for('ie_editar', id=ie.id) }}" class="btn btn-sm btn-outline-secondary">
     <i class="bi bi-pencil me-1"></i>Editar
   </a>
+</div>
+
+<!-- Modal Convênio -->
+<div class="modal fade" id="modalConvenio" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-file-earmark-text me-2"></i>Gerar Convênio de Estágio</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-3">
+          O convênio será gerado com base na <strong>Lei 11.788/2008</strong> e nos dados cadastrais da instituição.
+          Configure as opções de vigência abaixo.
+        </p>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Prazo de vigência</label>
+          <div class="d-flex gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="prazo" id="prazo_det" value="determinado" checked>
+              <label class="form-check-label" for="prazo_det">Prazo determinado</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="prazo" id="prazo_ind" value="indeterminado">
+              <label class="form-check-label" for="prazo_ind">Prazo indeterminado</label>
+            </div>
+          </div>
+        </div>
+        <div id="bloco-data-fim" class="mb-3">
+          <label class="form-label fw-semibold">Data de encerramento do convênio</label>
+          <input type="date" id="input-data-fim" class="form-control"
+                 value="{{ ie.data_vencimento_convenio.strftime('%Y-%m-%d') if ie.data_vencimento_convenio else '' }}">
+          <div class="form-text">Se já cadastrou a data de vencimento, ela foi preenchida automaticamente.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-abrir-convenio">
+          <i class="bi bi-file-earmark-arrow-down me-1"></i>Gerar Convênio
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="row g-3">
@@ -142,4 +188,23 @@
   </div>
 
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll('input[name="prazo"]').forEach(r => {
+  r.addEventListener('change', function() {
+    document.getElementById('bloco-data-fim').style.display =
+      this.value === 'indeterminado' ? 'none' : '';
+  });
+});
+
+document.getElementById('btn-abrir-convenio').addEventListener('click', function() {
+  const prazo = document.querySelector('input[name="prazo"]:checked').value;
+  const dataFim = document.getElementById('input-data-fim').value;
+  let url = '{{ url_for("ie_convenio", id=ie.id) }}?prazo=' + prazo;
+  if (prazo === 'determinado' && dataFim) url += '&data_fim=' + dataFim;
+  window.open(url, '_blank');
+  bootstrap.Modal.getInstance(document.getElementById('modalConvenio')).hide();
+});
+</script>
 {% endblock %}
