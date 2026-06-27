@@ -125,14 +125,15 @@
   /* ── Steps ── */
   .steps { counter-reset: step; padding-left: 0; list-style: none; margin: 16px 0; }
   .steps li {
-    counter-increment: step; display: flex; gap: 14px; margin-bottom: 14px;
-    align-items: flex-start;
+    counter-increment: step; position: relative;
+    padding-left: 42px; margin-bottom: 14px; min-height: 30px;
   }
   .steps li::before {
     content: counter(step); background: var(--azul); color: #fff;
-    width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center;
-    justify-content: center; font-weight: 700; font-size: .8rem; flex-shrink: 0;
-    margin-top: 2px; font-family: Arial, sans-serif;
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: .8rem; font-family: Arial, sans-serif;
+    position: absolute; left: 0; top: 2px;
   }
 
   /* ── Badges ── */
