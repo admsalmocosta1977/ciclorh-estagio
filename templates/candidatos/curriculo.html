@@ -82,17 +82,11 @@
   <div class="cv-body">
 
     <!-- Dados complementares -->
-    {% set tem_dados = candidato.cpf or candidato.data_nascimento or candidato.ie_nome or candidato.cidade %}
+    {% set tem_dados = candidato.data_nascimento or candidato.ie_nome or candidato.cidade %}
     {% if tem_dados %}
     <div class="section">
       <div class="section-title">Dados Pessoais</div>
       <div class="info-grid">
-        {% if candidato.cpf %}
-        <div class="info-item">
-          <span class="info-label">CPF:</span>
-          <span class="info-val">{{ candidato.cpf }}</span>
-        </div>
-        {% endif %}
         {% if candidato.data_nascimento %}
         <div class="info-item">
           <span class="info-label">Nascimento:</span>
