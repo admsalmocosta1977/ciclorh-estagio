@@ -50,7 +50,8 @@
         <td class="text-nowrap align-middle">
           {{ fmt_date(c.data_inicio) }}<br>
           {{ fmt_date(c.effective_data_fim) }}
-          {% if c.data_encerramento %}<br><span class="text-danger fst-italic">enc. antecipado</span>
+          {% if c.data_encerramento and c.data_encerramento < c.effective_data_fim %}<br><span class="text-danger fst-italic">enc. antecipado</span>
+          {% elif c.data_encerramento %}<br><span class="text-muted fst-italic">encerrado</span>
           {% elif c.effective_data_fim != c.data_fim %}<br><span class="text-muted fst-italic">c/ aditivo</span>{% endif %}
         </td>
         <td class="align-middle text-nowrap">R$ {{ '%.2f'|format(c.bolsa or 0) }}</td>
