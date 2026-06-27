@@ -1334,6 +1334,26 @@ def empresa_nps_set(id):
     return redirect(url_for('empresa_detalhe', id=id))
 
 
+@app.route('/empresas/<int:id>/convenio')
+@login_required
+def empresa_convenio(id):
+    emp = _q("SELECT * FROM empresa WHERE id = %s", (id,), one=True)
+    if not emp:
+        abort(404)
+    prazo = request.args.get('prazo', 'determinado')
+    data_fim_str = request.args.get('data_fim', '')
+    data_fim = None
+    if prazo == 'determinado' and data_fim_str:
+        try:
+            from datetime import datetime as _dt
+            data_fim = _dt.strptime(data_fim_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    cfg = _get_config()
+    return render_template('empresas/convenio.html', emp=emp, prazo=prazo,
+                           data_fim=data_fim, cfg=cfg, hoje=date.today())
+
+
 @app.route('/api/ie_professores/<int:ie_id>')
 @login_required
 def api_ie_professores(ie_id):
