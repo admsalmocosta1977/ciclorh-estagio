@@ -7,99 +7,138 @@
 <style>
   :root {
     --azul: #1a3e6c;
+    --azul-medio: #2a5298;
     --azul-claro: #e8f0fb;
     --verde: #198754;
     --cinza: #6c757d;
     --borda: #dee2e6;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px;
-         color: #333; background: #f5f7fa; line-height: 1.65; }
+  body {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 15px;
+    color: #222;
+    background: #f5f7fa;
+    line-height: 1.75;
+  }
 
   /* ── Layout ── */
   .layout { display: flex; min-height: 100vh; }
   .sidebar {
-    width: 260px; flex-shrink: 0; background: var(--azul); color: #fff;
+    width: 270px; flex-shrink: 0; background: var(--azul); color: #fff;
     padding: 24px 0; position: sticky; top: 0; height: 100vh; overflow-y: auto;
   }
   .sidebar-brand { padding: 0 20px 20px; border-bottom: 1px solid rgba(255,255,255,.15); margin-bottom: 12px; }
-  .sidebar-brand h2 { font-size: 1.1rem; font-weight: 700; }
-  .sidebar-brand p  { font-size: .75rem; opacity: .7; margin-top: 2px; }
-  .nav-group { padding: 6px 20px 2px; font-size: .68rem; text-transform: uppercase;
-               letter-spacing: 1px; opacity: .55; margin-top: 10px; }
+  .sidebar-brand h2 { font-size: 1.05rem; font-weight: 700; font-family: Arial, sans-serif; }
+  .sidebar-brand p  { font-size: .72rem; opacity: .7; margin-top: 2px; font-family: Arial, sans-serif; }
+  .nav-group {
+    padding: 7px 20px 2px; font-size: .65rem; text-transform: uppercase;
+    letter-spacing: 1px; opacity: .55; margin-top: 10px; font-family: Arial, sans-serif;
+  }
   .nav-item a {
-    display: block; padding: 7px 20px; font-size: .82rem; color: rgba(255,255,255,.85);
+    display: block; padding: 6px 20px; font-size: .8rem; color: rgba(255,255,255,.85);
     text-decoration: none; border-left: 3px solid transparent; transition: all .15s;
+    font-family: Arial, sans-serif;
   }
   .nav-item a:hover { background: rgba(255,255,255,.08); border-left-color: rgba(255,255,255,.5); }
   .nav-item a.active { background: rgba(255,255,255,.12); border-left-color: #fff; color: #fff; font-weight: 600; }
 
   /* ── Conteúdo ── */
-  .content { flex: 1; padding: 40px 48px 80px; max-width: 900px; }
+  .content { flex: 1; padding: 40px 52px 100px; max-width: 960px; }
   .print-btn {
     position: fixed; bottom: 28px; right: 28px; background: var(--azul);
-    color: #fff; border: none; padding: 10px 20px; border-radius: 8px;
+    color: #fff; border: none; padding: 10px 22px; border-radius: 8px;
     cursor: pointer; font-size: .85rem; box-shadow: 0 4px 14px rgba(0,0,0,.25);
-    z-index: 100;
+    z-index: 100; font-family: Arial, sans-serif;
+  }
+
+  /* ── Capa ── */
+  .cover {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; min-height: 92vh;
+    padding: 60px 40px 40px;
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.09); margin-bottom: 40px;
+  }
+  .cover-logo {
+    width: 100px; height: 100px; border-radius: 22px; background: var(--azul);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 22px; box-shadow: 0 6px 24px rgba(26,62,108,.35);
+  }
+  .cover-logo svg { width: 64px; height: 64px; }
+  .cover-brand { font-size: 2.6rem; font-weight: 900; color: var(--azul);
+                 letter-spacing: -1px; font-family: Arial, sans-serif; }
+  .cover-sub { font-size: 1rem; color: var(--cinza); margin-top: 4px;
+               font-family: Arial, sans-serif; letter-spacing: .5px; }
+  .cover-divider {
+    width: 80px; height: 4px; background: var(--azul); border-radius: 2px;
+    margin: 28px auto;
+  }
+  .cover-title { font-size: 1.9rem; font-weight: 700; color: #222; margin-bottom: 10px; }
+  .cover-desc { font-size: 1rem; color: #555; max-width: 480px; margin: 0 auto; line-height: 1.6; }
+  .cover-version {
+    margin-top: 44px; font-size: .8rem; color: #aaa; font-family: Arial, sans-serif;
+  }
+  .cover-bottom-bar {
+    width: 100%; margin-top: auto; padding-top: 36px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-top: 1px solid var(--borda); color: #aaa; font-size: .8rem;
+    font-family: Arial, sans-serif;
   }
 
   /* ── Tipografia ── */
-  h1 { font-size: 1.7rem; font-weight: 800; color: var(--azul); margin-bottom: 6px; }
-  h2 { font-size: 1.25rem; font-weight: 700; color: var(--azul); margin: 40px 0 14px;
-       padding-bottom: 8px; border-bottom: 2px solid var(--azul); }
-  h3 { font-size: 1rem; font-weight: 700; color: #333; margin: 24px 0 10px; }
-  h4 { font-size: .9rem; font-weight: 600; color: var(--cinza); margin: 16px 0 8px; }
-  p  { margin-bottom: 10px; }
-  ul, ol { padding-left: 22px; margin-bottom: 10px; }
-  li { margin-bottom: 4px; }
-  strong { color: #222; }
-  a { color: var(--azul); }
-
-  /* ── Componentes ── */
-  .hero {
-    background: var(--azul); color: #fff; padding: 28px 32px; border-radius: 12px;
-    margin-bottom: 32px;
+  h1 { font-size: 1.8rem; font-weight: 800; color: var(--azul); margin-bottom: 6px; }
+  h2 {
+    font-size: 1.3rem; font-weight: 700; color: var(--azul); margin: 40px 0 14px;
+    padding-bottom: 8px; border-bottom: 2px solid var(--azul);
   }
-  .hero h1 { color: #fff; font-size: 1.5rem; }
-  .hero p  { opacity: .85; margin: 6px 0 0; font-size: .9rem; }
+  h3 { font-size: 1.05rem; font-weight: 700; color: #1a1a1a; margin: 26px 0 10px; }
+  h4 { font-size: .95rem; font-weight: 700; color: var(--cinza); margin: 18px 0 8px; }
+  p  { margin-bottom: 12px; text-align: justify; }
+  ul, ol { padding-left: 24px; margin-bottom: 12px; }
+  li { margin-bottom: 6px; }
+  strong { color: #111; }
+  a { color: var(--azul); }
+  em { font-style: italic; }
 
+  /* ── Boxes ── */
   .tip {
-    background: #fff8e1; border-left: 4px solid #f0ad00; padding: 12px 16px;
-    border-radius: 0 8px 8px 0; margin: 14px 0; font-size: .87rem;
+    background: #fff8e1; border-left: 4px solid #f0ad00; padding: 13px 18px;
+    border-radius: 0 8px 8px 0; margin: 16px 0; font-size: .9rem;
   }
   .tip strong { color: #856404; }
-
   .info {
-    background: var(--azul-claro); border-left: 4px solid var(--azul); padding: 12px 16px;
-    border-radius: 0 8px 8px 0; margin: 14px 0; font-size: .87rem;
+    background: var(--azul-claro); border-left: 4px solid var(--azul); padding: 13px 18px;
+    border-radius: 0 8px 8px 0; margin: 16px 0; font-size: .9rem;
   }
-
   .danger {
-    background: #fff3f3; border-left: 4px solid #dc3545; padding: 12px 16px;
-    border-radius: 0 8px 8px 0; margin: 14px 0; font-size: .87rem;
+    background: #fff3f3; border-left: 4px solid #dc3545; padding: 13px 18px;
+    border-radius: 0 8px 8px 0; margin: 16px 0; font-size: .9rem;
   }
   .danger strong { color: #dc3545; }
-
   .success {
-    background: #f0fff4; border-left: 4px solid var(--verde); padding: 12px 16px;
-    border-radius: 0 8px 8px 0; margin: 14px 0; font-size: .87rem;
+    background: #f0fff4; border-left: 4px solid var(--verde); padding: 13px 18px;
+    border-radius: 0 8px 8px 0; margin: 16px 0; font-size: .9rem;
   }
+  .success strong { color: #0a5c2e; }
 
-  .steps { counter-reset: step; padding-left: 0; list-style: none; margin: 14px 0; }
+  /* ── Steps ── */
+  .steps { counter-reset: step; padding-left: 0; list-style: none; margin: 16px 0; }
   .steps li {
-    counter-increment: step; display: flex; gap: 14px; margin-bottom: 12px;
+    counter-increment: step; display: flex; gap: 14px; margin-bottom: 14px;
     align-items: flex-start;
   }
   .steps li::before {
     content: counter(step); background: var(--azul); color: #fff;
-    width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center;
+    width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center;
     justify-content: center; font-weight: 700; font-size: .8rem; flex-shrink: 0;
-    margin-top: 1px;
+    margin-top: 2px; font-family: Arial, sans-serif;
   }
 
+  /* ── Badges ── */
   .badge-demo {
     display: inline-block; padding: 2px 10px; border-radius: 20px;
-    font-size: .78rem; font-weight: 600; margin: 0 3px;
+    font-size: .78rem; font-weight: 700; margin: 0 2px; font-family: Arial, sans-serif;
   }
   .bd-green  { background: #d1e7dd; color: #0a3622; }
   .bd-blue   { background: #cfe2ff; color: #084298; }
@@ -107,30 +146,44 @@
   .bd-red    { background: #f8d7da; color: #58151c; }
   .bd-gray   { background: #e2e3e5; color: #41464b; }
 
-  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: .86rem; }
-  th { background: var(--azul); color: #fff; padding: 8px 12px; text-align: left; }
-  td { padding: 8px 12px; border-bottom: 1px solid var(--borda); }
+  /* ── Tabelas ── */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: .9rem; }
+  th { background: var(--azul); color: #fff; padding: 9px 14px; text-align: left; font-family: Arial, sans-serif; }
+  td { padding: 9px 14px; border-bottom: 1px solid var(--borda); vertical-align: top; }
   tr:nth-child(even) td { background: #f8f9fa; }
 
-  .section { background: #fff; border-radius: 10px; padding: 28px 32px;
-             box-shadow: 0 1px 6px rgba(0,0,0,.07); margin-bottom: 28px; }
+  /* ── Section card ── */
+  .section {
+    background: #fff; border-radius: 10px; padding: 30px 36px;
+    box-shadow: 0 1px 8px rgba(0,0,0,.07); margin-bottom: 30px;
+  }
 
+  /* ── Fluxo ── */
   .flow {
     display: flex; gap: 0; flex-wrap: wrap; align-items: center;
-    margin: 14px 0; font-size: .82rem;
+    margin: 16px 0; font-size: .83rem; font-family: Arial, sans-serif;
   }
   .flow-step {
     background: var(--azul-claro); border: 1px solid #b6d0f7; padding: 7px 14px;
-    border-radius: 6px; white-space: nowrap; font-weight: 600; color: var(--azul);
+    border-radius: 6px; white-space: nowrap; font-weight: 700; color: var(--azul);
   }
   .flow-arrow { padding: 0 8px; color: var(--cinza); font-size: 1.1rem; }
 
+  /* ── Destaque ── */
+  .highlight-box {
+    background: var(--azul); color: #fff; padding: 16px 22px;
+    border-radius: 8px; margin: 18px 0; font-size: .92rem;
+  }
+  .highlight-box strong { color: #fff; }
+
   @media print {
     .sidebar, .print-btn { display: none; }
-    .content { padding: 20px; max-width: 100%; }
-    .section { box-shadow: none; border: 1px solid var(--borda); page-break-inside: avoid; }
+    .content { padding: 0; max-width: 100%; }
+    .section { box-shadow: none; border: 1px solid var(--borda); margin-bottom: 20px; }
+    .cover { box-shadow: none; min-height: 100vh; page-break-after: always; }
     h2 { page-break-before: always; }
     h2:first-of-type { page-break-before: avoid; }
+    .flow { flex-wrap: wrap; }
   }
 </style>
 </head>
@@ -141,13 +194,14 @@
 <!-- ── Sumário lateral ── -->
 <nav class="sidebar">
   <div class="sidebar-brand">
-    <h2>📋 Manual</h2>
-    <p>Ciclo RH — Sistema de Estágio</p>
+    <h2>&#128203; Manual do Sistema</h2>
+    <p>Ciclo RH — Gestão de Estágios</p>
   </div>
-  <div class="nav-group">Introdução</div>
-  <div class="nav-item"><a href="#sobre">O que é o sistema</a></div>
-  <div class="nav-item"><a href="#acesso">Acesso e login</a></div>
-  <div class="nav-item"><a href="#tela-inicial">Tela inicial</a></div>
+  <div class="nav-group">Apresentação</div>
+  <div class="nav-item"><a href="#capa">Capa</a></div>
+  <div class="nav-item"><a href="#sobre">Visão Geral do Sistema</a></div>
+  <div class="nav-item"><a href="#acesso">Acesso e Login</a></div>
+  <div class="nav-item"><a href="#tela-inicial">Painel Principal</a></div>
   <div class="nav-group">Cadastros</div>
   <div class="nav-item"><a href="#empresas">Empresas Concedentes</a></div>
   <div class="nav-item"><a href="#ies">Instituições de Ensino</a></div>
@@ -157,11 +211,10 @@
   <div class="nav-item"><a href="#encaminhar">Encaminhar Candidatos</a></div>
   <div class="nav-item"><a href="#entrevista">Resultado da Entrevista</a></div>
   <div class="nav-item"><a href="#curriculos">Currículos</a></div>
-  <div class="nav-group">Contratos</div>
-  <div class="nav-item"><a href="#contratos">Criar e Gerir Contratos</a></div>
-  <div class="nav-group">Relatórios</div>
-  <div class="nav-item"><a href="#relatorios">Relatórios e Exportação</a></div>
-  <div class="nav-group">Outros</div>
+  <div class="nav-group">Contratos e Relatórios</div>
+  <div class="nav-item"><a href="#contratos">Contratos</a></div>
+  <div class="nav-item"><a href="#relatorios">Relatórios</a></div>
+  <div class="nav-group">Recursos Avançados</div>
   <div class="nav-item"><a href="#relacionamento">Relacionamento</a></div>
   <div class="nav-item"><a href="#regras">Regras Automáticas</a></div>
   <div class="nav-item"><a href="#link-qr">Link de Cadastro / QR</a></div>
@@ -170,399 +223,641 @@
 <!-- ── Conteúdo ── -->
 <main class="content">
 
-  <div class="hero">
-    <h1>Manual do Usuário — Ciclo RH</h1>
-    <p>Guia completo para operação do sistema de gestão de estágios</p>
-  </div>
+  <!-- ══════════════════════════════════════ CAPA ══════════════════════════════════════ -->
+  <div class="cover" id="capa">
+    <div class="cover-logo">
+      <!-- Ícone CicloRH -->
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" stroke="rgba(255,255,255,0.3)" stroke-width="2.5"/>
+        <circle cx="32" cy="32" r="20" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
+        <!-- Seta circular (ciclo) -->
+        <path d="M32 12 A20 20 0 1 1 14 38" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <polyline points="10,34 14,38 18,34" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <!-- RH letras -->
+        <text x="20" y="37" font-family="Arial" font-weight="900" font-size="14" fill="white">RH</text>
+      </svg>
+    </div>
 
-  <!-- ════════════════════════ SOBRE ════════════════════════ -->
-  <div class="section" id="sobre">
-    <h2>1. O que é o Ciclo RH?</h2>
-    <p>O <strong>Ciclo RH</strong> é um sistema desenvolvido para <strong>empresas integradoras de estágio</strong>. Ele centraliza todo o ciclo de vida de um estágio em um único lugar:</p>
-    <ul>
-      <li>Cadastro de <strong>candidatos</strong> que buscam estágio</li>
-      <li>Cadastro de <strong>empresas concedentes</strong> que oferecem vagas</li>
-      <li>Cadastro de <strong>instituições de ensino</strong> parceiras</li>
-      <li>Abertura e gestão de <strong>vagas</strong></li>
-      <li>Todo o processo de <strong>seleção</strong> — do encaminhamento à aprovação</li>
-      <li>Geração e controle de <strong>contratos</strong></li>
-      <li>Relatórios gerenciais e exportação para Excel</li>
-    </ul>
-    <div class="info">
-      <strong>Resumo do fluxo:</strong> Candidato se cadastra → Operador abre vaga → Seleciona candidatos → Envia convite pelo WhatsApp → Registra resultado da entrevista → Gera contrato
+    <div class="cover-brand">Ciclo RH</div>
+    <div class="cover-sub">PLATAFORMA DE GESTÃO DE ESTÁGIOS</div>
+
+    <div class="cover-divider"></div>
+
+    <div class="cover-title">Manual do Usuário</div>
+    <div class="cover-desc">
+      Guia completo de operação do sistema — cadastros, seleção, contratos,
+      relatórios e regras de negócio aplicadas ao processo de intermediação de estágios.
+    </div>
+
+    <div class="cover-version">Versão 2.0 &nbsp;·&nbsp; Junho de 2026</div>
+
+    <div class="cover-bottom-bar">
+      <span>Ciclo RH &copy; 2026 — Todos os direitos reservados</span>
+      <span>Documento de uso interno</span>
     </div>
   </div>
 
-  <!-- ════════════════════════ ACESSO ════════════════════════ -->
+  <!-- ══════════════════════════════════════ SOBRE ══════════════════════════════════════ -->
+  <div class="section" id="sobre">
+    <h2>1. Visão Geral do Sistema</h2>
+
+    <p>O <strong>Ciclo RH</strong> é uma plataforma de gestão desenvolvida especificamente para <strong>empresas integradoras de estágio</strong>. Seu objetivo é digitalizar e organizar todas as etapas do processo de intermediação — desde o momento em que um candidato manifesta interesse até a assinatura do contrato e o acompanhamento durante o período de estágio.</p>
+
+    <p>A plataforma foi construída para eliminar o uso de planilhas avulsas, cadernos físicos e comunicações informais que tornam o processo suscetível a erros e retrabalho. Com o Ciclo RH, toda a operação fica centralizada, rastreável e acessível de qualquer dispositivo com conexão à internet.</p>
+
+    <h3>Módulos do sistema</h3>
+    <table>
+      <tr><th>Módulo</th><th>Função principal</th></tr>
+      <tr><td><strong>Cadastros</strong></td><td>Gerencia empresas concedentes, instituições de ensino e candidatos do banco de talentos</td></tr>
+      <tr><td><strong>Seleção</strong></td><td>Controla vagas, encaminhamentos, entrevistas e aprovações</td></tr>
+      <tr><td><strong>Contratos</strong></td><td>Formaliza o vínculo de estágio e controla prazos e renovações</td></tr>
+      <tr><td><strong>Relatórios</strong></td><td>Gera indicadores operacionais e exporta dados para Excel</td></tr>
+      <tr><td><strong>Comercial</strong></td><td>Registra o relacionamento e o histórico de contatos com empresas e IEs</td></tr>
+      <tr><td><strong>Administração</strong></td><td>Gerencia usuários, permissões e configurações gerais do sistema</td></tr>
+    </table>
+
+    <h3>Fluxo operacional completo</h3>
+    <p>O ciclo de vida de um estágio intermediado pela integradora segue a sequência abaixo:</p>
+    <div class="flow">
+      <div class="flow-step">Candidato se cadastra</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Operador abre vaga</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Candidato é encaminhado</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Convite via WhatsApp</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Entrevista &amp; resultado</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Contrato gerado</div>
+    </div>
+
+    <div class="info">
+      <strong>Princípio central:</strong> Nenhuma etapa do processo fica fora do sistema. Todo encaminhamento, toda comunicação e todo resultado de entrevista devem ser registrados para garantir rastreabilidade e permitir a geração de relatórios precisos.
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════ ACESSO ══════════════════════════════════════ -->
   <div class="section" id="acesso">
     <h2>2. Acesso e Login</h2>
-    <p>Para entrar no sistema, acesse o endereço fornecido pela sua equipe (ex.: <em>ciclorh.railway.app</em>) e informe seu <strong>usuário</strong> e <strong>senha</strong>.</p>
-    <div class="tip">
-      <strong>Dica:</strong> Cada membro da equipe tem seu próprio login. Nunca compartilhe sua senha — todas as ações ficam registradas no sistema com o nome do usuário que as realizou.
-    </div>
+
+    <p>O sistema é acessado exclusivamente via navegador web, no endereço fornecido pela equipe de TI (ex.: <em>https://web-production-4dc8d.up.railway.app</em>). Não há necessidade de instalação de nenhum software — basta um navegador atualizado (Chrome, Edge ou Firefox).</p>
+
+    <p>Para entrar, informe seu <strong>nome de usuário</strong> e <strong>senha</strong> na tela de login. O acesso é pessoal e intransferível; todas as ações realizadas no sistema ficam registradas no log de auditoria vinculadas ao usuário que as efetuou.</p>
+
     <h3>Perfis de acesso</h3>
+    <p>O sistema possui dois níveis de permissão:</p>
     <table>
-      <tr><th>Perfil</th><th>O que pode fazer</th></tr>
-      <tr><td><strong>Administrador</strong></td><td>Acesso total: cadastros, seleção, contratos, relatórios e administração de usuários</td></tr>
-      <tr><td><strong>Operador</strong></td><td>Cadastros, seleção e contratos (sem acesso à área de administração)</td></tr>
+      <tr><th>Perfil</th><th>Permissões</th></tr>
+      <tr>
+        <td><strong>Administrador</strong></td>
+        <td>Acesso irrestrito a todos os módulos, incluindo cadastro e edição de usuários, configurações do sistema e relatórios gerenciais. Pode visualizar o log de auditoria completo.</td>
+      </tr>
+      <tr>
+        <td><strong>Operador</strong></td>
+        <td>Acesso a cadastros (empresas, IEs, candidatos), seleção (vagas, encaminhamentos, resultados) e contratos. Não possui acesso à área de Administração.</td>
+      </tr>
     </table>
+
+    <div class="tip">
+      <strong>Segurança:</strong> Nunca compartilhe sua senha com colegas. Se precisar de acesso para outro colaborador, solicite ao administrador o cadastro de um novo usuário. Senhas esquecidas devem ser redefinidas pelo administrador do sistema.
+    </div>
+
+    <h3>Sessão e logout</h3>
+    <p>A sessão permanece ativa enquanto o navegador estiver aberto. Para encerrar, clique em <strong>Sair</strong> no rodapé do menu lateral. Em ambientes compartilhados (computadores de uso coletivo), sempre faça logout ao terminar o uso.</p>
   </div>
 
-  <!-- ════════════════════════ TELA INICIAL ════════════════════════ -->
+  <!-- ══════════════════════════════════════ TELA INICIAL ══════════════════════════════════════ -->
   <div class="section" id="tela-inicial">
-    <h2>3. Tela Inicial (Dashboard)</h2>
-    <p>Ao fazer login, você verá o <strong>painel principal</strong> com os números mais importantes da operação:</p>
+    <h2>3. Painel Principal (Dashboard)</h2>
+
+    <p>Ao fazer login, o sistema exibe o <strong>painel principal</strong>, que oferece uma visão instantânea da operação. O painel é dividido em dois níveis: o <em>Dashboard Operacional</em> (visível a todos os usuários) e o <em>Dashboard Diretoria</em> (com indicadores estratégicos para gestores).</p>
+
+    <h3>Indicadores do Dashboard Operacional</h3>
+    <table>
+      <tr><th>Indicador</th><th>O que representa</th></tr>
+      <tr><td><strong>Candidatos no banco</strong></td><td>Total de pessoas cadastradas e disponíveis para encaminhamento</td></tr>
+      <tr><td><strong>Vagas abertas</strong></td><td>Vagas em processo ativo de seleção (status "aberta" ou "em seleção")</td></tr>
+      <tr><td><strong>Contratos ativos</strong></td><td>Estagiários com contrato em vigor na data atual</td></tr>
+      <tr><td><strong>Contratos a vencer</strong></td><td>Contratos com término nos próximos 30 dias — exigem atenção para renovação ou encerramento</td></tr>
+    </table>
+
+    <h3>Navegação pelo menu lateral</h3>
+    <p>O menu lateral esquerdo é a principal forma de navegar pelo sistema. Ele está organizado nas seguintes seções:</p>
     <ul>
-      <li><strong>Candidatos no banco</strong> — total de pessoas cadastradas disponíveis</li>
-      <li><strong>Vagas abertas</strong> — vagas em processo de seleção</li>
-      <li><strong>Contratos ativos</strong> — estagiários com contrato em vigor</li>
-      <li><strong>Contratos a vencer</strong> — contratos com prazo próximo do fim</li>
+      <li><strong>Principal</strong> — Início e Dashboard Diretoria</li>
+      <li><strong>Cadastros</strong> — Empresas, Instituições de Ensino e Áreas de Estágio</li>
+      <li><strong>Contratos</strong> — Listagem e gestão de contratos de estágio</li>
+      <li><strong>Seleção</strong> — Vagas, Candidatos e Nova Vaga</li>
+      <li><strong>Relatórios</strong> — Exportações e Manual do Sistema</li>
+      <li><strong>Comercial</strong> — Funil e implantação de novas empresas</li>
+      <li><strong>Administração</strong> — Usuários e configurações (somente Administrador)</li>
     </ul>
-    <p>O menu lateral esquerdo dá acesso rápido a todas as seções do sistema.</p>
+
     <div class="info">
-      <strong>Atalho:</strong> Clique no logotipo "Ciclo RH" no topo do menu para voltar à tela inicial de qualquer lugar.
+      <strong>Atalho rápido:</strong> Clique no logotipo "Ciclo RH" no topo do menu a qualquer momento para retornar à tela inicial sem precisar usar o botão Voltar do navegador.
     </div>
   </div>
 
-  <!-- ════════════════════════ EMPRESAS ════════════════════════ -->
+  <!-- ══════════════════════════════════════ EMPRESAS ══════════════════════════════════════ -->
   <div class="section" id="empresas">
     <h2>4. Empresas Concedentes</h2>
-    <p>São as empresas que recebem estagiários. Antes de abrir uma vaga, a empresa precisa estar cadastrada.</p>
 
-    <h3>Como cadastrar uma empresa</h3>
+    <p>Empresas concedentes são as organizações que recebem os estagiários. O cadastro da empresa é um pré-requisito para a abertura de qualquer vaga — sem empresa vinculada, não é possível criar uma oportunidade de estágio.</p>
+
+    <h3>Como cadastrar uma nova empresa</h3>
     <ol class="steps">
-      <li>No menu lateral, clique em <strong>Cadastros → Empresas</strong></li>
-      <li>Clique no botão <strong>+ Nova Empresa</strong></li>
-      <li>Preencha os dados: Razão Social, CNPJ, endereço, bairro, cidade, estado, contato e responsável legal</li>
-      <li>Informe os valores praticados (bolsa padrão e auxílio transporte) — serão sugeridos automaticamente ao criar contratos</li>
-      <li>Cadastre os <strong>supervisores de estágio</strong> da empresa (quem acompanha o estagiário no dia a dia)</li>
-      <li>Clique em <strong>Salvar</strong></li>
+      <li>No menu lateral, clique em <strong>Cadastros → Empresas</strong> e, em seguida, em <strong>+ Nova Empresa</strong>.</li>
+      <li>Preencha os dados de identificação: Razão Social, CNPJ, endereço completo (logradouro, bairro, cidade, estado) e dados de contato (telefone, e-mail e site).</li>
+      <li>Informe os valores padrão praticados pela empresa: <strong>bolsa mensal</strong> e <strong>auxílio transporte</strong>. Esses valores serão sugeridos automaticamente ao criar um contrato para essa empresa.</li>
+      <li>Cadastre os <strong>supervisores de estágio</strong> — as pessoas que acompanharão o estagiário no dia a dia dentro da empresa. Cada supervisor tem nome, cargo e contato próprios.</li>
+      <li>Clique em <strong>Salvar</strong>.</li>
     </ol>
 
-    <h3>Aba "Sem Estagiários"</h3>
-    <p>A lista de empresas possui duas abas:</p>
+    <h3>Abas da lista de empresas</h3>
+    <p>A listagem de empresas é dividida em duas abas estratégicas:</p>
     <ul>
-      <li><strong>Com Estagiários</strong> — empresas com contratos ativos no momento</li>
-      <li><strong>Sem Estagiários</strong> — empresas cadastradas mas sem estagiários ativos (concedentes inativas)</li>
+      <li><strong>Com Estagiários:</strong> Empresas com pelo menos um contrato de estágio ativo no momento. São as concedentes operacionalmente ativas.</li>
+      <li><strong>Sem Estagiários:</strong> Empresas cadastradas que não possuem contratos ativos. Representam oportunidades para prospecção de novas vagas ou reativação de parcerias.</li>
     </ul>
-    <p>Use a aba "Sem Estagiários" para identificar empresas que podem ter novas vagas.</p>
 
-    <h3>Página de detalhes da empresa</h3>
-    <p>Clique no ícone de olho (👁) na lista para abrir a ficha da empresa. Lá você encontra:</p>
+    <h3>Ficha da empresa</h3>
+    <p>Clicando no ícone de olho (&#128065;) na lista, você acessa a ficha completa da empresa, que contém:</p>
     <ul>
-      <li>Dados cadastrais e supervisores</li>
-      <li><strong>NPS</strong> — avaliação de 1 a 5 estrelas da empresa como parceira</li>
-      <li><strong>Histórico de contatos</strong> — registre ligações, reuniões e e-mails com a empresa</li>
-      <li>Vagas abertas vinculadas à empresa</li>
+      <li>Dados cadastrais completos e lista de supervisores</li>
+      <li><strong>NPS (avaliação de parceria):</strong> nota de 1 a 5 estrelas que a equipe da integradora atribui à empresa como concedente. Ajuda a identificar as melhores parceiras para futuras indicações.</li>
+      <li><strong>Histórico de relacionamento:</strong> registro cronológico de todas as interações da equipe com a empresa (ligações, reuniões, visitas, e-mails, WhatsApp).</li>
+      <li><strong>Vagas vinculadas:</strong> todas as vagas abertas ou em seleção na empresa.</li>
     </ul>
+
+    <h3>Edição e exclusão</h3>
+    <p>Para editar os dados de uma empresa, clique no ícone de lápis na lista ou no botão <strong>Editar</strong> dentro da ficha. Não é possível excluir uma empresa que possua contratos ou vagas ativas vinculadas a ela.</p>
   </div>
 
-  <!-- ════════════════════════ IEs ════════════════════════ -->
+  <!-- ══════════════════════════════════════ IEs ══════════════════════════════════════ -->
   <div class="section" id="ies">
     <h2>5. Instituições de Ensino (IEs)</h2>
-    <p>São as faculdades, universidades e escolas técnicas de onde vêm os candidatos.</p>
+
+    <p>As Instituições de Ensino são as faculdades, universidades e escolas técnicas parceiras da integradora. O relacionamento formal com elas é regulado por um <strong>convênio</strong>, que precisa ser renovado periodicamente. O sistema monitora os prazos automaticamente.</p>
 
     <h3>Como cadastrar uma IE</h3>
     <ol class="steps">
-      <li>Acesse <strong>Cadastros → Instituições de Ensino</strong></li>
-      <li>Clique em <strong>+ Nova IE</strong></li>
-      <li>Informe o nome, endereço, contato e a <strong>data de vencimento do convênio</strong></li>
-      <li>Clique em <strong>Salvar</strong></li>
+      <li>Acesse <strong>Cadastros → Instituições de Ensino</strong> e clique em <strong>+ Nova IE</strong>.</li>
+      <li>Informe o nome da instituição, endereço, telefone, e-mail institucional e nome do coordenador de estágios.</li>
+      <li>Registre a <strong>data de vencimento do convênio</strong> — esse campo é fundamental para o controle de parceria ativa.</li>
+      <li>Clique em <strong>Salvar</strong>.</li>
     </ol>
 
+    <h3>Controle de convênios</h3>
+    <p>O sistema monitora as datas de vencimento de convênio de cada IE. Na listagem:</p>
+    <ul>
+      <li>Convênios <strong>vigentes</strong> aparecem normalmente.</li>
+      <li>Convênios <strong>vencidos</strong> são exibidos em <span style="color:#dc3545;font-weight:700">vermelho</span>, sinalizando a necessidade de renovação.</li>
+    </ul>
     <div class="tip">
-      <strong>Atenção ao convênio:</strong> A data de vencimento é exibida na lista de IEs. Quando vencer, aparece em <span style="color:#dc3545;font-weight:600">vermelho</span> para alertar que precisa de renovação.
+      <strong>Boas práticas:</strong> Verifique regularmente a lista de IEs para identificar convênios prestes a vencer. Um convênio expirado pode comprometer a legalidade dos contratos de estágio vinculados àquela IE, conforme a Lei 11.788/2008.
     </div>
+
+    <h3>Histórico de relacionamento</h3>
+    <p>Assim como nas empresas concedentes, a ficha de cada IE permite registrar o histórico de contatos com a coordenação de estágios da instituição. Utilize esse recurso para documentar reuniões de renovação de convênio, visitas e comunicados.</p>
   </div>
 
-  <!-- ════════════════════════ CANDIDATOS ════════════════════════ -->
+  <!-- ══════════════════════════════════════ CANDIDATOS ══════════════════════════════════════ -->
   <div class="section" id="candidatos">
     <h2>6. Candidatos</h2>
-    <p>O banco de candidatos reúne todas as pessoas que se inscreveram para estágio, seja pelo formulário público (QR Code) ou cadastradas manualmente pelo operador.</p>
 
-    <h3>Cadastro manual</h3>
+    <p>O <strong>banco de candidatos</strong> é o coração do processo de seleção. Reúne todas as pessoas que manifestaram interesse em estagiar, seja por iniciativa própria (via formulário público com QR Code) ou cadastradas manualmente por um operador.</p>
+
+    <h3>Cadastro manual de candidato</h3>
+    <p>Utilize o cadastro manual quando o candidato entrar em contato diretamente por telefone, WhatsApp ou presencialmente.</p>
     <ol class="steps">
-      <li>Acesse <strong>Seleção → Candidatos</strong></li>
-      <li>Clique em <strong>+ Novo Candidato</strong></li>
-      <li>Preencha: nome, CPF, data de nascimento, contato (WhatsApp e e-mail), endereço completo, formação acadêmica, IE vinculada, disponibilidade e observações</li>
-      <li>Se o candidato já trabalhou antes, marque <strong>"Sim"</strong> em experiência profissional e preencha as experiências anteriores</li>
-      <li>Clique em <strong>Cadastrar</strong></li>
+      <li>Acesse <strong>Seleção → Candidatos</strong> e clique em <strong>+ Novo Candidato</strong>.</li>
+      <li>Preencha os dados de <strong>identificação</strong>: nome completo, CPF e data de nascimento.</li>
+      <li>Informe os dados de <strong>contato</strong>: WhatsApp (com DDD) e e-mail.</li>
+      <li>Preencha o <strong>endereço completo</strong>: logradouro, bairro, cidade e estado.</li>
+      <li>Registre a <strong>formação acadêmica</strong>: curso, semestre atual e instituição de ensino vinculada.</li>
+      <li>Selecione a <strong>disponibilidade de horário</strong>: Manhã, Tarde, Integral ou Noite.</li>
+      <li>Se o candidato possuir experiências profissionais anteriores, marque <strong>"Sim"</strong> e preencha as informações de cada experiência (empresa, período e cargo/função).</li>
+      <li>Clique em <strong>Cadastrar</strong>.</li>
     </ol>
 
-    <h3>Cadastro via QR Code (pelo candidato)</h3>
-    <p>O candidato pode se cadastrar sozinho usando o link ou QR Code disponível no sistema. Veja a seção <a href="#link-qr">Link de Cadastro / QR Code</a> para detalhes.</p>
+    <h3>Cadastro via formulário público (QR Code)</h3>
+    <p>O sistema disponibiliza um formulário público que pode ser acessado via link ou QR Code. O candidato preenche e envia os dados por conta própria, sem interação do operador, e o cadastro é criado automaticamente no banco. Veja mais detalhes na seção <a href="#link-qr">Link de Cadastro / QR Code</a>.</p>
 
-    <h3>Disponibilidade do candidato</h3>
-    <p>Um candidato só aparece disponível para encaminhamento quando <strong>não está em processo seletivo ativo</strong> em nenhuma outra vaga. Ao ser encaminhado para uma vaga, ele fica bloqueado para as demais até que a seleção seja concluída (aprovado, não aprovado ou ausente).</p>
+    <h3>Disponibilidade para encaminhamento</h3>
+    <p>Um candidato aparece <strong>disponível</strong> no dropdown de encaminhamento somente quando <em>não está em processo ativo</em> (inscrito ou em entrevista) em nenhuma outra vaga. Essa restrição existe para evitar a situação de um mesmo candidato ser convocado para duas entrevistas simultâneas — o que prejudica o relacionamento com as empresas.</p>
+    <p>Assim que um resultado terminal for registrado (aprovado, não aprovado, não compareceu, desistiu), o candidato volta imediatamente ao pool de disponíveis para novas oportunidades.</p>
 
-    <h3>Excluir candidato</h3>
-    <p>Na lista de candidatos, clique no ícone de lixeira (🗑) ao lado do candidato. O sistema pedirá confirmação antes de excluir.</p>
+    <h3>Currículo do candidato</h3>
+    <p>O sistema gera automaticamente um currículo formatado para cada candidato com base nos dados cadastrais. O currículo pode ser acessado a partir da ficha do candidato ou diretamente na página da vaga. Veja mais em <a href="#curriculos">Currículos</a>.</p>
 
+    <h3>Exclusão de candidato</h3>
+    <p>Para excluir um candidato do banco, clique no ícone de lixeira (&#128465;) na lista de candidatos. O sistema solicitará confirmação antes de prosseguir.</p>
     <div class="danger">
-      <strong>Atenção:</strong> A exclusão de um candidato remove também todo o histórico de candidaturas vinculado a ele. Esta ação não pode ser desfeita.
+      <strong>Atenção:</strong> A exclusão de um candidato é <strong>permanente e irreversível</strong>. Todos os registros de candidatura vinculados a ele também serão removidos. Utilize essa função apenas quando o candidato solicitar a remoção de seus dados ou em casos de duplicidade comprovada.
     </div>
   </div>
 
-  <!-- ════════════════════════ VAGAS ════════════════════════ -->
+  <!-- ══════════════════════════════════════ VAGAS ══════════════════════════════════════ -->
   <div class="section" id="vagas">
     <h2>7. Vagas de Estágio</h2>
-    <p>Cada vaga representa uma oportunidade de estágio em uma empresa concedente.</p>
 
-    <h3>Como criar uma vaga</h3>
+    <p>Uma <strong>vaga</strong> representa uma oportunidade de estágio aberta por uma empresa concedente. É a unidade central do processo de seleção — candidatos são encaminhados para vagas, e os resultados das entrevistas são registrados no contexto de cada vaga.</p>
+
+    <h3>Como criar uma nova vaga</h3>
     <ol class="steps">
-      <li>Acesse <strong>Seleção → Vagas</strong></li>
-      <li>Clique em <strong>+ Nova Vaga</strong></li>
-      <li>Vincule a <strong>empresa concedente</strong> e informe: título, área, nível, curso desejado, carga horária, bolsa, benefícios e data limite</li>
-      <li>Clique em <strong>Salvar</strong></li>
+      <li>Acesse <strong>Seleção → Vagas</strong> e clique em <strong>+ Nova Vaga</strong> (ou acesse <strong>Nova Vaga</strong> diretamente no menu lateral).</li>
+      <li>Vincule a <strong>empresa concedente</strong> que está oferecendo a oportunidade.</li>
+      <li>Preencha os detalhes da vaga: título, área de atuação, nível (superior, técnico ou ensino médio), curso desejado, carga horária semanal, valor da bolsa, benefícios adicionais e data limite para preenchimento.</li>
+      <li>Atribua um <strong>responsável interno</strong> — o operador da integradora que gerenciará o processo seletivo.</li>
+      <li>Clique em <strong>Salvar</strong>.</li>
     </ol>
 
-    <h3>Status da vaga</h3>
+    <h3>Status da vaga e seu significado operacional</h3>
     <table>
-      <tr><th>Status</th><th>Significado</th></tr>
-      <tr><td><span class="badge-demo bd-blue">Aberta</span></td><td>Vaga publicada, aguardando candidatos</td></tr>
-      <tr><td><span class="badge-demo bd-blue">Em seleção</span></td><td>Candidatos já foram encaminhados, entrevistas em andamento</td></tr>
-      <tr><td><span class="badge-demo bd-gray">Preenchida</span></td><td>Vaga encerrada com sucesso — estagiário contratado</td></tr>
-      <tr><td><span class="badge-demo bd-red">Cancelada</span></td><td>Vaga encerrada sem preenchimento</td></tr>
+      <tr><th>Status</th><th>Significado</th><th>Próximo passo</th></tr>
+      <tr>
+        <td><span class="badge-demo bd-blue">Aberta</span></td>
+        <td>Vaga publicada, aguardando encaminhamento de candidatos</td>
+        <td>Selecionar candidatos para encaminhar</td>
+      </tr>
+      <tr>
+        <td><span class="badge-demo bd-blue">Em seleção</span></td>
+        <td>Um ou mais candidatos já foram encaminhados; entrevistas em andamento</td>
+        <td>Registrar resultados das entrevistas</td>
+      </tr>
+      <tr>
+        <td><span class="badge-demo bd-gray">Preenchida</span></td>
+        <td>Candidato aprovado e contrato formalizado</td>
+        <td>Gerar o contrato de estágio</td>
+      </tr>
+      <tr>
+        <td><span class="badge-demo bd-red">Cancelada</span></td>
+        <td>Vaga encerrada pela empresa sem preenchimento</td>
+        <td>Registrar o motivo e contatar a empresa</td>
+      </tr>
     </table>
 
-    <p>Você pode alterar o status manualmente na página de detalhes da vaga, no card <strong>"Alterar Status da Vaga"</strong>.</p>
+    <p>O status pode ser alterado manualmente a qualquer momento na página de detalhes da vaga, no card <strong>"Alterar Status da Vaga"</strong>.</p>
+
+    <h3>Excluir uma vaga</h3>
+    <p>Para remover permanentemente uma vaga do sistema, clique no ícone de lixeira (&#128465;) na lista de vagas ou no botão <strong>Excluir</strong> na página de detalhes da vaga.</p>
+    <div class="danger">
+      <strong>Atenção:</strong> A exclusão de uma vaga remove também <strong>todos os encaminhamentos e histórico de seleção</strong> associados a ela. Essa operação é irreversível. Prefira alterar o status para "Cancelada" em vez de excluir, a fim de preservar o histórico operacional.
+    </div>
   </div>
 
-  <!-- ════════════════════════ ENCAMINHAR ════════════════════════ -->
+  <!-- ══════════════════════════════════════ ENCAMINHAR ══════════════════════════════════════ -->
   <div class="section" id="encaminhar">
-    <h2>8. Encaminhar Candidatos</h2>
-    <p>Encaminhar significa selecionar um candidato do banco e colocá-lo em processo seletivo para uma vaga específica.</p>
+    <h2>8. Encaminhar Candidatos para uma Vaga</h2>
 
-    <h3>Como encaminhar</h3>
+    <p>Encaminhar é o ato de selecionar um candidato do banco de talentos e colocá-lo em processo seletivo para uma vaga específica. É nesse momento que o candidato recebe o convite para a entrevista, geralmente via WhatsApp.</p>
+
+    <h3>Passo a passo do encaminhamento</h3>
     <ol class="steps">
-      <li>Abra a vaga desejada (clique nela na lista de vagas)</li>
-      <li>Role a página até o card <strong>"Encaminhar Candidato"</strong> (aparece apenas para vagas Abertas ou Em seleção)</li>
-      <li>Selecione o candidato no dropdown — o modal do WhatsApp abrirá automaticamente</li>
-      <li>Preencha a <strong>data</strong> e o <strong>horário</strong> da entrevista</li>
-      <li>Revise (e edite se necessário) a mensagem pré-preenchida</li>
-      <li>Clique em <strong>"Abrir no WhatsApp"</strong> para enviar direto, ou <strong>"Copiar mensagem"</strong> para colar manualmente</li>
-      <li>Clique em <strong>"Confirmar encaminhamento"</strong> para registrar o candidato na vaga</li>
+      <li>Abra a vaga desejada clicando no título na lista de vagas.</li>
+      <li>Na página da vaga, role até o card <strong>"Encaminhar Candidato"</strong> — este card só aparece em vagas com status <em>Aberta</em> ou <em>Em seleção</em>.</li>
+      <li>Selecione o candidato no menu suspenso (dropdown). Apenas candidatos <em>disponíveis</em> aparecem na lista. Ao selecionar, o <strong>modal do WhatsApp</strong> abrirá automaticamente.</li>
+      <li>No modal, informe a <strong>data</strong> e o <strong>horário</strong> da entrevista nos campos indicados. A mensagem é atualizada em tempo real.</li>
+      <li>Revise o texto da mensagem — você pode editá-la livremente antes de enviar.</li>
+      <li>Clique em <strong>"Abrir no WhatsApp"</strong> para ser redirecionado ao WhatsApp Web com a mensagem já preenchida, ou em <strong>"Copiar mensagem"</strong> para colar manualmente.</li>
+      <li>Após enviar a mensagem, clique em <strong>"Confirmar encaminhamento"</strong> para registrar o candidato como inscrito na vaga.</li>
     </ol>
 
     <div class="tip">
-      <strong>Aviso amarelo:</strong> Se o candidato já participou de uma seleção anterior na mesma empresa e foi reprovado, o sistema exibirá um aviso antes de abrir o modal. Você pode confirmar mesmo assim ou cancelar.
+      <strong>Candidato com histórico na empresa:</strong> Se o candidato já tiver sido encaminhado anteriormente para outra vaga da <em>mesma empresa</em> e não tiver sido aprovado, o sistema exibirá um <strong>aviso em amarelo</strong> antes de abrir o modal. Você pode confirmar o encaminhamento mesmo assim — o aviso é apenas informativo.
     </div>
+
+    <h3>A mensagem automática do WhatsApp</h3>
+    <p>A mensagem é montada automaticamente pelo sistema com as informações relevantes para o candidato:</p>
+    <ul>
+      <li>Saudação com o primeiro nome do candidato</li>
+      <li>Local da empresa: bairro e cidade (sem revelar o endereço completo)</li>
+      <li>Valor da bolsa mensal e benefícios</li>
+      <li>Data e horário da entrevista</li>
+      <li>Aviso de que o endereço completo será enviado mediante confirmação do candidato</li>
+    </ul>
+    <p>Essa abordagem protege a privacidade da empresa e garante que apenas candidatos que confirmaram interesse recebam o endereço completo.</p>
 
     <h3>Nova rodada de entrevistas</h3>
-    <p>Se um candidato já participou dessa vaga mas teve um resultado terminal (não aprovado, não compareceu, desistiu), ele <strong>voltará a aparecer no dropdown</strong> para ser encaminhado novamente. O sistema reconhece a situação e <strong>reativa a candidatura existente</strong> em vez de criar uma duplicata — o histórico da rodada anterior é preservado.</p>
+    <p>Se um candidato já participou de uma seleção na mesma vaga e teve um resultado terminal (não aprovado, não compareceu, desistiu), ele <strong>voltará a aparecer no dropdown</strong> quando disponível. O sistema detecta automaticamente a situação e <strong>reativa a candidatura existente</strong> para uma nova rodada — em vez de criar um registro duplicado — preservando o histórico anterior.</p>
     <div class="info">
-      <strong>Exemplo:</strong> Um candidato não compareceu à primeira entrevista (justificou). Após nova tentativa de agendamento, basta selecioná-lo novamente no dropdown da mesma vaga — ele aparecerá disponível e será reencaminhado para nova rodada.
+      <strong>Exemplo prático:</strong> Um candidato foi convocado para a Vaga X mas não compareceu e justificou. Após nova negociação, o operador quer reagendá-lo para a mesma vaga. Basta selecioná-lo novamente no dropdown — ele estará disponível e a candidatura será reativada automaticamente.
     </div>
-
-    <h3>A mensagem do WhatsApp</h3>
-    <p>A mensagem é montada automaticamente com as informações da vaga e da empresa:</p>
-    <ul>
-      <li>Nome do candidato (primeiro nome)</li>
-      <li>Bairro e cidade da empresa</li>
-      <li>Valor da bolsa e benefícios</li>
-      <li>Data e horário da entrevista (preenchidos pelo operador)</li>
-      <li>Aviso de que o endereço completo será enviado mediante aceite</li>
-    </ul>
-    <p>Você pode editar livremente o texto antes de copiar ou enviar.</p>
   </div>
 
-  <!-- ════════════════════════ ENTREVISTA ════════════════════════ -->
+  <!-- ══════════════════════════════════════ ENTREVISTA ══════════════════════════════════════ -->
   <div class="section" id="entrevista">
-    <h2>9. Resultado da Entrevista</h2>
-    <p>Após a entrevista, registre o resultado de cada candidato na página da vaga.</p>
+    <h2>9. Registro do Resultado da Entrevista</h2>
 
-    <h3>Opções disponíveis</h3>
+    <p>Após a realização da entrevista, o operador deve registrar o resultado para cada candidato encaminhado. Esse registro é fundamental para liberar o candidato para outras vagas, atualizar os indicadores do sistema e acionar as regras automáticas de negócio.</p>
+
+    <h3>Opções de resultado e seus efeitos</h3>
     <table>
-      <tr><th>Botão</th><th>Status gerado</th><th>O que significa</th></tr>
-      <tr><td><span class="badge-demo bd-blue">Entrevista</span></td><td>Em entrevista</td><td>Candidato foi convocado e está no processo</td></tr>
-      <tr><td><span class="badge-demo bd-green">Aprovado</span></td><td>Aprovado</td><td>Candidato selecionado — aparece opção de criar contrato</td></tr>
-      <tr><td><span class="badge-demo bd-red">Não aprovado</span></td><td>Reprovado</td><td>Candidato não passou, volta ao banco disponível</td></tr>
-      <tr><td><span class="badge-demo bd-yellow">N/C justif.</span></td><td>Não compareceu (justificou)</td><td>Faltou mas apresentou justificativa</td></tr>
-      <tr><td><span class="badge-demo bd-red">N/C s/ justif.</span></td><td>Não compareceu (sem justif.)</td><td>Faltou sem justificativa — ver regra abaixo</td></tr>
+      <tr><th>Ação</th><th>Status resultante</th><th>Efeito no sistema</th></tr>
+      <tr>
+        <td><span class="badge-demo bd-blue">Em entrevista</span></td>
+        <td>Em entrevista</td>
+        <td>Confirma que o candidato foi para a entrevista; mantém bloqueado para outras vagas</td>
+      </tr>
+      <tr>
+        <td><span class="badge-demo bd-green">Aprovado</span></td>
+        <td>Aprovado</td>
+        <td>Habilita o botão "Criar Contrato"; candidato fica bloqueado até o contrato ser gerado</td>
+      </tr>
+      <tr>
+        <td><span class="badge-demo bd-red">Não aprovado</span></td>
+        <td>Reprovado</td>
+        <td>Candidato volta imediatamente ao pool de disponíveis para outras vagas</td>
+      </tr>
+      <tr>
+        <td><span class="badge-demo bd-yellow">N/C justificou</span></td>
+        <td>Não compareceu (justificou)</td>
+        <td>Candidato retorna ao pool; nenhuma penalidade aplicada</td>
+      </tr>
+      <tr>
+        <td><span class="badge-demo bd-red">N/C s/ justificativa</span></td>
+        <td>Não compareceu (sem justif.)</td>
+        <td>Aciona a regra de exclusão automática (ver abaixo)</td>
+      </tr>
     </table>
 
+    <h3>Regra de exclusão automática por faltas</h3>
+    <p>O sistema aplica uma política de penalização progressiva para candidatos que faltam a entrevistas sem justificativa:</p>
+    <ul>
+      <li><strong>1ª falta sem justificativa:</strong> O sistema registra o ocorrido e exibe um alerta ao operador informando que, na próxima ocorrência, o candidato será excluído automaticamente do banco.</li>
+      <li><strong>2ª falta sem justificativa</strong> (em qualquer vaga, não necessariamente a mesma): O candidato é <strong>excluído automaticamente e permanentemente</strong> do banco de talentos, sem necessidade de intervenção manual.</li>
+    </ul>
     <div class="danger">
-      <strong>Regra de exclusão automática:</strong> Se um candidato faltar a <strong>2 entrevistas sem justificativa</strong> (em qualquer vaga), o sistema o excluirá automaticamente do banco de candidatos. Na primeira falta sem justificativa, o sistema exibe um alerta de aviso. Na segunda, a exclusão é imediata e irreversível.
+      <strong>Importante:</strong> A exclusão por 2ª falta é <strong>imediata e irreversível</strong>. Todo o histórico de candidaturas do candidato é removido junto. Essa regra existe para manter a qualidade do banco e proteger a reputação da integradora perante as empresas parceiras.
     </div>
 
+    <h3>Fluxo de estados de uma candidatura</h3>
     <div class="flow">
       <div class="flow-step">Inscrito</div>
       <div class="flow-arrow">→</div>
       <div class="flow-step">Em entrevista</div>
       <div class="flow-arrow">→</div>
       <div class="flow-step">Aprovado ✅</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Contrato</div>
     </div>
-    <div class="flow" style="margin-top:6px">
+    <div class="flow" style="margin-top:8px">
       <div class="flow-step">Em entrevista</div>
       <div class="flow-arrow">→</div>
-      <div class="flow-step">Não aprovado ❌</div>
-      <div class="flow-arrow">ou</div>
-      <div class="flow-step">Não compareceu ⚠️</div>
+      <div class="flow-step">Não aprovado / N/C</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">Disponível novamente</div>
       <div class="flow-arrow">→</div>
       <div class="flow-step">Nova rodada 🔄</div>
     </div>
+  </div>
 
-    <h3>Nova rodada</h3>
-    <p>Após registrar um resultado terminal (não aprovado, não compareceu), o candidato pode ser reencaminhado para a mesma vaga quantas vezes for necessário. Basta selecioná-lo novamente no card <strong>"Encaminhar Candidato"</strong> — o sistema reativa a candidatura automaticamente para uma nova rodada, preservando o histórico anterior.</p>
+  <!-- ══════════════════════════════════════ CURRÍCULOS ══════════════════════════════════════ -->
+  <div class="section" id="curriculos">
+    <h2>10. Geração de Currículos</h2>
+
+    <p>O Ciclo RH gera currículos formatados para impressão diretamente do sistema, sem necessidade de Word, PDF externo ou qualquer outra ferramenta. Os currículos são montados automaticamente com base nos dados cadastrais de cada candidato.</p>
+
+    <h3>Currículo individual</h3>
+    <p>Para gerar o currículo de um único candidato:</p>
+    <ul>
+      <li><strong>Via ficha do candidato:</strong> Acesse a página de detalhes do candidato e clique em <em>Currículo</em>.</li>
+      <li><strong>Via vaga:</strong> Na página da vaga, cada candidato encaminhado possui um ícone de documento (&#128196;). Clique nele para abrir o currículo em nova aba.</li>
+    </ul>
+    <p>Na página do currículo, use o botão <strong>"Imprimir / Salvar PDF"</strong> para exportar em PDF ou enviar para impressora.</p>
+
+    <h3>Currículos em lote (por vaga)</h3>
+    <p>Para enviar um conjunto de currículos para uma empresa concedente, utilize a função de impressão em lote:</p>
+    <ol class="steps">
+      <li>Abra a página da vaga desejada.</li>
+      <li>No topo do card de candidatos, clique no botão <strong>"Currículos"</strong> (aparece apenas quando há candidatos ativos).</li>
+      <li>O sistema abrirá uma página com os currículos de todos os candidatos inscritos, em entrevista e aprovados, separados por quebras de página.</li>
+      <li>Use <strong>"Imprimir / Salvar PDF"</strong> para gerar um único arquivo com todos os currículos.</li>
+    </ol>
+
+    <h3>Informações presentes no currículo</h3>
+    <table>
+      <tr><th>Seção</th><th>Campos exibidos</th></tr>
+      <tr><td><strong>Cabeçalho</strong></td><td>Nome completo, curso, semestre, disponibilidade de horário</td></tr>
+      <tr><td><strong>Contato</strong></td><td>WhatsApp, e-mail, cidade e estado</td></tr>
+      <tr><td><strong>Dados pessoais</strong></td><td>CPF, data de nascimento, endereço completo, instituição de ensino</td></tr>
+      <tr><td><strong>Apresentação</strong></td><td>Texto livre de objetivos e habilidades cadastrado pelo candidato</td></tr>
+      <tr><td><strong>Experiência profissional</strong></td><td>Lista de empregos anteriores com empresa, período e cargo/função</td></tr>
+    </table>
+
     <div class="tip">
-      <strong>Exceção:</strong> Candidatos <strong>aprovados</strong> não podem ser reencaminhados para a mesma vaga. Para eles, o próximo passo é a criação do contrato.
+      <strong>Dica:</strong> Antes de imprimir os currículos para enviar à empresa, verifique se os dados estão completos — especialmente nome, curso e disponibilidade. Candidatos com dados incompletos geram uma impressão menos profissional.
     </div>
   </div>
 
-  <!-- ════════════════════════ CURRÍCULOS ════════════════════════ -->
-  <div class="section" id="curriculos">
-    <h2>10. Currículos</h2>
-    <p>O sistema gera currículos em formato imprimível diretamente, sem necessidade de Word ou PDF externo.</p>
-
-    <h3>Currículo individual</h3>
-    <p>Na página de detalhes de uma vaga, cada candidato tem um ícone de currículo (📄). Clique nele para abrir o currículo em nova aba. Use o botão <strong>"Imprimir / Salvar PDF"</strong> na tela para exportar.</p>
-
-    <h3>Currículos em lote</h3>
-    <p>No topo do card de candidatos da vaga, clique em <strong>"Currículos"</strong>. O sistema abrirá uma página com todos os candidatos ativos da vaga (inscritos, em entrevista e aprovados) separados por quebras de página — prontos para imprimir e enviar à empresa.</p>
-
-    <h3>O que aparece no currículo</h3>
-    <ul>
-      <li>Nome, curso, semestre e disponibilidade (no cabeçalho)</li>
-      <li>WhatsApp, e-mail e cidade/estado</li>
-      <li>CPF, data de nascimento e instituição de ensino</li>
-      <li>Endereço completo (logradouro, bairro, cidade)</li>
-      <li>Apresentação / observações</li>
-      <li>Experiências profissionais anteriores</li>
-    </ul>
-  </div>
-
-  <!-- ════════════════════════ CONTRATOS ════════════════════════ -->
+  <!-- ══════════════════════════════════════ CONTRATOS ══════════════════════════════════════ -->
   <div class="section" id="contratos">
-    <h2>11. Contratos</h2>
-    <p>Após a aprovação do candidato, o próximo passo é formalizar o estágio com um contrato.</p>
+    <h2>11. Contratos de Estágio</h2>
+
+    <p>O contrato formaliza o vínculo entre o candidato aprovado, a empresa concedente e a integradora. É o documento legal que ampara o estágio conforme a <strong>Lei 11.788/2008 (Lei do Estágio)</strong>. O sistema facilita a criação e o acompanhamento do ciclo de vida de cada contrato.</p>
 
     <h3>Como criar um contrato</h3>
     <ol class="steps">
-      <li>Na página da vaga, clique em <strong>"Criar Contrato"</strong> ao lado do candidato aprovado<br><em>(ou acesse Contratos → Novo Contrato no menu lateral)</em></li>
-      <li>Confirme: empresa, candidato, supervisor, período (início e fim), carga horária, bolsa e auxílio transporte</li>
-      <li>Clique em <strong>Salvar</strong></li>
+      <li>Após registrar um candidato como <strong>Aprovado</strong> na entrevista, o botão <strong>"Criar Contrato"</strong> aparecerá ao lado do nome dele na página da vaga.</li>
+      <li>Alternativamente, acesse <strong>Contratos → Novo Contrato</strong> no menu lateral e selecione manualmente a empresa, o candidato e a vaga.</li>
+      <li>Confirme e preencha os dados do contrato: supervisor responsável na empresa, data de início, data de término prevista, carga horária semanal, valor da bolsa e valor do auxílio transporte.</li>
+      <li>Clique em <strong>Salvar</strong>. O contrato ficará com status <em>Ativo</em>.</li>
     </ol>
 
-    <h3>Status do contrato</h3>
+    <h3>Ciclo de vida do contrato</h3>
     <table>
-      <tr><th>Status</th><th>Significado</th></tr>
-      <tr><td><span class="badge-demo bd-blue">Ativo</span></td><td>Estagiário em exercício</td></tr>
-      <tr><td><span class="badge-demo bd-yellow">A vencer</span></td><td>Contrato próximo do término (alerta automático)</td></tr>
-      <tr><td><span class="badge-demo bd-gray">Encerrado</span></td><td>Período de estágio concluído</td></tr>
-      <tr><td><span class="badge-demo bd-red">Rescindido</span></td><td>Contrato encerrado antes do prazo</td></tr>
+      <tr><th>Status</th><th>Significado</th><th>O que fazer</th></tr>
+      <tr>
+        <td><span class="badge-demo bd-blue">Ativo</span></td>
+        <td>Estagiário em exercício, dentro do prazo contratual</td>
+        <td>Acompanhar regularmente; registrar visitas de supervisão</td>
+      </tr>
+      <tr>
+        <td><span class="badge-demo bd-yellow">A vencer</span></td>
+        <td>Contrato com término nos próximos 30 dias</td>
+        <td>Contatar empresa para decidir entre renovação ou encerramento</td>
+      </tr>
+      <tr>
+        <td><span class="badge-demo bd-gray">Encerrado</span></td>
+        <td>Período de estágio concluído no prazo</td>
+        <td>Emitir declaração de conclusão; atualizar ficha do candidato</td>
+      </tr>
+      <tr>
+        <td><span class="badge-demo bd-red">Rescindido</span></td>
+        <td>Contrato encerrado antecipadamente</td>
+        <td>Registrar o motivo; verificar obrigações legais pendentes</td>
+      </tr>
     </table>
+
+    <h3>Alertas automáticos de vencimento</h3>
+    <p>O sistema destaca automaticamente no Dashboard os contratos com vencimento nos próximos 30 dias. Esses contratos também aparecem no relatório de "Contratos a Vencer". Use esse recurso para antecipar o contato com as empresas e evitar encerramentos abruptos de estágio.</p>
   </div>
 
-  <!-- ════════════════════════ RELATÓRIOS ════════════════════════ -->
+  <!-- ══════════════════════════════════════ RELATÓRIOS ══════════════════════════════════════ -->
   <div class="section" id="relatorios">
-    <h2>12. Relatórios</h2>
-    <p>Acesse <strong>Relatórios</strong> no menu lateral para exportar dados do sistema em Excel (.xlsx).</p>
+    <h2>12. Relatórios e Exportação de Dados</h2>
 
+    <p>O módulo de Relatórios permite exportar dados do sistema em formato Excel (.xlsx) para análise externa, apresentações à diretoria ou prestação de contas. Os relatórios são gerados em tempo real com base nos dados atuais do banco de dados.</p>
+
+    <h3>Relatórios disponíveis</h3>
     <table>
-      <tr><th>Relatório</th><th>Conteúdo</th></tr>
-      <tr><td><strong>Contratos</strong></td><td>Lista de contratos ativos ou todos, com empresa, candidato, período e valores</td></tr>
-      <tr><td><strong>Estagiários</strong></td><td>Dados dos candidatos com contratos, IE e supervisor</td></tr>
-      <tr><td><strong>Indicadores</strong></td><td>Vagas abertas, candidatos por status, aprovações e taxa de conversão</td></tr>
+      <tr><th>Relatório</th><th>Conteúdo exportado</th><th>Uso típico</th></tr>
+      <tr>
+        <td><strong>Contratos Ativos</strong></td>
+        <td>Lista de todos os contratos em vigor, com empresa, candidato, IE, período e valores de bolsa e auxílio</td>
+        <td>Acompanhamento mensal da carteira de estagiários</td>
+      </tr>
+      <tr>
+        <td><strong>Todos os Contratos</strong></td>
+        <td>Histórico completo de contratos (ativos, encerrados e rescindidos)</td>
+        <td>Auditoria e prestação de contas</td>
+      </tr>
+      <tr>
+        <td><strong>Estagiários</strong></td>
+        <td>Dados pessoais, acadêmicos e contratuais dos estagiários com contratos ativos</td>
+        <td>Envio de lista para IEs parceiras; controle de documentação</td>
+      </tr>
+      <tr>
+        <td><strong>Indicadores</strong></td>
+        <td>Vagas abertas, candidatos por status, total de encaminhamentos e taxa de conversão</td>
+        <td>Reuniões de gestão e planejamento estratégico</td>
+      </tr>
     </table>
 
-    <p>Clique no botão de download do relatório desejado — o arquivo será gerado e baixado automaticamente.</p>
+    <p>Para gerar um relatório, acesse <strong>Relatórios</strong> no menu lateral e clique no botão de download do relatório desejado. O arquivo será gerado e baixado automaticamente para o seu computador.</p>
 
     <div class="info">
-      Também é possível <strong>imprimir o dashboard</strong> clicando em "Imprimir painel" na tela de relatórios.
+      <strong>Dashboard Diretoria:</strong> Além dos relatórios em Excel, o módulo de Relatórios oferece acesso ao Dashboard Diretoria, com gráficos e indicadores consolidados prontos para apresentação. Clique em <em>"Imprimir painel"</em> para exportar como PDF.
     </div>
   </div>
 
-  <!-- ════════════════════════ RELACIONAMENTO ════════════════════════ -->
+  <!-- ══════════════════════════════════════ RELACIONAMENTO ══════════════════════════════════════ -->
   <div class="section" id="relacionamento">
     <h2>13. Relacionamento com Empresas e IEs</h2>
-    <p>O módulo de relacionamento permite registrar o histórico de interações com empresas e instituições de ensino.</p>
+
+    <p>O módulo de Relacionamento permite que a equipe comercial e operacional da integradora registre <strong>todas as interações</strong> com empresas concedentes e instituições de ensino. Com isso, qualquer membro da equipe pode consultar o histórico de contatos antes de ligar ou visitar um parceiro, garantindo continuidade e profissionalismo no atendimento.</p>
 
     <h3>Como registrar um contato</h3>
     <ol class="steps">
-      <li>Abra a ficha da empresa ou IE (ícone de olho na lista)</li>
-      <li>No painel direito, escolha o tipo de contato: ligação, reunião, e-mail, visita ou WhatsApp</li>
-      <li>Descreva o que foi tratado e clique em <strong>Registrar</strong></li>
+      <li>Abra a ficha da empresa ou IE (clique no ícone de olho na lista).</li>
+      <li>No painel lateral direito da ficha, localize o formulário de <strong>Novo Contato</strong>.</li>
+      <li>Selecione o <strong>tipo de interação</strong>: Ligação, Reunião presencial, Visita, E-mail ou WhatsApp.</li>
+      <li>Digite uma descrição objetiva do que foi tratado — decisões tomadas, compromissos assumidos, próximos passos.</li>
+      <li>Clique em <strong>Registrar</strong>.</li>
     </ol>
-    <p>Todos os contatos ficam registrados em uma linha do tempo cronológica na ficha da empresa.</p>
 
-    <h3>NPS da empresa</h3>
-    <p>Avalie a empresa parceira de 1 a 5 estrelas na ficha. Essa avaliação ajuda a identificar as melhores concedentes para futuras parcerias.</p>
+    <p>Todos os registros aparecem em uma <strong>linha do tempo cronológica</strong> na ficha, com data, tipo e usuário que realizou o contato.</p>
+
+    <h3>Avaliação NPS das empresas</h3>
+    <p>O campo <strong>NPS (Net Promoter Score adaptado)</strong> permite que a equipe avalie a empresa concedente de <strong>1 a 5 estrelas</strong> como parceira. Essa avaliação considera fatores como pontualidade no pagamento da bolsa, qualidade da supervisão ao estagiário e abertura para renovação de vagas.</p>
+    <p>Empresas com NPS alto devem ser priorizadas na prospecção de novas vagas e indicadas preferencialmente aos candidatos mais qualificados do banco.</p>
+
+    <h3>Funil Comercial</h3>
+    <p>O menu <strong>Comercial → Funil</strong> exibe o pipeline de prospecção de novas empresas concedentes, organizado por estágio (prospectado, contato realizado, proposta enviada, contrato assinado). Use este módulo para acompanhar a evolução de novas parcerias.</p>
   </div>
 
-  <!-- ════════════════════════ REGRAS ════════════════════════ -->
+  <!-- ══════════════════════════════════════ REGRAS ══════════════════════════════════════ -->
   <div class="section" id="regras">
     <h2>14. Regras Automáticas do Sistema</h2>
-    <p>O Ciclo RH possui regras automáticas que protegem a qualidade do banco de candidatos e do processo seletivo:</p>
 
+    <p>O Ciclo RH possui um conjunto de <strong>regras de negócio automáticas</strong> que executam ações sem intervenção manual do operador. Essas regras foram definidas para proteger a integridade do banco de candidatos, garantir a qualidade do processo seletivo e reduzir o trabalho operacional.</p>
+
+    <h3>Tabela de regras automáticas</h3>
     <table>
-      <tr><th>Situação</th><th>O que acontece</th></tr>
+      <tr><th>Situação</th><th>Ação automática do sistema</th><th>Motivo</th></tr>
       <tr>
         <td>Candidato encaminhado para uma vaga</td>
-        <td>Fica indisponível para outras vagas até o resultado ser registrado</td>
+        <td>Fica indisponível para outras vagas enquanto o resultado não for registrado</td>
+        <td>Evita convocação dupla e conflito de agenda</td>
       </tr>
       <tr>
         <td>Candidato reprovado em empresa X</td>
-        <td>Fica disponível novamente, mas aparece aviso amarelo se for encaminhado para a mesma empresa</td>
+        <td>Volta ao pool de disponíveis; aviso amarelo se for encaminhado para a mesma empresa</td>
+        <td>Protege a relação com a empresa parceira</td>
       </tr>
       <tr>
         <td>1ª falta sem justificativa</td>
-        <td>Sistema alerta o operador que na próxima o candidato será excluído</td>
+        <td>Exibe alerta ao operador; registra a ocorrência internamente</td>
+        <td>Transparência; permite ação corretiva antes da exclusão</td>
       </tr>
       <tr>
-        <td>2ª falta sem justificativa</td>
-        <td>Candidato é excluído automaticamente do banco</td>
+        <td>2ª falta sem justificativa (qualquer vaga)</td>
+        <td>Candidato é excluído permanentemente do banco</td>
+        <td>Preservar a qualidade do banco e a reputação da integradora</td>
       </tr>
       <tr>
-        <td>Candidato reencaminhado para a mesma vaga</td>
-        <td>Candidatura anterior é reativada (nova rodada), sem criar duplicata</td>
+        <td>Reencaminhamento para a mesma vaga</td>
+        <td>Candidatura anterior é reativada (nova rodada); histórico preservado</td>
+        <td>Evita registros duplicados; mantém rastreabilidade</td>
       </tr>
       <tr>
         <td>Convênio de IE vencido</td>
         <td>Data aparece em vermelho na lista de IEs</td>
+        <td>Alertar para renovação e evitar contratos com IE irregular</td>
+      </tr>
+      <tr>
+        <td>Contrato com vencimento em 30 dias</td>
+        <td>Aparece com destaque no Dashboard e no relatório de vencimentos</td>
+        <td>Antecipar decisão de renovação ou encerramento</td>
       </tr>
     </table>
+
+    <div class="highlight-box">
+      <strong>Princípio geral:</strong> As regras automáticas existem para que a equipe não precise memorizar procedimentos operacionais. O sistema age preventivamente, alertando antes que problemas ocorram e registrando automaticamente quando ocorrem.
+    </div>
   </div>
 
-  <!-- ════════════════════════ QR CODE ════════════════════════ -->
+  <!-- ══════════════════════════════════════ QR CODE ══════════════════════════════════════ -->
   <div class="section" id="link-qr">
-    <h2>15. Link de Cadastro e QR Code</h2>
-    <p>O sistema gera um <strong>link e QR Code únicos</strong> para que candidatos se cadastrem sozinhos, sem precisar de ajuda do operador.</p>
+    <h2>15. Link de Cadastro Público e QR Code</h2>
 
-    <h3>Como usar</h3>
+    <p>O sistema disponibiliza um <strong>formulário público de cadastro</strong> que pode ser acessado por qualquer pessoa com o link ou QR Code, sem precisar de login. Trata-se da principal ferramenta de captação passiva de candidatos — o candidato preenche os dados por conta própria e entra automaticamente no banco de talentos.</p>
+
+    <h3>Como obter o link e o QR Code</h3>
     <ol class="steps">
-      <li>Acesse <strong>Seleção → Candidatos</strong></li>
-      <li>Clique em <strong>"Link de Cadastro"</strong> no topo da página</li>
-      <li>Uma janela mostrará o QR Code e o link copiável</li>
-      <li>Baixe o QR Code (PNG) para usar em materiais de divulgação</li>
+      <li>Acesse <strong>Seleção → Candidatos</strong>.</li>
+      <li>Clique no botão <strong>"Link de Cadastro"</strong> no canto superior direito da tela.</li>
+      <li>Uma janela exibirá o <strong>QR Code</strong> gerado automaticamente e o link copiável.</li>
+      <li>Clique em <strong>"Baixar QR Code (PNG)"</strong> para salvar a imagem e usá-la em materiais de divulgação.</li>
     </ol>
 
-    <h3>O formulário público coleta</h3>
+    <h3>Dados coletados pelo formulário público</h3>
+    <table>
+      <tr><th>Seção</th><th>Campos</th></tr>
+      <tr><td><strong>Identificação</strong></td><td>Nome completo, CPF, data de nascimento</td></tr>
+      <tr><td><strong>Contato</strong></td><td>WhatsApp (com DDD), e-mail</td></tr>
+      <tr><td><strong>Endereço</strong></td><td>Logradouro, bairro, cidade, estado</td></tr>
+      <tr><td><strong>Formação</strong></td><td>Curso, semestre, instituição de ensino</td></tr>
+      <tr><td><strong>Disponibilidade</strong></td><td>Turno preferido (Manhã, Tarde, Integral ou Noite)</td></tr>
+      <tr><td><strong>Apresentação</strong></td><td>Texto livre de objetivos e habilidades</td></tr>
+      <tr><td><strong>Experiência profissional</strong></td><td>Empregos anteriores (empresa, período e cargo), se houver</td></tr>
+    </table>
+
+    <h3>Estratégias de divulgação</h3>
+    <p>O QR Code pode ser utilizado em diversas ações de captação:</p>
     <ul>
-      <li>Nome completo, CPF e data de nascimento</li>
-      <li>WhatsApp e e-mail</li>
-      <li>Endereço completo (logradouro, bairro, cidade, estado)</li>
-      <li>Curso, semestre e instituição de ensino</li>
-      <li>Disponibilidade de horário</li>
-      <li>Apresentação pessoal / objetivos</li>
-      <li>Experiências profissionais anteriores</li>
+      <li><strong>Murais de faculdades e universidades parceiras:</strong> imprima o QR Code em cartazes e afixe nos espaços de convivência.</li>
+      <li><strong>Grupos de WhatsApp das IEs:</strong> envie o link para coordenadores de estágio repassarem aos alunos.</li>
+      <li><strong>Redes sociais da integradora:</strong> inclua o link em posts de divulgação de vagas e no perfil da empresa.</li>
+      <li><strong>Eventos e feiras de estágio:</strong> exiba o QR Code em banners e material de apresentação.</li>
     </ul>
 
     <div class="success">
-      <strong>Dica de divulgação:</strong> Imprima o QR Code e cole em murais de faculdades, envie em grupos de WhatsApp das IEs parceiras ou inclua em artes para redes sociais. Todo candidato que escanear e preencher já entra automaticamente no banco de talentos.
+      <strong>Captação automatizada:</strong> Cada candidato que preencher o formulário entra imediatamente no banco de talentos e fica disponível para encaminhamento. Não há necessidade de nenhuma ação do operador — o sistema processa e salva o cadastro automaticamente.
     </div>
 
     <div class="tip">
-      <strong>Sem duplicidade:</strong> Se o candidato preencher o formulário mais de uma vez com o mesmo e-mail ou WhatsApp, o sistema reconhece e <strong>não cria um cadastro duplicado</strong>.
+      <strong>Sem duplicidade:</strong> O sistema verifica automaticamente se já existe um candidato com o mesmo e-mail ou WhatsApp cadastrado. Em caso positivo, o cadastro duplicado <strong>não é criado</strong> — a tentativa é ignorada silenciosamente, evitando registros redundantes no banco.
     </div>
   </div>
 
 </main>
 </div>
 
-<button class="print-btn" onclick="window.print()">🖨 Imprimir / Salvar PDF</button>
+<button class="print-btn" onclick="window.print()">&#128424; Imprimir / Salvar PDF</button>
 
 <script>
-// Highlight active section on scroll
 const sections = document.querySelectorAll('[id]');
 const navLinks = document.querySelectorAll('.nav-item a');
 window.addEventListener('scroll', () => {
