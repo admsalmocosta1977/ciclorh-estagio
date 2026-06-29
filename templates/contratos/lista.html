@@ -67,7 +67,8 @@
             <a href="{{ url_for('doc_plano', id=c.id) }}" class="btn btn-outline-success btn-doc" style="font-size:.68rem;padding:2px 6px" target="_blank">Plano</a>
             <a href="{{ url_for('doc_ciencia', id=c.id) }}" class="btn btn-outline-info btn-doc" style="font-size:.68rem;padding:2px 6px" target="_blank">Ciência</a>
             <a href="{{ url_for('doc_tre', id=c.id) }}" class="btn btn-outline-warning btn-doc" style="font-size:.68rem;padding:2px 6px" target="_blank">TRE</a>
-            <a href="{{ url_for('doc_relatorio', id=c.id) }}" class="btn btn-outline-secondary btn-doc" style="font-size:.68rem;padding:2px 6px" target="_blank">Rel.</a>
+            <button class="btn btn-outline-secondary btn-doc btn-relatorio-lista" style="font-size:.68rem;padding:2px 6px"
+                    data-id="{{ c.id }}">Rel.</button>
             <button class="btn btn-outline-dark btn-doc btn-aditivo" style="font-size:.68rem;padding:2px 6px"
                     data-id="{{ c.id }}" data-bs-toggle="modal" data-bs-target="#modal-aditivo-lista">Adi.</button>
           </div>
@@ -126,6 +127,38 @@
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-dark" id="lista-btn-gerar-aditivo">
           <i class="bi bi-file-earmark-text me-1"></i>Gerar Aditivo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal Relatório (lista) -->
+<div class="modal fade" id="modal-relatorio-lista" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-text me-2"></i>Emitir Relatório de Estágio</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info py-2 mb-3">
+          <small><strong>Próximo relatório:</strong> N.º <span id="lista-rel-num">—</span> — a partir de <span id="lista-rel-inicio">—</span></small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Data Final do Período *</label>
+          <input type="date" id="lista-rel-data-fim" class="form-control">
+          <div class="form-text">Períodos acima de 6 meses são divididos automaticamente (Lei 11.788/2008, art. 9.º).</div>
+        </div>
+        <div id="lista-rel-preview" class="d-none">
+          <div class="alert alert-warning py-2 mb-0">
+            <small id="lista-rel-preview-text"></small>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="lista-btn-emitir-rel" disabled>
+          <i class="bi bi-check-lg me-1"></i>Confirmar e Emitir
         </button>
       </div>
     </div>
@@ -199,6 +232,112 @@ document.getElementById('lista-btn-gerar-aditivo').addEventListener('click', fun
   .then(function(r) { return r.json(); })
   .then(function(d) { abrirPDF(d.numero); })
   .catch(function() { abrirPDF(null); });
+});
+
+// ── Relatório (lista) ─────────────────────────────────────────────────────────
+let relContratoId = null;
+let relProximoInicio = null;
+let relProximoNum = 0;
+
+function _fmtBR(iso) {
+  var p = iso.split('-'); return p[2] + '/' + p[1] + '/' + p[0];
+}
+function _addMeses(dt, m) {
+  var d = new Date(dt.getFullYear(), dt.getMonth() + m, dt.getDate());
+  if (d.getMonth() !== (dt.getMonth() + m) % 12) d.setDate(0);
+  return d;
+}
+function _isoDate(dt) {
+  return dt.getFullYear() + '-' +
+    String(dt.getMonth()+1).padStart(2,'0') + '-' +
+    String(dt.getDate()).padStart(2,'0');
+}
+function _split6m(inicioISO, fimISO) {
+  var ini = new Date(inicioISO + 'T00:00:00');
+  var fim = new Date(fimISO + 'T00:00:00');
+  var res = []; var cur = new Date(ini);
+  while (cur <= fim) {
+    var cf = _addMeses(cur, 6); cf.setDate(cf.getDate()-1);
+    if (cf > fim) cf = new Date(fim);
+    res.push({inicio: new Date(cur), fim: new Date(cf)});
+    cur = new Date(cf); cur.setDate(cur.getDate()+1);
+  }
+  return res;
+}
+
+document.querySelectorAll('.btn-relatorio-lista').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    relContratoId = this.dataset.id;
+    document.getElementById('lista-rel-data-fim').value = '';
+    document.getElementById('lista-rel-preview').classList.add('d-none');
+    document.getElementById('lista-btn-emitir-rel').disabled = true;
+    document.getElementById('lista-rel-num').textContent = '—';
+    document.getElementById('lista-rel-inicio').textContent = '—';
+    relProximoInicio = null; relProximoNum = 0;
+    fetch('/contratos/' + relContratoId + '/relatorio/proximo')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d.ok) return;
+        relProximoInicio = d.data_inicio;
+        relProximoNum = d.proximo_numero;
+        document.getElementById('lista-rel-num').textContent = d.proximo_numero;
+        document.getElementById('lista-rel-inicio').textContent = _fmtBR(d.data_inicio);
+        document.getElementById('lista-rel-data-fim').min = d.data_inicio;
+      });
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-relatorio-lista')).show();
+  });
+});
+
+document.getElementById('lista-rel-data-fim').addEventListener('change', function() {
+  var fim = this.value;
+  var btn = document.getElementById('lista-btn-emitir-rel');
+  var preview = document.getElementById('lista-rel-preview');
+  var previewText = document.getElementById('lista-rel-preview-text');
+  if (!fim || !relProximoInicio) { btn.disabled = true; preview.classList.add('d-none'); return; }
+  if (fim < relProximoInicio) {
+    previewText.textContent = 'Data final anterior ao início do próximo período (' + _fmtBR(relProximoInicio) + ').';
+    preview.classList.remove('d-none'); btn.disabled = true; return;
+  }
+  var periodos = _split6m(relProximoInicio, fim);
+  var num = relProximoNum;
+  var linhas = periodos.map(function(p) {
+    return 'Relatório N.º ' + num++ + ': ' + _fmtBR(_isoDate(p.inicio)) + ' a ' + _fmtBR(_isoDate(p.fim));
+  });
+  previewText.innerHTML = 'Serão emitidos <strong>' + periodos.length + '</strong> relatório(s):<br>' + linhas.join('<br>');
+  preview.classList.remove('d-none'); btn.disabled = false;
+});
+
+document.getElementById('lista-btn-emitir-rel').addEventListener('click', function() {
+  var fim = document.getElementById('lista-rel-data-fim').value;
+  if (!fim) return;
+  this.disabled = true;
+  this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Processando…';
+  var self = this;
+  fetch('/contratos/' + relContratoId + '/relatorio/registrar', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({data_fim: fim})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-relatorio-lista')).hide();
+      d.periodos.forEach(function(p, i) {
+        setTimeout(function() {
+          window.open('/contratos/' + relContratoId + '/relatorio?data_inicio=' + p.data_inicio + '&data_fim=' + p.data_fim + '&num=' + p.numero, '_blank');
+        }, i * 400);
+      });
+    } else {
+      alert('Erro: ' + (d.erro || 'Falha desconhecida'));
+      self.disabled = false;
+      self.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar e Emitir';
+    }
+  })
+  .catch(function() {
+    alert('Erro ao comunicar com o servidor.');
+    self.disabled = false;
+    self.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar e Emitir';
+  });
 });
 </script>
 {% endblock %}
