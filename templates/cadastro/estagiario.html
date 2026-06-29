@@ -71,6 +71,16 @@
           <input type="text" name="matricula" class="form-control" placeholder="Número de matrícula">
         </div>
         <div class="col-12">
+          <label class="form-label fw-semibold">Instituição de Ensino *</label>
+          <select name="ie_id" class="form-select" required>
+            <option value="">— Selecione sua instituição —</option>
+            {% for ie in ies %}
+            <option value="{{ ie.id }}">{% if ie.sigla %}{{ ie.sigla }} — {% endif %}{{ ie.nome }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text">Instituição onde você está matriculado(a).</div>
+        </div>
+        <div class="col-12">
           <label class="form-label fw-semibold">Observações (opcional)</label>
           <textarea name="obs" class="form-control" rows="3" placeholder="Informações adicionais relevantes..."></textarea>
         </div>

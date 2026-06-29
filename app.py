@@ -2222,12 +2222,13 @@ def relatorio_lista_estagiarios():
 
 @app.route('/cadastro/estagiario', methods=['GET', 'POST'])
 def cadastro_estagiario():
+    ies = _q("SELECT id, nome, sigla FROM ie ORDER BY nome")
     if request.method == 'POST':
         try:
             _ins("""INSERT INTO estagiario
                     (nome,cpf,rg,data_nascimento,telefone,email,endereco,
-                     cidade,estado,tipo_ensino,semestre,matricula,obs,status)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pendente')""",
+                     cidade,estado,tipo_ensino,semestre,matricula,ie_id,obs,status)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pendente')""",
                  (request.form['nome'], request.form['cpf'],
                   request.form.get('rg'), request.form.get('data_nascimento') or None,
                   request.form.get('telefone'), request.form.get('email'),
@@ -2237,11 +2238,12 @@ def cadastro_estagiario():
                   request.form.get('tipo_ensino', 'superior'),
                   request.form.get('semestre') or None,
                   request.form.get('matricula') or None,
+                  request.form.get('ie_id') or None,
                   request.form.get('obs')))
             return render_template('cadastro/sucesso.html', tipo='estagiário')
         except psycopg2.errors.UniqueViolation:
             flash('Este CPF já está cadastrado no sistema.', 'danger')
-    return render_template('cadastro/estagiario.html')
+    return render_template('cadastro/estagiario.html', ies=ies)
 
 
 @app.route('/cadastro/empresa', methods=['GET', 'POST'])
