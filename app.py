@@ -246,6 +246,7 @@ def init_db():
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS semestre INTEGER;")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS tipo_ensino TEXT DEFAULT 'superior';")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS matricula TEXT;")
+        cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS ie_id INTEGER REFERENCES ie(id) ON DELETE SET NULL;")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS cidade TEXT;")
         cur.execute("ALTER TABLE estagiario ADD COLUMN IF NOT EXISTS estado TEXT;")
         cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS estado TEXT;")
@@ -1113,12 +1114,13 @@ def estagiarios():
 @app.route('/estagiarios/novo', methods=['GET', 'POST'])
 @login_required
 def estagiario_novo():
+    ies = _q("SELECT id, nome, sigla FROM ie ORDER BY nome")
     if request.method == 'POST':
         try:
             _ins("""INSERT INTO estagiario
                     (nome,cpf,rg,data_nascimento,telefone,email,endereco,cidade,estado,banco,agencia,conta,obs,
-                     tipo_ensino,semestre,matricula)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                     tipo_ensino,semestre,matricula,ie_id)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                  (request.form['nome'], request.form['cpf'],
                   request.form.get('rg'), request.form.get('data_nascimento') or None,
                   request.form.get('telefone'), request.form.get('email'),
@@ -1129,13 +1131,14 @@ def estagiario_novo():
                   request.form.get('obs'),
                   request.form.get('tipo_ensino', 'superior'),
                   request.form.get('semestre') or None,
-                  request.form.get('matricula') or None))
+                  request.form.get('matricula') or None,
+                  request.form.get('ie_id') or None))
             _log('criar', 'estagiario', None, f'Criou estagiário: {request.form["nome"]} (CPF: {request.form["cpf"]})')
             flash('Estagiário cadastrado!', 'success')
             return redirect(url_for('estagiarios'))
         except psycopg2.errors.UniqueViolation:
             flash('CPF já cadastrado!', 'danger')
-    return render_template('estagiarios/form.html', e=None)
+    return render_template('estagiarios/form.html', e=None, ies=ies)
 
 
 @app.route('/estagiarios/<int:id>/editar', methods=['GET', 'POST'])
@@ -1144,11 +1147,12 @@ def estagiario_editar(id):
     e = _q("SELECT * FROM estagiario WHERE id = %s", (id,), one=True)
     if not e:
         abort(404)
+    ies = _q("SELECT id, nome, sigla FROM ie ORDER BY nome")
     if request.method == 'POST':
         _run("""UPDATE estagiario SET
                 nome=%s,cpf=%s,rg=%s,data_nascimento=%s,telefone=%s,email=%s,
                 endereco=%s,cidade=%s,estado=%s,banco=%s,agencia=%s,conta=%s,obs=%s,
-                tipo_ensino=%s,semestre=%s,matricula=%s WHERE id=%s""",
+                tipo_ensino=%s,semestre=%s,matricula=%s,ie_id=%s WHERE id=%s""",
              (request.form['nome'], request.form['cpf'],
               request.form.get('rg'), request.form.get('data_nascimento') or None,
               request.form.get('telefone'), request.form.get('email'),
@@ -1160,11 +1164,12 @@ def estagiario_editar(id):
               request.form.get('tipo_ensino', 'superior'),
               request.form.get('semestre') or None,
               request.form.get('matricula') or None,
+              request.form.get('ie_id') or None,
               id))
         _log('editar', 'estagiario', id, f'Editou estagiário: {request.form["nome"]}')
         flash('Atualizado!', 'success')
         return redirect(url_for('estagiarios'))
-    return render_template('estagiarios/form.html', e=e)
+    return render_template('estagiarios/form.html', e=e, ies=ies)
 
 
 @app.route('/estagiarios/<int:id>/excluir')
