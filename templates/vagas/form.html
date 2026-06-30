@@ -29,7 +29,7 @@
                 {% for e in empresas %}
                 <option value="{{ e.id }}"
                   {% if vaga and vaga.empresa_id == e.id %}selected{% endif %}>
-                  {{ e.nome }}
+                  {{ e.display }}
                 </option>
                 {% endfor %}
               </select>

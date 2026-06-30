@@ -2885,7 +2885,7 @@ def vagas_lista():
         q += " AND v.empresa_id = %s"; params.append(empresa_f)
     q += " ORDER BY v.created_at DESC"
     vagas = _q(q, params or None)
-    empresas = _q("SELECT id, nome FROM empresa ORDER BY nome")
+    empresas = _q("SELECT id, nome, COALESCE(nome_fantasia, nome) AS display FROM empresa ORDER BY COALESCE(nome_fantasia, nome)")
     return render_template('vagas/lista.html', vagas=vagas, empresas=empresas,
                            status_f=status_f, empresa_f=empresa_f,
                            status_cor=STATUS_VAGA_COR)
@@ -2914,7 +2914,7 @@ def vaga_nova():
               current_user.id))
         flash('Vaga criada!', 'success')
         return redirect(url_for('vagas_lista'))
-    empresas = _q("SELECT id, nome FROM empresa ORDER BY nome")
+    empresas = _q("SELECT id, nome, COALESCE(nome_fantasia, nome) AS display FROM empresa ORDER BY COALESCE(nome_fantasia, nome)")
     areas = _q("SELECT id, nome FROM area_estagio ORDER BY nome")
     return render_template('vagas/form.html', vaga=None, empresas=empresas, areas=areas)
 
@@ -3076,7 +3076,7 @@ def vaga_editar(id):
               id))
         flash('Vaga atualizada!', 'success')
         return redirect(url_for('vaga_detalhe', id=id))
-    empresas = _q("SELECT id, nome FROM empresa ORDER BY nome")
+    empresas = _q("SELECT id, nome, COALESCE(nome_fantasia, nome) AS display FROM empresa ORDER BY COALESCE(nome_fantasia, nome)")
     areas = _q("SELECT id, nome FROM area_estagio ORDER BY nome")
     usuarios = _q("SELECT id, nome FROM usuario ORDER BY nome")
     return render_template('vagas/form.html', vaga=vaga, empresas=empresas,
