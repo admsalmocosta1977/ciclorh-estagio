@@ -44,7 +44,7 @@
     <tr><td class="label">Curso:</td><td>{{ d.curso }}</td></tr>
     <tr><td class="label">Período de Estágio:</td><td>{{ fmt_date(d.data_inicio) }} a {{ fmt_date(d.data_fim) }}</td></tr>
     <tr><td class="label">Bolsa Auxílio Mensal:</td><td>R$ {{ '%.2f'|format(d.bolsa or 0) }}</td></tr>
-    {% if d.aux_transporte %}<tr><td class="label">Auxílio Transporte:</td><td>R$ {{ '%.2f'|format(d.aux_transporte) }} / dia</td></tr>{% endif %}
+    {% if d.aux_transporte %}<tr><td class="label">Auxílio Transporte:</td><td>R$ {{ '%.2f'|format(d.aux_transporte) }} / mês</td></tr>{% endif %}
   </table>
 
   <p>Declaro ainda ter recebido, nesta data, os documentos de estágio devidamente assinados pela Parte Concedente — <span class="destaque">{{ d.emp_nome }}</span> — e estar ciente de que é de minha exclusiva responsabilidade apresentar a via correspondente à <span class="destaque">{{ d.ie_nome }}</span> para coleta das assinaturas da Instituição de Ensino, no prazo adequado ao início do estágio.</p>
