@@ -1385,10 +1385,20 @@ def api_empresa_supervisores(empresa_id):
 @app.route('/ies')
 @login_required
 def ies():
-    rows = _q("""SELECT ie.*,
-                 (SELECT COUNT(*) FROM contrato WHERE ie_id = ie.id) qtd_contratos
-                 FROM ie ORDER BY ie.nome""")
-    return render_template('ies/lista.html', ies=rows)
+    q = request.args.get('q', '').strip()
+    if q:
+        like = f'%{q}%'
+        rows = _q("""SELECT ie.*,
+                     (SELECT COUNT(*) FROM contrato WHERE ie_id = ie.id) qtd_contratos
+                     FROM ie
+                     WHERE ie.nome ILIKE %s OR ie.sigla ILIKE %s
+                        OR ie.cidade ILIKE %s OR ie.cnpj ILIKE %s
+                     ORDER BY ie.nome""", (like, like, like, like))
+    else:
+        rows = _q("""SELECT ie.*,
+                     (SELECT COUNT(*) FROM contrato WHERE ie_id = ie.id) qtd_contratos
+                     FROM ie ORDER BY ie.nome""")
+    return render_template('ies/lista.html', ies=rows, q=q)
 
 
 @app.route('/ies/nova', methods=['GET', 'POST'])

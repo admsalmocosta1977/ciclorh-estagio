@@ -1,11 +1,27 @@
 {% extends 'base.html' %}
 {% block title %}Instituições de Ensino{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-3">
   <h4 class="fw-bold mb-0"><i class="bi bi-mortarboard me-2"></i>Instituições de Ensino</h4>
   <a href="{{ url_for('ie_nova') }}" class="btn btn-primary">
     <i class="bi bi-plus-lg me-1"></i>Nova Instituição
   </a>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <form method="get" class="d-flex gap-2 align-items-center">
+      <div class="input-group input-group-sm" style="max-width:420px">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" name="q" value="{{ q }}" class="form-control"
+               placeholder="Buscar por nome, sigla, CNPJ ou cidade…" autofocus>
+        {% if q %}
+        <a href="{{ url_for('ies') }}" class="btn btn-outline-secondary">Limpar</a>
+        {% endif %}
+      </div>
+      <button class="btn btn-sm btn-outline-secondary" type="submit">Buscar</button>
+    </form>
+  </div>
 </div>
 
 <div class="card">
