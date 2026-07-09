@@ -197,12 +197,12 @@
   </div>
 
   <!-- ══ PARTES ══ -->
-  {% set int_nome = cfg.int_nome if cfg.int_nome else 'CICLO RH GESTÃO DE ESTÁGIOS LTDA' %}
-  {% set int_cnpj = cfg.int_cnpj if cfg.int_cnpj else '__.___.___/____-__' %}
-  {% set int_end  = cfg.int_endereco if cfg.int_endereco else '___________________________' %}
-  {% set int_cid  = (cfg.int_cidade + '/' + cfg.int_estado) if cfg.int_cidade else '________________________' %}
-  {% set int_rep  = cfg.int_representante if cfg.int_representante else '____________________________' %}
-  {% set int_cargo = cfg.int_cargo if cfg.int_cargo else '__________________________' %}
+  {% set int_nome  = agente.nome %}
+  {% set int_cnpj  = agente.cnpj %}
+  {% set int_end   = agente.endereco %}
+  {% set int_cid   = agente.cidade %}
+  {% set int_rep   = agente.representante %}
+  {% set int_cargo = agente.cargo %}
 
   {% set ie_rep   = ie.representante_legal if ie.representante_legal else '____________________________' %}
   {% set ie_cargo = ie.cargo_representante_legal if ie.cargo_representante_legal else '____________________________' %}
@@ -372,7 +372,7 @@
     <div class="clausula-titulo">Cláusula Oitava — Do Foro</div>
     <p>
       As partes elegem o foro da Comarca de
-      <strong>{{ cfg.int_cidade if cfg.int_cidade else '____________________' }}</strong>
+      <strong>{{ agente.cidade }}</strong>
       para dirimir quaisquer dúvidas ou litígios decorrentes do presente convênio,
       renunciando a qualquer outro, por mais privilegiado que seja.
     </p>
@@ -387,7 +387,7 @@
   <!-- ══ ASSINATURAS ══ -->
   <div class="assinaturas">
     <div class="ass-local-data">
-      {{ cfg.int_cidade if cfg.int_cidade else '____________________' }},
+      {{ agente.cidade }},
       ______ de ________________________ de __________.
     </div>
 

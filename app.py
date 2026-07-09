@@ -1527,7 +1527,7 @@ def ie_convenio(id):
             pass
     cfg = _get_config()
     return render_template('ies/convenio.html', ie=ie, prazo=prazo,
-                           data_fim=data_fim, cfg=cfg, hoje=date.today())
+                           data_fim=data_fim, cfg=cfg, agente=AGENTE, hoje=date.today())
 
 
 # ─── ÁREAS DE ESTÁGIO ────────────────────────────────────────────────────────
