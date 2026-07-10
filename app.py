@@ -158,6 +158,7 @@ def init_db():
     conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
     conn.autocommit = True
     with conn.cursor() as cur:
+        cur.execute("CREATE EXTENSION IF NOT EXISTS unaccent;")
         cur.execute('''
         CREATE TABLE IF NOT EXISTS usuario (
             id SERIAL PRIMARY KEY,
@@ -1627,8 +1628,10 @@ def contratos():
              JOIN ie ON ie.id = c.ie_id"""
     params = []
     if q:
-        sql += " WHERE (e.nome ILIKE %s OR emp.nome ILIKE %s)"
-        params += [f'%{q}%', f'%{q}%']
+        sql += """ WHERE (unaccent(e.nome) ILIKE unaccent(%s)
+                       OR unaccent(emp.nome) ILIKE unaccent(%s)
+                       OR unaccent(COALESCE(emp.nome_fantasia, emp.nome)) ILIKE unaccent(%s))"""
+        params += [f'%{q}%', f'%{q}%', f'%{q}%']
     sql += ' ORDER BY effective_data_fim'
     rows = _q(sql, params)
     if status:
