@@ -31,7 +31,7 @@
           <select name="empresa_id" class="form-select" required id="sel-empresa">
             <option value="">Selecione...</option>
             {% for emp in empresas %}
-            <option value="{{ emp.id }}" {% if c and c.empresa_id==emp.id %}selected{% endif %}>{{ emp.nome }}</option>
+            <option value="{{ emp.id }}" {% if c and c.empresa_id==emp.id %}selected{% endif %}>{{ emp.display }}</option>
             {% endfor %}
           </select>
           <div class="mt-1">

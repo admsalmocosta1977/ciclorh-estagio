@@ -1683,7 +1683,7 @@ def contrato_novo():
         flash('Contrato criado!', 'success')
         return redirect(url_for('contratos'))
     estagiarios = _q("SELECT * FROM estagiario WHERE status='ativo' ORDER BY nome")
-    empresas_list = _q("SELECT * FROM empresa WHERE status='ativo' ORDER BY nome")
+    empresas_list = _q("SELECT id, nome, COALESCE(nome_fantasia, nome) AS display FROM empresa WHERE status='ativo' ORDER BY COALESCE(nome_fantasia, nome)")
     ies_list = _q("SELECT * FROM ie ORDER BY COALESCE(NULLIF(TRIM(sigla),''), nome)")
     areas_list = _q("SELECT id, nome FROM area_estagio WHERE status='ativo' ORDER BY nome")
     return render_template('contratos/form.html', c=None,
@@ -1729,7 +1729,7 @@ def contrato_editar(id):
         flash('Contrato atualizado!', 'success')
         return redirect(url_for('contratos'))
     estagiarios = _q("SELECT * FROM estagiario WHERE status='ativo' ORDER BY nome")
-    empresas_list = _q("SELECT * FROM empresa WHERE status='ativo' ORDER BY nome")
+    empresas_list = _q("SELECT id, nome, COALESCE(nome_fantasia, nome) AS display FROM empresa WHERE status='ativo' ORDER BY COALESCE(nome_fantasia, nome)")
     ies_list = _q("SELECT * FROM ie ORDER BY COALESCE(NULLIF(TRIM(sigla),''), nome)")
     areas_list = _q("SELECT id, nome FROM area_estagio WHERE status='ativo' ORDER BY nome")
     aditivos = _q("SELECT * FROM aditivo WHERE contrato_id = %s ORDER BY created_at", (id,))
