@@ -614,7 +614,7 @@ function makeAC(txtId, dropId, hidId, data) {
         return `<div class="ac-item" tabindex="-1" data-id="${d.id}">${lbl}</div>`;
       }).join('');
     }
-    drop.style.display = '';
+    drop.style.display = 'block';
   }
 
   txt.addEventListener('focus', () => render(txt.value.trim()));
