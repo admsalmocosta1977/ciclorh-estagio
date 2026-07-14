@@ -1,14 +1,24 @@
 {% extends 'base.html' %}
 {% block title %}Contratos{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<!-- Cabeçalho visível somente na impressão -->
+<div class="d-none d-print-block mb-3" style="border-bottom:2px solid #000;padding-bottom:6px;text-align:center">
+  <strong style="font-size:13pt">CICLO RH – Apoio Administrativo LTDA</strong><br>
+  <span style="font-size:10pt">Listagem de Contratos{% if q %} — Busca: "{{ q }}"{% endif %}{% if status %} — Status: {{ status|capitalize }}{% endif %}</span>
+</div>
+<div class="d-flex justify-content-between align-items-center mb-3 no-print">
   <h5 class="fw-bold mb-0"><i class="bi bi-file-earmark-text me-2"></i>Contratos</h5>
-  <a href="{{ url_for('contrato_novo') }}" class="btn btn-sm btn-primary">
-    <i class="bi bi-plus-lg me-1"></i>Novo Contrato
-  </a>
+  <div class="d-flex gap-2">
+    <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+      <i class="bi bi-printer me-1"></i>Imprimir
+    </button>
+    <a href="{{ url_for('contrato_novo') }}" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Novo Contrato
+    </a>
+  </div>
 </div>
 
-<div class="card mb-3">
+<div class="card mb-3 no-print">
   <div class="card-body py-2">
     <form method="get" class="row g-2 align-items-center">
       <div class="col-md-4">
@@ -35,7 +45,7 @@
   <div class="card-body p-0">
     <table class="table table-hover table-sm mb-0" style="font-size:0.76rem">
       <thead class="table-light" style="font-size:0.71rem">
-        <tr><th>Estagiário</th><th>Empresa</th><th>Curso/IE</th><th>Vigência</th><th>Bolsa</th><th>Situação</th><th>Docs</th><th></th></tr>
+        <tr><th>Estagiário</th><th>Empresa</th><th>Curso/IE</th><th>Vigência</th><th>Bolsa</th><th>Situação</th><th class="d-print-none">Docs</th><th class="d-print-none"></th></tr>
       </thead>
       <tbody>
       {% for c in contratos %}
@@ -61,7 +71,7 @@
           {% elif st == 'VENCIDO' %}<span class="badge badge-vencido" style="font-size:.65rem">VENCIDO</span>
           {% else %}<span class="badge badge-ativo" style="font-size:.65rem">ATIVO</span>{% endif %}
         </td>
-        <td class="align-middle">
+        <td class="align-middle d-print-none">
           <div class="d-flex gap-1 flex-wrap">
             <a href="{{ url_for('doc_tce', id=c.id) }}" class="btn btn-outline-primary btn-doc" style="font-size:.68rem;padding:2px 6px" target="_blank">TCE</a>
             <a href="{{ url_for('doc_plano', id=c.id) }}" class="btn btn-outline-success btn-doc" style="font-size:.68rem;padding:2px 6px" target="_blank">Plano</a>
@@ -73,7 +83,7 @@
                     data-id="{{ c.id }}" data-bs-toggle="modal" data-bs-target="#modal-aditivo-lista">Adi.</button>
           </div>
         </td>
-        <td class="align-middle">
+        <td class="align-middle d-print-none">
           <a href="{{ url_for('contrato_editar', id=c.id) }}" class="btn btn-outline-secondary" style="font-size:.68rem;padding:2px 6px">
             <i class="bi bi-pencil"></i>
           </a>
@@ -164,6 +174,20 @@
     </div>
   </div>
 </div>
+<style>
+@media print {
+  @page { margin: 1.5cm; }
+  .main { font-family: 'Times New Roman', Times, serif !important; font-size: 10pt !important; padding: 0 !important; }
+  .card { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
+  .card-body { padding: 0 !important; }
+  table { font-family: 'Times New Roman', Times, serif !important; font-size: 10pt !important; border-collapse: collapse !important; width: 100% !important; }
+  table th, table td { border: 1px solid #555 !important; padding: 3px 5px !important; font-size: 10pt !important; vertical-align: top !important; }
+  table thead tr { background: #e8e8e8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .badge { border: 1px solid #000 !important; color: #000 !important; background: transparent !important; padding: 1px 4px !important; font-size: 9pt !important; border-radius: 3px !important; }
+  .text-muted { color: #444 !important; }
+  .fst-italic { font-style: italic; }
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
