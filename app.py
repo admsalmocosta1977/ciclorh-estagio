@@ -893,6 +893,13 @@ def admin_importar():
     return render_template('admin/importar.html', resultado=resultado)
 
 
+# ─── LANDING PAGE PÚBLICA ─────────────────────────────────────────────────────
+
+@app.route('/landing')
+def landing():
+    return render_template('landing.html')
+
+
 # ─── DASHBOARD ────────────────────────────────────────────────────────────────
 
 @app.route('/')
