@@ -1640,13 +1640,14 @@ def contratos():
         filtered = []
         for r in rows:
             st = calcular_status(r['effective_data_fim'])
-            if status == 'ativo' and st == 'ATIVO':
+            enc = bool(r.get('data_encerramento'))
+            if status == 'ativo' and st == 'ATIVO' and not enc:
                 filtered.append(r)
-            elif status == 'vencendo' and 'DIAS' in st:
+            elif status == 'vencendo' and 'DIAS' in st and not enc:
                 filtered.append(r)
-            elif status == 'vencido' and st == 'VENCIDO':
+            elif status == 'vencido' and st == 'VENCIDO' and not enc:
                 filtered.append(r)
-            elif status == 'encerrado' and r.get('data_encerramento'):
+            elif status == 'encerrado' and enc:
                 filtered.append(r)
         rows = filtered
     return render_template('contratos/lista.html', contratos=rows, q=q, status=status)
