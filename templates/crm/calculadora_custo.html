@@ -192,7 +192,7 @@ function calcular() {
 
   // ── Provisões ──
   const prov_13     = salario / 12;                   // 8,33%
-  const prov_ferias = salario / 12 * (4/3);           // 11,11% (+ 1/3)
+  const prov_ferias = salario / 12 * (1/3);           // 2,78% (abono 1/3 constitucional)
   const base_prov   = prov_13 + prov_ferias;
 
   const fgts_prov      = base_prov * r.fgts;
@@ -229,7 +229,7 @@ function calcular() {
 
   rows += separador('PROVISÕES MENSAIS (13º, FÉRIAS + 1/3 E ENCARGOS)');
   rows += linha('Provisão 13º Salário',    'Salário', 1/12, prov_13);
-  rows += linha('Provisão Férias + 1/3',   'Salário', 4/36, prov_ferias);
+  rows += linha('Abono de Férias (1/3 constitucional)', 'Salário', 1/36, prov_ferias);
   rows += linha('FGTS s/ 13º e Férias',   'Provisões', r.fgts, fgts_prov);
   if (r.inss > 0) rows += linha('INSS Patronal s/ 13º e Férias', 'Provisões', r.inss, inss_prov);
   if (r.rat > 0)  rows += linha('RAT s/ 13º e Férias',           'Provisões', r.rat,  rat_prov);
