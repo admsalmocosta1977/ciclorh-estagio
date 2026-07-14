@@ -91,21 +91,6 @@
         </div>
       </div>
 
-      <!-- CTA estagiário -->
-      <div class="card border-0" style="background:linear-gradient(135deg,#1a2845 0%,#2d4070 100%)">
-        <div class="card-body py-4 text-center">
-          <div class="mb-2">
-            <i class="bi bi-lightbulb-fill text-warning fs-3"></i>
-          </div>
-          <p class="text-white fw-semibold mb-1" style="font-size:1.05rem">
-            Contratar estagiários pode ajudar a reduzir os seus custos.
-          </p>
-          <p class="text-white-50 small mb-3" id="cta-economia"></p>
-          <a href="{{ url_for('crm_lead_novo') }}" class="btn btn-warning fw-semibold">
-            <i class="bi bi-arrow-right-circle me-1"></i>Clique aqui e saiba mais
-          </a>
-        </div>
-      </div>
     </div>
 
     <!-- Estado inicial -->
@@ -242,12 +227,6 @@ function calcular() {
   document.getElementById('card-mensal').textContent  = 'R$ ' + fmtBR(total);
   document.getElementById('card-anual').textContent   = 'R$ ' + fmtBR(total * 12);
 
-  // Custo do estagiário estimado (bolsa + FGTS-estagiário 8% + seg. acidente ~40/mês)
-  // Só como referência qualitativa
-  const sobrecusto = ((total / salario) - 1) * 100;
-  document.getElementById('cta-economia').textContent =
-    `O custo real desse funcionário é ${sobrecusto.toFixed(0).replace('.',',')}% maior que o salário bruto. `
-    + 'Com estagiários, sua empresa elimina INSS patronal, RAT, 13º e multa do FGTS.';
 
   document.getElementById('resultado').classList.remove('d-none');
   document.getElementById('estado-inicial').classList.add('d-none');
