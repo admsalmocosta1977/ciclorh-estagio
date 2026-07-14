@@ -1630,8 +1630,10 @@ def contratos():
     if q:
         sql += """ WHERE (unaccent(e.nome) ILIKE unaccent(%s)
                        OR unaccent(emp.nome) ILIKE unaccent(%s)
-                       OR unaccent(COALESCE(emp.nome_fantasia, emp.nome)) ILIKE unaccent(%s))"""
-        params += [f'%{q}%', f'%{q}%', f'%{q}%']
+                       OR unaccent(COALESCE(emp.nome_fantasia, emp.nome)) ILIKE unaccent(%s)
+                       OR unaccent(ie.nome) ILIKE unaccent(%s)
+                       OR unaccent(COALESCE(ie.sigla, '')) ILIKE unaccent(%s))"""
+        params += [f'%{q}%', f'%{q}%', f'%{q}%', f'%{q}%', f'%{q}%']
     sql += ' ORDER BY effective_data_fim'
     rows = _q(sql, params)
     if status:
