@@ -45,7 +45,7 @@
 
 <form class="d-flex gap-2 mb-3" method="get">
   <input type="text" name="q" class="form-control form-control-sm" style="max-width:320px"
-         value="{{ busca }}" placeholder="Buscar por nome, curso ou cidade…">
+         value="{{ busca }}" placeholder="Buscar por nome, curso, cidade ou instituição…">
   <button type="submit" class="btn btn-sm btn-outline-secondary">Buscar</button>
   {% if busca %}<a href="{{ url_for('candidatos_lista') }}" class="btn btn-sm btn-link text-muted">Limpar</a>{% endif %}
 </form>

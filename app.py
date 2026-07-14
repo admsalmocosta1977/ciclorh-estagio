@@ -3131,8 +3131,8 @@ def candidatos_lista():
            FROM candidato c LEFT JOIN ie i ON i.id = c.ie_id WHERE 1=1"""
     params = []
     if busca:
-        q += " AND (c.nome ILIKE %s OR c.curso ILIKE %s OR c.cidade ILIKE %s)"
-        params += [f'%{busca}%', f'%{busca}%', f'%{busca}%']
+        q += " AND (c.nome ILIKE %s OR c.curso ILIKE %s OR c.cidade ILIKE %s OR i.nome ILIKE %s)"
+        params += [f'%{busca}%', f'%{busca}%', f'%{busca}%', f'%{busca}%']
     q += " ORDER BY c.created_at DESC"
     candidatos = _q(q, params or None)
     return render_template('candidatos/lista.html', candidatos=candidatos, busca=busca)
