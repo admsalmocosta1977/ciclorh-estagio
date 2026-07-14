@@ -183,7 +183,9 @@ footer a { color: #6B7A99; }
 
 <section class="hero">
   <div class="container">
-    <img src="{{ url_for('static', filename='logo_ciclorh.png.png') }}" alt="Ciclo RH" style="height:54px;width:auto;margin-bottom:32px;filter:brightness(0) invert(1)">
+    <div style="display:inline-block;background:rgba(255,255,255,.92);padding:12px 24px;border-radius:12px;margin-bottom:36px">
+      <img src="{{ url_for('static', filename='logo_ciclorh.png.png') }}" alt="Ciclo RH" style="height:70px;width:auto;display:block">
+    </div>
     <p class="hero-eyebrow">Você realmente sabe o custo real?</p>
     <h1>Seu funcionário CLT custa muito mais do que o salário que você paga.</h1>
     <p class="hero-sub">Encargos, provisões, benefícios e multas transformam um salário de R$ 2.000 em um custo de quase R$ 3.000. Calcule agora e descubra quanto você pode economizar.</p>
@@ -342,6 +344,52 @@ footer a { color: #6B7A99; }
       <div class="step"><div class="step-n">01</div><h3>Você define o perfil</h3><p>Nos conta o que precisa — curso, turno, atividades e bolsa. Buscamos no banco de candidatos ou fazemos triagem ativa.</p></div>
       <div class="step"><div class="step-n">02</div><h3>A Ciclo RH formaliza tudo</h3><p>Elaboramos o TCE com empresa, estudante e IES. Zero burocracia para você. Contrato já sai com cobertura de seguro.</p></div>
       <div class="step"><div class="step-n">03</div><h3>Estagiário começa a trabalhar</h3><p>Você paga a bolsa direto ao estagiário. A Ciclo RH acompanha o contrato, cuida dos relatórios e renova quando necessário.</p></div>
+    </div>
+  </div>
+</section>
+
+<section style="background:var(--bg-alt);padding:72px 0">
+  <div class="container">
+    <p class="section-eyebrow">Quem já economiza com a Ciclo RH</p>
+    <h2 class="section-title">Empresários reais. Resultados reais.</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin-top:8px">
+
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:28px 24px;box-shadow:var(--shadow)">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+          <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#6B21A8,#2563EB);display:grid;place-items:center;flex-shrink:0;font-size:1.25rem;font-weight:800;color:#fff">M</div>
+          <div>
+            <div style="font-weight:700;font-size:.95rem">Marcos Oliveira</div>
+            <div style="font-size:.78rem;color:var(--muted)">Sócio — Escritório Contábil · Barreiras/BA</div>
+          </div>
+        </div>
+        <p style="color:var(--muted);font-size:.9rem;line-height:1.7;font-style:italic">"Precisava de alguém para apoio administrativo mas o custo CLT estava fora do orçamento. Com o estagiário da Ciclo RH paguei menos da metade e o atendimento ao cliente melhorou."</p>
+        <div style="margin-top:16px;color:#F59E0B;font-size:.85rem">★★★★★</div>
+      </div>
+
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:28px 24px;box-shadow:var(--shadow)">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+          <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#065F46,#2563EB);display:grid;place-items:center;flex-shrink:0;font-size:1.25rem;font-weight:800;color:#fff">A</div>
+          <div>
+            <div style="font-weight:700;font-size:.95rem">Ana Paula Ferreira</div>
+            <div style="font-size:.78rem;color:var(--muted)">Diretora — Clínica Odontológica · Barreiras/BA</div>
+          </div>
+        </div>
+        <p style="color:var(--muted);font-size:.9rem;line-height:1.7;font-style:italic">"A Ciclo cuidou de toda a documentação, eu só recebi o estagiário no primeiro dia. Zero burocracia. Hoje tenho dois na clínica e economizo mais de R$ 1.800 por mês."</p>
+        <div style="margin-top:16px;color:#F59E0B;font-size:.85rem">★★★★★</div>
+      </div>
+
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:28px 24px;box-shadow:var(--shadow)">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+          <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#0EA5E9);display:grid;place-items:center;flex-shrink:0;font-size:1.25rem;font-weight:800;color:#fff">R</div>
+          <div>
+            <div style="font-weight:700;font-size:.95rem">Ricardo Menezes</div>
+            <div style="font-size:.78rem;color:var(--muted)">Proprietário — Loja de Materiais · Luís Eduardo/BA</div>
+          </div>
+        </div>
+        <p style="color:var(--muted);font-size:.9rem;line-height:1.7;font-style:italic">"Tinha medo de estagiário — achava que não ia ter comprometimento. Me enganei. O jovem que a Ciclo RH me enviou virou referência na equipe em 3 meses."</p>
+        <div style="margin-top:16px;color:#F59E0B;font-size:.85rem">★★★★★</div>
+      </div>
+
     </div>
   </div>
 </section>
