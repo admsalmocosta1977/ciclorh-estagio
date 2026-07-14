@@ -52,7 +52,7 @@
       {% set st = calcular_status(c.effective_data_fim) %}
       <tr>
         <td class="fw-semibold align-middle">{{ c.est_nome }}</td>
-        <td class="align-middle">{{ c.emp_nome }}</td>
+        <td class="align-middle">{{ c.emp_nome_fantasia or c.emp_nome }}</td>
         <td class="align-middle">
           <span class="text-muted">{{ c.curso or '' }}</span><br>
           <span>{{ c.ie_sigla or c.ie_nome or '—' }}</span>

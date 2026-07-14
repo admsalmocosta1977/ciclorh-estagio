@@ -1613,7 +1613,7 @@ def api_area_atividades(area_id):
 def contratos():
     q = request.args.get('q', '')
     status = request.args.get('status', '')
-    sql = """SELECT c.*, e.nome est_nome, emp.nome emp_nome,
+    sql = """SELECT c.*, e.nome est_nome, emp.nome emp_nome, emp.nome_fantasia emp_nome_fantasia,
              ie.sigla ie_sigla, ie.nome ie_nome,
              COALESCE(
                  c.data_encerramento,
