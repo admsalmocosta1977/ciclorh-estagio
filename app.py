@@ -2703,6 +2703,12 @@ def crm_lead_excluir(id):
     return redirect(url_for('crm_kanban'))
 
 
+@app.route('/crm/calculadora')
+@crm_required
+def crm_calculadora():
+    return render_template('crm/calculadora_custo.html')
+
+
 @app.route('/crm/indicadores')
 @crm_required
 def crm_indicadores():

@@ -190,6 +190,9 @@
       <a href="{{ url_for('crm_indicadores') }}" class="nav-link {% if ep=='crm_indicadores' %}active{% endif %}">
         <i class="bi bi-bar-chart"></i> Indicadores
       </a>
+      <a href="{{ url_for('crm_calculadora') }}" class="nav-link {% if ep=='crm_calculadora' %}active{% endif %}">
+        <i class="bi bi-calculator"></i> Calc. Custo CLT
+      </a>
     </div>
     {% endif %}
 
@@ -340,6 +343,9 @@
     </a>
     <a href="{{ url_for('crm_indicadores') }}" class="nav-link {% if ep=='crm_indicadores' %}active{% endif %}">
       <i class="bi bi-bar-chart"></i> Indicadores
+    </a>
+    <a href="{{ url_for('crm_calculadora') }}" class="nav-link {% if ep=='crm_calculadora' %}active{% endif %}">
+      <i class="bi bi-calculator"></i> Calc. Custo CLT
     </a>
   </div>
   {% endif %}

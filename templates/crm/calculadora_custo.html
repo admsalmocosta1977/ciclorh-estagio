@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% block title %}Calculadora de Custo de Funcionário{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-bold mb-0"><i class="bi bi-calculator me-2"></i>Calculadora de Custo de Funcionário</h5>
+</div>
+
+<div class="row g-3">
+  <!-- Formulário -->
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-sliders me-1"></i> Parâmetros</div>
+      <div class="card-body">
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Regime Tributário</label>
+          <select id="regime" class="form-select">
+            <option value="">— Selecione —</option>
+            <option value="simples">Simples Nacional</option>
+            <option value="presumido">Lucro Presumido</option>
+            <option value="real">Lucro Real</option>
+          </select>
+          <div id="nota-regime" class="form-text text-muted mt-1"></div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Salário Bruto (R$)</label>
+          <input type="text" id="salario" class="form-control" placeholder="Ex: 2.000,00" inputmode="decimal">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Vale Transporte Mensal (R$)</label>
+          <input type="text" id="vt" class="form-control" placeholder="Ex: 220,00" inputmode="decimal">
+          <div class="form-text">Valor total dos passes mensais do funcionário.</div>
+        </div>
+
+        <button class="btn btn-primary w-100" id="btn-calcular" disabled>
+          <i class="bi bi-calculator me-1"></i>Calcular
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resultado -->
+  <div class="col-md-8">
+    <div id="resultado" class="d-none">
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-receipt me-1"></i> Composição de Custos — <span id="res-regime"></span></span>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm mb-0" style="font-size:.88rem">
+            <thead class="table-light">
+              <tr>
+                <th>Item</th>
+                <th class="text-end">Base de Cálculo</th>
+                <th class="text-end">%</th>
+                <th class="text-end">Mensal (R$)</th>
+                <th class="text-end">Anual (R$)</th>
+              </tr>
+            </thead>
+            <tbody id="tabela-itens"></tbody>
+            <tfoot>
+              <tr class="table-primary fw-bold">
+                <td colspan="3">CUSTO TOTAL DO FUNCIONÁRIO</td>
+                <td class="text-end" id="total-mensal"></td>
+                <td class="text-end" id="total-anual"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Cards de totais -->
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <div class="card text-center border-0" style="background:#e8f5e9">
+            <div class="card-body py-3">
+              <div class="text-muted small mb-1">Custo Mensal Total</div>
+              <div class="fw-bold fs-4 text-success" id="card-mensal"></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="card text-center border-0" style="background:#e3f2fd">
+            <div class="card-body py-3">
+              <div class="text-muted small mb-1">Custo Anual Total</div>
+              <div class="fw-bold fs-4 text-primary" id="card-anual"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA estagiário -->
+      <div class="card border-0" style="background:linear-gradient(135deg,#1a2845 0%,#2d4070 100%)">
+        <div class="card-body py-4 text-center">
+          <div class="mb-2">
+            <i class="bi bi-lightbulb-fill text-warning fs-3"></i>
+          </div>
+          <p class="text-white fw-semibold mb-1" style="font-size:1.05rem">
+            Contratar estagiários pode ajudar a reduzir os seus custos.
+          </p>
+          <p class="text-white-50 small mb-3" id="cta-economia"></p>
+          <a href="{{ url_for('crm_lead_novo') }}" class="btn btn-warning fw-semibold">
+            <i class="bi bi-arrow-right-circle me-1"></i>Clique aqui e saiba mais
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Estado inicial -->
+    <div id="estado-inicial" class="card h-100 border-0" style="background:#f8f9fa">
+      <div class="card-body d-flex flex-column align-items-center justify-content-center py-5 text-center">
+        <i class="bi bi-calculator text-muted" style="font-size:3rem;opacity:.3"></i>
+        <p class="text-muted mt-3 mb-0">Preencha os dados ao lado e clique em <strong>Calcular</strong>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const REGIMES = {
+  simples: {
+    nome: 'Simples Nacional',
+    fgts: 0.08, inss: 0, rat: 0, terceiros: 0,
+    nota: 'INSS patronal, RAT e Terceiros incluídos no DAS (Anexo III). FGTS recolhido separadamente.'
+  },
+  presumido: {
+    nome: 'Lucro Presumido',
+    fgts: 0.08, inss: 0.20, rat: 0.02, terceiros: 0.058,
+    nota: 'RAT estimado em 2% (varia conforme CNAE e FAP). Terceiros: SESC/SENAC 5,8%.'
+  },
+  real: {
+    nome: 'Lucro Real',
+    fgts: 0.08, inss: 0.20, rat: 0.02, terceiros: 0.058,
+    nota: 'RAT estimado em 2% (varia conforme CNAE e FAP). Terceiros: SESC/SENAC 5,8%.'
+  }
+};
+
+function parseBR(v) {
+  return parseFloat(v.replace(/\./g,'').replace(',','.')) || 0;
+}
+function fmtBR(v) {
+  return v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function pct(v) {
+  return v === 0 ? '—' : (v*100).toFixed(1).replace('.',',') + '%';
+}
+
+function linha(desc, base, taxa, mensal) {
+  return `<tr>
+    <td>${desc}</td>
+    <td class="text-end text-muted">${base}</td>
+    <td class="text-end">${pct(taxa)}</td>
+    <td class="text-end">R$ ${fmtBR(mensal)}</td>
+    <td class="text-end">R$ ${fmtBR(mensal*12)}</td>
+  </tr>`;
+}
+function linhaDest(desc, base, taxa, mensal) {
+  return `<tr class="table-warning">
+    <td><strong>${desc}</strong></td>
+    <td class="text-end text-muted">${base}</td>
+    <td class="text-end">${pct(taxa)}</td>
+    <td class="text-end"><strong>R$ ${fmtBR(mensal)}</strong></td>
+    <td class="text-end"><strong>R$ ${fmtBR(mensal*12)}</strong></td>
+  </tr>`;
+}
+function separador(titulo) {
+  return `<tr class="table-secondary"><td colspan="5" class="fw-semibold text-muted" style="font-size:.78rem;letter-spacing:.5px">${titulo}</td></tr>`;
+}
+
+function calcular() {
+  const regime = document.getElementById('regime').value;
+  const salario = parseBR(document.getElementById('salario').value);
+  const vt = parseBR(document.getElementById('vt').value);
+
+  if (!regime || salario <= 0) return;
+
+  const r = REGIMES[regime];
+
+  // ── Encargos diretos ──
+  const fgts       = salario * r.fgts;
+  const inss       = salario * r.inss;
+  const rat        = salario * r.rat;
+  const terceiros  = salario * r.terceiros;
+
+  // ── Vale Transporte ──
+  const desconto_vt = Math.min(salario * 0.06, vt);
+  const custo_vt    = Math.max(0, vt - desconto_vt);
+
+  // ── Provisões ──
+  const prov_13     = salario / 12;                   // 8,33%
+  const prov_ferias = salario / 12 * (4/3);           // 11,11% (+ 1/3)
+  const base_prov   = prov_13 + prov_ferias;
+
+  const fgts_prov      = base_prov * r.fgts;
+  const inss_prov      = base_prov * r.inss;
+  const rat_prov       = base_prov * r.rat;
+  const terc_prov      = base_prov * r.terceiros;
+
+  const total = salario + fgts + inss + rat + terceiros + custo_vt
+              + prov_13 + prov_ferias
+              + fgts_prov + inss_prov + rat_prov + terc_prov;
+
+  // ── Monta tabela ──
+  let rows = '';
+  rows += separador('REMUNERAÇÃO');
+  rows += linha('Salário Bruto', 'Base', 1, salario);
+
+  rows += separador('ENCARGOS SOBRE O SALÁRIO');
+  rows += linha('FGTS', 'Salário', r.fgts, fgts);
+  if (r.inss > 0) rows += linha('INSS Patronal', 'Salário', r.inss, inss);
+  else rows += `<tr><td>INSS Patronal</td><td class="text-end text-muted">Salário</td><td class="text-end">—</td><td class="text-end text-muted">Incluso no DAS</td><td class="text-end text-muted">—</td></tr>`;
+  if (r.rat > 0)      rows += linha('RAT / FAP',         'Salário', r.rat,      rat);
+  if (r.terceiros > 0) rows += linha('Terceiros (Sist. S)', 'Salário', r.terceiros, terceiros);
+
+  if (vt > 0) {
+    rows += separador('BENEFÍCIOS');
+    rows += `<tr>
+      <td>Vale Transporte <small class="text-muted">(emp. paga: VT – 6% salário)</small></td>
+      <td class="text-end text-muted">R$ ${fmtBR(vt)}</td>
+      <td class="text-end">—</td>
+      <td class="text-end">R$ ${fmtBR(custo_vt)}</td>
+      <td class="text-end">R$ ${fmtBR(custo_vt*12)}</td>
+    </tr>`;
+  }
+
+  rows += separador('PROVISÕES MENSAIS (13º, FÉRIAS + 1/3 E ENCARGOS)');
+  rows += linha('Provisão 13º Salário',    'Salário', 1/12, prov_13);
+  rows += linha('Provisão Férias + 1/3',   'Salário', 4/36, prov_ferias);
+  rows += linha('FGTS s/ 13º e Férias',   'Provisões', r.fgts, fgts_prov);
+  if (r.inss > 0) rows += linha('INSS Patronal s/ 13º e Férias', 'Provisões', r.inss, inss_prov);
+  if (r.rat > 0)  rows += linha('RAT s/ 13º e Férias',           'Provisões', r.rat,  rat_prov);
+  if (r.terceiros > 0) rows += linha('Terceiros s/ 13º e Férias', 'Provisões', r.terceiros, terc_prov);
+
+  document.getElementById('tabela-itens').innerHTML = rows;
+  document.getElementById('res-regime').textContent = r.nome;
+  document.getElementById('total-mensal').textContent = 'R$ ' + fmtBR(total);
+  document.getElementById('total-anual').textContent  = 'R$ ' + fmtBR(total * 12);
+  document.getElementById('card-mensal').textContent  = 'R$ ' + fmtBR(total);
+  document.getElementById('card-anual').textContent   = 'R$ ' + fmtBR(total * 12);
+
+  // Custo do estagiário estimado (bolsa + FGTS-estagiário 8% + seg. acidente ~40/mês)
+  // Só como referência qualitativa
+  const sobrecusto = ((total / salario) - 1) * 100;
+  document.getElementById('cta-economia').textContent =
+    `O custo real desse funcionário é ${sobrecusto.toFixed(0).replace('.',',')}% maior que o salário bruto. `
+    + 'Com estagiários, sua empresa elimina INSS patronal, RAT, 13º e multa do FGTS.';
+
+  document.getElementById('resultado').classList.remove('d-none');
+  document.getElementById('estado-inicial').classList.add('d-none');
+}
+
+// ── Máscara de moeda ──
+function maskMoeda(el) {
+  el.addEventListener('input', function() {
+    let v = this.value.replace(/\D/g,'');
+    if (!v) { this.value = ''; return; }
+    v = (parseInt(v)/100).toFixed(2);
+    this.value = parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2});
+  });
+}
+maskMoeda(document.getElementById('salario'));
+maskMoeda(document.getElementById('vt'));
+
+// ── Habilitar botão ──
+function verificar() {
+  const ok = document.getElementById('regime').value && parseBR(document.getElementById('salario').value) > 0;
+  document.getElementById('btn-calcular').disabled = !ok;
+}
+document.getElementById('regime').addEventListener('change', function() {
+  const r = REGIMES[this.value] || {};
+  document.getElementById('nota-regime').textContent = r.nota || '';
+  verificar();
+});
+document.getElementById('salario').addEventListener('input', verificar);
+document.getElementById('vt').addEventListener('input', verificar);
+document.getElementById('btn-calcular').addEventListener('click', calcular);
+
+// Recalcular ao pressionar Enter
+['salario','vt'].forEach(function(id) {
+  document.getElementById(id).addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') calcular();
+  });
+});
+</script>
+{% endblock %}
