@@ -1663,42 +1663,60 @@ def contratos():
 @app.route('/contratos/novo', methods=['GET', 'POST'])
 @login_required
 def contrato_novo():
-    if request.method == 'POST':
-        ats = '||'.join(request.form.get(f'atividade_{i}', '') for i in range(1, 10))
-        _ins("""INSERT INTO contrato
-                (estagiario_id,empresa_id,ie_id,orientador,
-                 supervisor_nome,supervisor_cargo,supervisor_registro,
-                 curso,tipo_estagio,area_atuacao,ch_diaria,ch_semanal,
-                 data_inicio,data_fim,numero_contrato,bolsa,bolsa_tipo,taxa,aux_transporte,
-                 atividades,obs,jornada,data_encerramento,ie_professor_id)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-             (request.form['estagiario_id'], request.form['empresa_id'], request.form['ie_id'],
-              request.form.get('orientador', 'Salmo Lima Costa'),
-              request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
-              request.form.get('supervisor_registro'),
-              request.form['curso'], request.form.get('tipo_estagio', 'Não Obrigatório'),
-              request.form.get('area_atuacao'),
-              request.form.get('ch_diaria', 6), request.form.get('ch_semanal', 30),
-              request.form['data_inicio'], request.form['data_fim'],
-              request.form.get('numero_contrato'),
-              request.form.get('bolsa') or None,
-              request.form.get('bolsa_tipo', 'mensal'),
-              request.form.get('taxa') or None,
-              request.form.get('aux_transporte') or None,
-              ats, request.form.get('obs'), _build_jornada_json(),
-              request.form.get('data_encerramento') or None,
-              request.form.get('ie_professor_id') or None))
-        _est = _q("SELECT nome FROM estagiario WHERE id=%s", (request.form['estagiario_id'],), one=True)
-        _emp = _q("SELECT nome FROM empresa WHERE id=%s", (request.form['empresa_id'],), one=True)
-        _log('criar', 'contrato', None,
-             f'Criou contrato: {_est["nome"] if _est else "?"} @ {_emp["nome"] if _emp else "?"}'
-             f' ({request.form["data_inicio"]} a {request.form["data_fim"]})')
-        flash('Contrato criado!', 'success')
-        return redirect(url_for('contratos'))
     estagiarios = _q("SELECT * FROM estagiario WHERE status='ativo' ORDER BY nome")
     empresas_list = _q("SELECT id, nome, COALESCE(nome_fantasia, nome) AS display FROM empresa WHERE status='ativo' ORDER BY COALESCE(nome_fantasia, nome)")
     ies_list = _q("SELECT * FROM ie ORDER BY COALESCE(NULLIF(TRIM(sigla),''), nome)")
     areas_list = _q("SELECT id, nome FROM area_estagio WHERE status='ativo' ORDER BY nome")
+    if request.method == 'POST':
+        erros = []
+        if not request.form.get('estagiario_id'): erros.append('Estagiário obrigatório.')
+        if not request.form.get('empresa_id'):    erros.append('Empresa obrigatória.')
+        if not request.form.get('ie_id'):         erros.append('Instituição de Ensino obrigatória.')
+        if not request.form.get('data_inicio'):   erros.append('Data de início obrigatória.')
+        if not request.form.get('data_fim'):      erros.append('Data de fim obrigatória.')
+        if not request.form.get('curso'):         erros.append('Curso obrigatório.')
+        if erros:
+            for e in erros: flash(e, 'danger')
+            return render_template('contratos/form.html', c=request.form,
+                                   estagiarios=estagiarios, empresas=empresas_list,
+                                   ies=ies_list, areas=areas_list, aditivos=[])
+        try:
+            ats = '||'.join(request.form.get(f'atividade_{i}', '') for i in range(1, 10))
+            _ins("""INSERT INTO contrato
+                    (estagiario_id,empresa_id,ie_id,orientador,
+                     supervisor_nome,supervisor_cargo,supervisor_registro,
+                     curso,tipo_estagio,area_atuacao,ch_diaria,ch_semanal,
+                     data_inicio,data_fim,numero_contrato,bolsa,bolsa_tipo,taxa,aux_transporte,
+                     atividades,obs,jornada,data_encerramento,ie_professor_id)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                 (request.form['estagiario_id'], request.form['empresa_id'], request.form['ie_id'],
+                  request.form.get('orientador', 'Salmo Lima Costa'),
+                  request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
+                  request.form.get('supervisor_registro'),
+                  request.form['curso'], request.form.get('tipo_estagio', 'Não Obrigatório'),
+                  request.form.get('area_atuacao'),
+                  request.form.get('ch_diaria', 6), request.form.get('ch_semanal', 30),
+                  request.form['data_inicio'], request.form['data_fim'],
+                  request.form.get('numero_contrato'),
+                  request.form.get('bolsa') or None,
+                  request.form.get('bolsa_tipo', 'mensal'),
+                  request.form.get('taxa') or None,
+                  request.form.get('aux_transporte') or None,
+                  ats, request.form.get('obs'), _build_jornada_json(),
+                  request.form.get('data_encerramento') or None,
+                  request.form.get('ie_professor_id') or None))
+            _est = _q("SELECT nome FROM estagiario WHERE id=%s", (request.form['estagiario_id'],), one=True)
+            _emp = _q("SELECT nome FROM empresa WHERE id=%s", (request.form['empresa_id'],), one=True)
+            _log('criar', 'contrato', None,
+                 f'Criou contrato: {_est["nome"] if _est else "?"} @ {_emp["nome"] if _emp else "?"}'
+                 f' ({request.form["data_inicio"]} a {request.form["data_fim"]})')
+            flash('Contrato criado!', 'success')
+            return redirect(url_for('contratos'))
+        except Exception as ex:
+            flash(f'Erro ao salvar contrato: {ex}', 'danger')
+            return render_template('contratos/form.html', c=request.form,
+                                   estagiarios=estagiarios, empresas=empresas_list,
+                                   ies=ies_list, areas=areas_list, aditivos=[])
     return render_template('contratos/form.html', c=None,
                            estagiarios=estagiarios, empresas=empresas_list, ies=ies_list,
                            areas=areas_list, aditivos=[])
@@ -1710,43 +1728,63 @@ def contrato_editar(id):
     c = _q("SELECT * FROM contrato WHERE id = %s", (id,), one=True)
     if not c:
         abort(404)
-    if request.method == 'POST':
-        ats = '||'.join(request.form.get(f'atividade_{i}', '') for i in range(1, 10))
-        _run("""UPDATE contrato SET
-                estagiario_id=%s,empresa_id=%s,ie_id=%s,orientador=%s,
-                supervisor_nome=%s,supervisor_cargo=%s,supervisor_registro=%s,
-                curso=%s,tipo_estagio=%s,area_atuacao=%s,ch_diaria=%s,ch_semanal=%s,
-                data_inicio=%s,data_fim=%s,numero_contrato=%s,bolsa=%s,bolsa_tipo=%s,
-                taxa=%s,aux_transporte=%s,atividades=%s,obs=%s,jornada=%s,
-                data_encerramento=%s,ie_professor_id=%s WHERE id=%s""",
-             (request.form['estagiario_id'], request.form['empresa_id'], request.form['ie_id'],
-              request.form.get('orientador'),
-              request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
-              request.form.get('supervisor_registro'),
-              request.form['curso'], request.form.get('tipo_estagio'),
-              request.form.get('area_atuacao'),
-              request.form.get('ch_diaria'), request.form.get('ch_semanal'),
-              request.form['data_inicio'], request.form['data_fim'],
-              request.form.get('numero_contrato'),
-              request.form.get('bolsa') or None,
-              request.form.get('bolsa_tipo', 'mensal'),
-              request.form.get('taxa') or None,
-              request.form.get('aux_transporte') or None,
-              ats, request.form.get('obs'), _build_jornada_json(),
-              request.form.get('data_encerramento') or None,
-              request.form.get('ie_professor_id') or None, id))
-        _est2 = _q("SELECT nome FROM estagiario WHERE id=%s", (request.form['estagiario_id'],), one=True)
-        _emp2 = _q("SELECT nome FROM empresa WHERE id=%s", (request.form['empresa_id'],), one=True)
-        _log('editar', 'contrato', id,
-             f'Editou contrato: {_est2["nome"] if _est2 else "?"} @ {_emp2["nome"] if _emp2 else "?"}')
-        flash('Contrato atualizado!', 'success')
-        return redirect(url_for('contratos'))
     estagiarios = _q("SELECT * FROM estagiario WHERE status='ativo' ORDER BY nome")
     empresas_list = _q("SELECT id, nome, COALESCE(nome_fantasia, nome) AS display FROM empresa WHERE status='ativo' ORDER BY COALESCE(nome_fantasia, nome)")
     ies_list = _q("SELECT * FROM ie ORDER BY COALESCE(NULLIF(TRIM(sigla),''), nome)")
     areas_list = _q("SELECT id, nome FROM area_estagio WHERE status='ativo' ORDER BY nome")
     aditivos = _q("SELECT * FROM aditivo WHERE contrato_id = %s ORDER BY created_at", (id,))
     relatorios = _q("SELECT * FROM relatorio_periodo WHERE contrato_id=%s ORDER BY numero", (id,))
+    if request.method == 'POST':
+        erros = []
+        if not request.form.get('estagiario_id'): erros.append('Estagiário obrigatório.')
+        if not request.form.get('empresa_id'):    erros.append('Empresa obrigatória.')
+        if not request.form.get('ie_id'):         erros.append('Instituição de Ensino obrigatória.')
+        if not request.form.get('data_inicio'):   erros.append('Data de início obrigatória.')
+        if not request.form.get('data_fim'):      erros.append('Data de fim obrigatória.')
+        if not request.form.get('curso'):         erros.append('Curso obrigatório.')
+        if erros:
+            for e in erros: flash(e, 'danger')
+            return render_template('contratos/form.html', c=request.form,
+                                   estagiarios=estagiarios, empresas=empresas_list,
+                                   ies=ies_list, areas=areas_list, aditivos=aditivos,
+                                   relatorios=relatorios, relatorio_pendente=False)
+        try:
+            ats = '||'.join(request.form.get(f'atividade_{i}', '') for i in range(1, 10))
+            _run("""UPDATE contrato SET
+                    estagiario_id=%s,empresa_id=%s,ie_id=%s,orientador=%s,
+                    supervisor_nome=%s,supervisor_cargo=%s,supervisor_registro=%s,
+                    curso=%s,tipo_estagio=%s,area_atuacao=%s,ch_diaria=%s,ch_semanal=%s,
+                    data_inicio=%s,data_fim=%s,numero_contrato=%s,bolsa=%s,bolsa_tipo=%s,
+                    taxa=%s,aux_transporte=%s,atividades=%s,obs=%s,jornada=%s,
+                    data_encerramento=%s,ie_professor_id=%s WHERE id=%s""",
+                 (request.form['estagiario_id'], request.form['empresa_id'], request.form['ie_id'],
+                  request.form.get('orientador'),
+                  request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
+                  request.form.get('supervisor_registro'),
+                  request.form['curso'], request.form.get('tipo_estagio'),
+                  request.form.get('area_atuacao'),
+                  request.form.get('ch_diaria'), request.form.get('ch_semanal'),
+                  request.form['data_inicio'], request.form['data_fim'],
+                  request.form.get('numero_contrato'),
+                  request.form.get('bolsa') or None,
+                  request.form.get('bolsa_tipo', 'mensal'),
+                  request.form.get('taxa') or None,
+                  request.form.get('aux_transporte') or None,
+                  ats, request.form.get('obs'), _build_jornada_json(),
+                  request.form.get('data_encerramento') or None,
+                  request.form.get('ie_professor_id') or None, id))
+            _est2 = _q("SELECT nome FROM estagiario WHERE id=%s", (request.form['estagiario_id'],), one=True)
+            _emp2 = _q("SELECT nome FROM empresa WHERE id=%s", (request.form['empresa_id'],), one=True)
+            _log('editar', 'contrato', id,
+                 f'Editou contrato: {_est2["nome"] if _est2 else "?"} @ {_emp2["nome"] if _emp2 else "?"}')
+            flash('Contrato atualizado!', 'success')
+            return redirect(url_for('contratos'))
+        except Exception as ex:
+            flash(f'Erro ao salvar contrato: {ex}', 'danger')
+            return render_template('contratos/form.html', c=request.form,
+                                   estagiarios=estagiarios, empresas=empresas_list,
+                                   ies=ies_list, areas=areas_list, aditivos=aditivos,
+                                   relatorios=relatorios, relatorio_pendente=False)
     last_rel = relatorios[-1] if relatorios else None
     if last_rel:
         prox_inicio = date.fromisoformat(str(last_rel['data_fim'])[:10]) + timedelta(days=1)
