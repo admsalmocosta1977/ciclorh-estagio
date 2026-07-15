@@ -230,6 +230,9 @@
   <div class="nav-item"><a href="#relacionamento">Relacionamento</a></div>
   <div class="nav-item"><a href="#regras">Regras Automáticas</a></div>
   <div class="nav-item"><a href="#link-qr">Link de Cadastro / QR</a></div>
+  <div class="nav-group">Comercial</div>
+  <div class="nav-item"><a href="#calculadora">Calculadora CLT</a></div>
+  <div class="nav-item"><a href="#landing">Landing Page Pública</a></div>
 </nav>
 
 <!-- ── Conteúdo ── -->
@@ -261,7 +264,7 @@
       relatórios e regras de negócio aplicadas ao processo de intermediação de estágios.
     </div>
 
-    <div class="cover-version">Versão 3.0 &nbsp;·&nbsp; Junho de 2026</div>
+    <div class="cover-version">Versão 5.0 &nbsp;·&nbsp; Julho de 2026</div>
 
     <div class="cover-bottom-bar">
       <span>Ciclo RH &copy; 2026 — Todos os direitos reservados</span>
@@ -430,6 +433,9 @@
       <strong>Boas práticas:</strong> Verifique regularmente a lista de IEs para identificar convênios prestes a vencer. Um convênio expirado pode comprometer a legalidade dos contratos de estágio vinculados àquela IE, conforme a Lei 11.788/2008.
     </div>
 
+    <h3>Busca na lista de IEs</h3>
+    <p>A listagem de Instituições de Ensino conta com campo de busca que localiza registros por <strong>nome</strong>, <strong>sigla</strong>, <strong>CNPJ</strong> ou <strong>cidade</strong>. A busca é insensível a maiúsculas e acentuação — basta digitar parte do termo desejado para filtrar os resultados em tempo real.</p>
+
     <h3>Histórico de relacionamento</h3>
     <p>Assim como nas empresas concedentes, a ficha de cada IE permite registrar o histórico de contatos com a coordenação de estágios da instituição. Utilize esse recurso para documentar reuniões de renovação de convênio, visitas e comunicados.</p>
   </div>
@@ -447,14 +453,21 @@
       <li>Preencha os dados de <strong>identificação</strong>: nome completo, CPF e data de nascimento.</li>
       <li>Informe os dados de <strong>contato</strong>: WhatsApp (com DDD) e e-mail.</li>
       <li>Preencha o <strong>endereço completo</strong>: logradouro, bairro, cidade e estado.</li>
-      <li>Registre a <strong>formação acadêmica</strong>: curso, semestre atual e instituição de ensino vinculada.</li>
+      <li>Registre a <strong>formação acadêmica</strong>: nível de ensino (Superior, Técnico, EJA ou PROEJA), curso, semestre atual e <strong>Instituição de Ensino</strong> — selecione pelo nome no campo com busca integrada ou digite para filtrar.</li>
       <li>Selecione a <strong>disponibilidade de horário</strong>: Manhã, Tarde, Integral ou Noite.</li>
       <li>Se o candidato possuir experiências profissionais anteriores, marque <strong>"Sim"</strong> e preencha as informações de cada experiência (empresa, período e cargo/função).</li>
       <li>Clique em <strong>Cadastrar</strong>.</li>
     </ol>
 
+    <div class="tip">
+      <strong>Modalidades de ensino disponíveis:</strong> além de Superior e Técnico, o sistema aceita as modalidades <strong>EJA</strong> (Educação de Jovens e Adultos) e <strong>PROEJA</strong> (Programa Nacional de Integração da Educação Profissional com a Educação Básica na Modalidade de Educação de Jovens e Adultos), atendendo candidatos vinculados a programas de educação continuada.
+    </div>
+
+    <h3>Busca de candidatos por Instituição de Ensino</h3>
+    <p>Na listagem de candidatos, o campo de busca localiza registros por nome, CPF ou <strong>Instituição de Ensino</strong> — facilitando a identificação de todos os candidatos vinculados a uma determinada IE.</p>
+
     <h3>Cadastro via formulário público (QR Code)</h3>
-    <p>O sistema disponibiliza um formulário público que pode ser acessado via link ou QR Code. O candidato preenche e envia os dados por conta própria, sem interação do operador, e o cadastro é criado automaticamente no banco. Veja mais detalhes na seção <a href="#link-qr">Link de Cadastro / QR Code</a>.</p>
+    <p>O sistema disponibiliza um formulário público que pode ser acessado via link ou QR Code. O candidato preenche e envia os dados por conta própria, sem interação do operador, e o cadastro é criado automaticamente no banco. O formulário público também inclui o campo de <strong>Instituição de Ensino</strong>. Veja mais detalhes na seção <a href="#link-qr">Link de Cadastro / QR Code</a>.</p>
 
     <h3>Disponibilidade para encaminhamento</h3>
     <p>Um candidato aparece <strong>disponível</strong> no dropdown de encaminhamento somente quando <em>não está em processo ativo</em> (inscrito ou em entrevista) em nenhuma outra vaga. Essa restrição existe para evitar a situação de um mesmo candidato ser convocado para duas entrevistas simultâneas — o que prejudica o relacionamento com as empresas.</p>
@@ -1046,6 +1059,31 @@
       </tr>
     </table>
 
+    <h3>Busca avançada com autocomplete</h3>
+    <p>O campo de busca da listagem de contratos localiza registros simultaneamente por <strong>nome do estagiário</strong>, <strong>nome fantasia da empresa</strong> e <strong>Instituição de Ensino</strong>. A busca é insensível a maiúsculas e acentuação. Um menu de sugestões aparece automaticamente enquanto você digita, permitindo selecionar o registro desejado com um clique.</p>
+    <div class="tip">
+      <strong>Nome fantasia na listagem:</strong> a coluna "Empresa" exibe o <strong>nome fantasia</strong> da concedente (não a razão social), tornando a identificação mais rápida no dia a dia.
+    </div>
+
+    <h3>Filtros de status</h3>
+    <p>A listagem oferece quatro filtros de status independentes:</p>
+    <table>
+      <tr><th>Filtro</th><th>O que exibe</th></tr>
+      <tr><td><strong>Ativo</strong></td><td>Contratos dentro do prazo, sem data de encerramento registrada</td></tr>
+      <tr><td><strong>A vencer</strong></td><td>Contratos com término nos próximos 30 dias</td></tr>
+      <tr><td><strong>Vencido</strong></td><td>Contratos com data de término ultrapassada, <em>sem</em> encerramento formal registrado</td></tr>
+      <tr><td><strong>Encerrado</strong></td><td>Contratos com data de encerramento registrada (TRE emitido)</td></tr>
+    </table>
+    <div class="tip">
+      <strong>Vencido ≠ Encerrado:</strong> um contrato <em>vencido</em> passou da data prevista mas ainda não foi formalmente encerrado no sistema. Um contrato <em>encerrado</em> já teve o TRE gerado e a data de encerramento preenchida. Os filtros são mutuamente exclusivos.
+    </div>
+
+    <h3>Imprimir lista de contratos</h3>
+    <p>O botão <strong>Imprimir</strong> (ícone de impressora) no canto superior direito da listagem abre a janela de impressão do navegador. O relatório impresso usa fonte <em>Times New Roman 8pt</em> com bordas nas células, ocultando botões e filtros. O cabeçalho de impressão exibe o nome da empresa e o filtro ativo no momento.</p>
+
+    <h3>Relatório semestral a partir da lista</h3>
+    <p>Na coluna <strong>Rel.</strong> de cada contrato ativo, o botão abre um modal com a <strong>programação dos relatórios semestrais</strong> exigidos pela Lei 11.788/2008 (art. 9º). O sistema calcula automaticamente as datas dos dois períodos de 6 meses com base na data de início do contrato e exibe o status (pendente ou concluído) de cada relatório.</p>
+
     <h3>Alertas automáticos de vencimento</h3>
     <p>O sistema destaca automaticamente no Dashboard os contratos com vencimento nos próximos 30 dias. Esses contratos também aparecem no relatório de "Contratos a Vencer". Use esse recurso para antecipar o contato com as empresas e evitar encerramentos abruptos de estágio.</p>
   </div>
@@ -1205,6 +1243,71 @@
 
     <div class="tip">
       <strong>Sem duplicidade:</strong> O sistema verifica automaticamente se já existe um candidato com o mesmo e-mail ou WhatsApp cadastrado. Em caso positivo, o cadastro duplicado <strong>não é criado</strong> — a tentativa é ignorada silenciosamente, evitando registros redundantes no banco.
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════ COMERCIAL ══════════════════════════════════════ -->
+  <div class="section" id="calculadora">
+    <h2>18. Calculadora de Custo CLT</h2>
+
+    <p>A <strong>Calculadora de Custo CLT</strong> é uma ferramenta de apoio comercial acessível pelo menu lateral em <strong>Comercial → Calc. Custo CLT</strong>. Ela calcula o custo real mensal e anual de um funcionário CLT para a empresa, considerando encargos, provisões e benefícios — útil para demonstrar a vantagem econômica do estágio em negociações com clientes.</p>
+
+    <h3>Como usar a calculadora</h3>
+    <ol class="steps">
+      <li>Selecione o <strong>Regime Tributário</strong> da empresa: Simples Nacional, Lucro Presumido ou Lucro Real.</li>
+      <li>Informe o <strong>Salário Bruto</strong> do funcionário em questão.</li>
+      <li>Informe o <strong>Vale Transporte mensal</strong> (valor total dos passes). Se não houver VT, deixe em branco.</li>
+      <li>Clique em <strong>Calcular</strong>.</li>
+    </ol>
+
+    <h3>O que a calculadora apura</h3>
+    <table>
+      <tr><th>Componente</th><th>Simples Nacional</th><th>Lucro Presumido / Real</th></tr>
+      <tr><td>FGTS</td><td>8%</td><td>8%</td></tr>
+      <tr><td>INSS Patronal</td><td>Incluso no DAS</td><td>20%</td></tr>
+      <tr><td>RAT / FAP</td><td>Incluso no DAS</td><td>2% (estimado)</td></tr>
+      <tr><td>Terceiros (Sistema S)</td><td>Incluso no DAS</td><td>5,8%</td></tr>
+      <tr><td>Vale Transporte</td><td colspan="2">Custo = VT − mín(6% × salário, VT)</td></tr>
+      <tr><td>Provisão 13º Salário</td><td colspan="2">8,33% (1/12 do salário)</td></tr>
+      <tr><td>Abono de Férias (1/3)</td><td colspan="2">2,78% (1/36 do salário)</td></tr>
+      <tr><td>Encargos s/ provisões</td><td colspan="2">FGTS + encargos patronais sobre 13º e férias</td></tr>
+    </table>
+
+    <div class="tip">
+      <strong>INSS do empregado:</strong> a calculadora apura apenas os <em>custos do empregador</em>. O INSS descontado do salário do empregado segue tabela progressiva (7,5% a 14%) e não compõe o custo adicional da empresa — já está embutido no salário bruto pago.
+    </div>
+
+    <h3>Resultado</h3>
+    <p>Após o cálculo, o sistema exibe:</p>
+    <ul>
+      <li>Tabela detalhada com cada componente, percentual aplicado, valor mensal e valor anual.</li>
+      <li>Cards de destaque com o <strong>Custo Mensal Total</strong> e o <strong>Custo Anual Total</strong>.</li>
+    </ul>
+  </div>
+
+  <div class="section" id="landing">
+    <h2>19. Landing Page Pública</h2>
+
+    <p>A <strong>Landing Page</strong> é uma página pública de captação de leads, acessível sem login, voltada para empresários interessados em contratar estagiários. Ela combina a calculadora de custo CLT com conteúdo de quebra de objeções e um CTA direto para o WhatsApp da Ciclo RH.</p>
+
+    <h3>Acesso</h3>
+    <p>A página está disponível publicamente em:</p>
+    <p style="margin:10px 0 10px 20px"><strong>https://web-production-4dc8d.up.railway.app/landing</strong></p>
+    <p>Não requer login. Pode ser compartilhada livremente via WhatsApp, redes sociais e materiais de divulgação.</p>
+
+    <h3>Conteúdo da landing page</h3>
+    <table>
+      <tr><th>Seção</th><th>Objetivo</th></tr>
+      <tr><td><strong>Hero</strong></td><td>Chamada principal + botão para a calculadora</td></tr>
+      <tr><td><strong>Calculadora CLT</strong></td><td>Mesma lógica da calculadora interna, com resultado em tempo real</td></tr>
+      <tr><td><strong>CLT vs. Estagiário</strong></td><td>Comparativo visual de custos para R$ 2.000 de bolsa no Lucro Presumido</td></tr>
+      <tr><td><strong>Quebra de objeções</strong></td><td>6 objeções comuns respondidas em accordion expansível</td></tr>
+      <tr><td><strong>Como funciona</strong></td><td>Processo em 3 passos: calcule → entre em contato → receba o estagiário</td></tr>
+      <tr><td><strong>CTA final</strong></td><td>Botão WhatsApp linkado para o número da Ciclo RH</td></tr>
+    </table>
+
+    <div class="tip">
+      <strong>Custo do estagiário na comparação:</strong> o comparativo considera bolsa + taxa de gestão da Ciclo RH (~R$ 100/mês, que inclui o seguro obrigatório). O percentual de overhead mostrado após o cálculo refere-se ao custo CLT em relação ao salário bruto — quanto maior, mais convincente a economia com o estágio.
     </div>
   </div>
 
