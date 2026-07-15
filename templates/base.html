@@ -68,7 +68,7 @@
 
 <!-- ── Mobile top bar ── -->
 <div class="mobile-topbar no-print">
-  <div class="brand-mob">Ciclo RH <small>Sistema de Estágio</small></div>
+  <a href="{{ url_for('index') }}" class="brand-mob" style="text-decoration:none;color:inherit;">Ciclo RH <small>Sistema de Estágio</small></a>
   <button class="btn btn-sm" style="color:#8fa8cc;border:1px solid #2d4070"
           data-bs-toggle="offcanvas" data-bs-target="#mob-nav" aria-label="Menu">
     <i class="bi bi-list fs-5"></i>
@@ -238,10 +238,10 @@
 
 <!-- ── Desktop sidebar ── -->
 <nav class="sidebar">
-  <div class="brand">
+  <a href="{{ url_for('index') }}" class="brand" style="text-decoration:none;color:inherit;display:block;">
     Ciclo RH
     <small>Sistema de Estágio</small>
-  </div>
+  </a>
 
   <div class="nav-section" data-bs-toggle="collapse" data-bs-target="#sb-principal"
        aria-expanded="true" aria-controls="sb-principal">
