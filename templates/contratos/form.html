@@ -1488,9 +1488,11 @@ function toggleAiHorario() {
 
   function normalizar(t) {
     return t.toLowerCase()
-      .replace(/[àá]/g,'a').replace(/[éê]/g,'e').replace(/[íî]/g,'i')
+      .replace(/\bàs\b/g,'a').replace(/\baté\b|\bate\b/g,'a')   // antes de tirar acentos
+      .replace(/[àáã]/g,'a').replace(/[éê]/g,'e').replace(/[íî]/g,'i')
       .replace(/[óô]/g,'o').replace(/[úû]/g,'u').replace(/ç/g,'c')
-      .replace(/\bàs\b|\bate\b|\baté\b/g,'a').replace(/\bdas\b|\bde\b/g,'')
+      .replace(/\bas\b/g,'a')                                     // "às" que virou "as"
+      .replace(/\bdas\b|\bde\b/g,'')
       .replace(/(\d)h(\d)/g,'$1:$2').replace(/(\d)h\b/g,'$1:00')
       .replace(/[–—]/g,'-').replace(/\s+/g,' ').trim();
   }
