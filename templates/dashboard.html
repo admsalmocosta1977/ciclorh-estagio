@@ -2,107 +2,254 @@
 {% block title %}Dashboard da Diretoria{% endblock %}
 {% block content %}
 <style>
-.kpi-card { border-radius: 14px; padding: 18px 20px; color: #fff; position: relative; overflow: hidden; }
-.kpi-card .kpi-val { font-size: 2.2rem; font-weight: 800; line-height: 1; }
-.kpi-card .kpi-label { font-size: .78rem; opacity: .85; margin-top: 4px; }
-.kpi-card .kpi-sub { font-size: .75rem; opacity: .7; margin-top: 6px; }
-.kpi-card .kpi-icon { position: absolute; right: 16px; top: 14px; font-size: 2.4rem; opacity: .18; }
-.kpi-card a { color: rgba(255,255,255,.8); font-size: .75rem; text-decoration: none; }
-.kpi-card a:hover { color: #fff; }
-.section-title { font-size: .7rem; text-transform: uppercase; letter-spacing: 1px;
-  color: #8fa8cc; font-weight: 700; margin: 20px 0 10px; }
-.funil-bar { display: flex; height: 28px; border-radius: 6px; overflow: hidden; margin-bottom: 6px; }
-.funil-seg { display: flex; align-items: center; justify-content: center;
-  font-size: .68rem; font-weight: 700; color: #fff; transition: flex .4s; min-width: 0; overflow: hidden; }
-.alert-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-  border-radius: 8px; margin-bottom: 8px; font-size: .85rem; }
+/* ── Dashboard BI ── */
+.dash-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:24px; }
+.dash-title  { font-size:1.35rem; font-weight:800; color:var(--ink); letter-spacing:-.4px; line-height:1.1; }
+.dash-sub    { font-size:.78rem; color:var(--ink-3); margin-top:3px; display:flex; align-items:center; gap:6px; }
+.live-dot    { width:6px; height:6px; border-radius:50%; background:var(--success); display:inline-block; animation:pulse 2s infinite; }
+@keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* Alertas refinados */
+.dash-alert  { display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:var(--radius); margin-bottom:8px; font-size:.84rem; font-weight:500; }
+.dash-alert.danger { background:var(--accent-soft); border:1px solid rgba(234,29,44,.2); color:#991B1B; }
+.dash-alert.warning{ background:var(--warn-soft);   border:1px solid rgba(217,119,6,.2); color:#92400E; }
+.dash-alert a { font-weight:700; margin-left:auto; text-decoration:none; padding:4px 12px; border-radius:20px; font-size:.76rem; }
+.dash-alert.danger  a { color:#991B1B; border:1px solid rgba(220,38,38,.35); }
+.dash-alert.warning a { color:#92400E; border:1px solid rgba(217,119,6,.35); }
+
+/* Section labels */
+.dash-section-label { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:var(--ink-4); margin:24px 0 10px; display:flex; align-items:center; gap:8px; }
+.dash-section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* KPI tiles */
+.kpi-tile    { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow-card); padding:18px 20px; border-left:3px solid transparent; position:relative; overflow:hidden; }
+.kpi-tile.blue   { border-left-color:var(--brand); }
+.kpi-tile.amber  { border-left-color:var(--warn); }
+.kpi-tile.red    { border-left-color:var(--accent); }
+.kpi-tile.green  { border-left-color:var(--success); }
+.kpi-tile.purple { border-left-color:#7C3AED; }
+.kpi-tile.teal   { border-left-color:#0891B2; }
+.kpi-tile-icon   { position:absolute; right:16px; top:50%; transform:translateY(-50%); font-size:1.6rem; opacity:.08; color:var(--ink); }
+.kpi-val   { font-size:2rem; font-weight:800; letter-spacing:-.06em; color:var(--ink); line-height:1; }
+.kpi-label { font-size:.76rem; font-weight:600; color:var(--ink-3); margin-top:6px; }
+.kpi-sub   { font-size:.73rem; color:var(--ink-4); margin-top:4px; }
+.kpi-tile a { color:inherit; text-decoration:none; }
+.kpi-tile.blue   .kpi-val { color:var(--brand); }
+.kpi-tile.amber  .kpi-val { color:var(--warn); }
+.kpi-tile.red    .kpi-val { color:var(--accent); }
+.kpi-tile.green  .kpi-val { color:var(--success); }
+.kpi-tile.purple .kpi-val { color:#7C3AED; }
+.kpi-tile.teal   .kpi-val { color:#0891B2; }
+
+/* Chart cards */
+.chart-card { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow-card); }
+.chart-header { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.chart-header-title { font-size:.88rem; font-weight:600; color:var(--ink); display:flex; align-items:center; gap:7px; }
+.chart-header-title i { color:var(--ink-3); }
+.chart-body { padding:18px; }
+
+/* Funil legend */
+.funil-legend { display:flex; flex-direction:column; gap:8px; }
+.funil-row    { display:flex; align-items:center; gap:10px; font-size:.8rem; }
+.funil-dot    { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.funil-label  { flex:1; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.funil-count  { font-weight:700; color:var(--ink); min-width:18px; text-align:right; }
+
+/* Resumo operacional */
+.op-row { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--border); }
+.op-row:last-child { border-bottom:none; }
+.op-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:.95rem; flex-shrink:0; }
+.op-label { flex:1; font-size:.83rem; color:var(--ink-2); }
+.op-val   { font-size:1.1rem; font-weight:800; color:var(--ink); letter-spacing:-.02em; }
 </style>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h4 class="fw-bold mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard da Diretoria</h4>
-  <small class="text-muted">Atualizado em tempo real · {{ today.strftime('%d/%m/%Y') }}</small>
+<!-- ── Header ── -->
+<div class="dash-header">
+  <div>
+    <div class="dash-title"><i class="bi bi-speedometer2" style="color:var(--brand);margin-right:8px;font-size:1.2rem"></i>Dashboard da Diretoria</div>
+    <div class="dash-sub">
+      <span class="live-dot"></span>
+      Atualizado em tempo real · {{ today.strftime('%d/%m/%Y') }}
+    </div>
+  </div>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-sm" style="font-size:.76rem;color:var(--ink-3);border:1px solid var(--border);border-radius:var(--radius-sm)">
+    <i class="bi bi-arrow-clockwise me-1"></i>Atualizar
+  </a>
 </div>
 
 <!-- ── Alertas ── -->
 {% if alertas %}
-<div class="mb-4">
+<div class="mb-3">
   {% for a in alertas %}
-  <div class="alert-item alert-{{ a.tipo }} bg-{{ a.tipo }} bg-opacity-10 border border-{{ a.tipo }} border-opacity-25">
-    <i class="bi {{ a.icone }} text-{{ a.tipo }} fs-5 flex-shrink-0"></i>
+  <div class="dash-alert {{ a.tipo }}">
+    <i class="bi {{ a.icone }} fs-5 flex-shrink-0"></i>
     <span>{{ a.msg }}</span>
-    <a href="{{ a.link }}" class="ms-auto btn btn-sm btn-outline-{{ a.tipo }} py-0">{{ a.link_label }}</a>
+    <a href="{{ a.link }}">{{ a.link_label }}</a>
   </div>
   {% endfor %}
 </div>
 {% endif %}
 
-<!-- ── KPIs de Estágios ── -->
-<p class="section-title"><i class="bi bi-file-earmark-text me-1"></i>Estágios</p>
-<div class="row g-3 mb-2">
+<!-- ── KPIs Estágios ── -->
+<div class="dash-section-label"><i class="bi bi-file-earmark-text"></i>Estágios</div>
+<div class="row g-3 mb-1">
   <div class="col-6 col-md-3">
-    <div class="kpi-card" style="background:linear-gradient(135deg,#1a2845,#2d4070)">
-      <i class="bi bi-file-earmark-check kpi-icon"></i>
-      <div class="kpi-val">{{ ativos }}</div>
+    <div class="kpi-tile blue">
+      <i class="bi bi-file-earmark-check kpi-tile-icon"></i>
+      <div class="kpi-val"><a href="{{ url_for('contratos') }}">{{ ativos }}</a></div>
       <div class="kpi-label">Contratos ativos</div>
-      <div class="kpi-sub"><a href="{{ url_for('contratos') }}">Ver todos →</a></div>
+      <div class="kpi-sub"><a href="{{ url_for('contratos') }}" style="color:var(--brand);font-weight:600;font-size:.72rem">Ver todos →</a></div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="kpi-card" style="background:linear-gradient(135deg,#d97706,#f59e0b)">
-      <i class="bi bi-calendar-x kpi-icon"></i>
-      <div class="kpi-val">{{ vencendo_30 }}</div>
+    <div class="kpi-tile amber">
+      <i class="bi bi-calendar-x kpi-tile-icon"></i>
+      <div class="kpi-val"><a href="{{ url_for('relatorio_vencimentos') }}">{{ vencendo_30 }}</a></div>
       <div class="kpi-label">Vencem em 30 dias</div>
-      <div class="kpi-sub"><a href="{{ url_for('relatorio_vencimentos') }}">Ver relatório →</a></div>
+      <div class="kpi-sub"><a href="{{ url_for('relatorio_vencimentos') }}" style="color:var(--warn);font-weight:600;font-size:.72rem">Ver relatório →</a></div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="kpi-card" style="background:linear-gradient(135deg,#059669,#10b981)">
-      <i class="bi bi-plus-circle kpi-icon"></i>
+    <div class="kpi-tile green">
+      <i class="bi bi-plus-circle kpi-tile-icon"></i>
       <div class="kpi-val">{{ novos_mes }}</div>
       <div class="kpi-label">Novos este mês</div>
       <div class="kpi-sub">{{ encerrados_mes }} encerrado(s) no mês</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="kpi-card" style="background:linear-gradient(135deg,#dc2626,#ef4444)">
-      <i class="bi bi-exclamation-triangle kpi-icon"></i>
-      <div class="kpi-val">{{ vencidos_sem_tre }}</div>
+    <div class="kpi-tile red">
+      <i class="bi bi-exclamation-triangle kpi-tile-icon"></i>
+      <div class="kpi-val"><a href="{{ url_for('contratos') }}">{{ vencidos_sem_tre }}</a></div>
       <div class="kpi-label">Vencidos sem TRE</div>
-      <div class="kpi-sub"><a href="{{ url_for('contratos') }}">Regularizar →</a></div>
+      <div class="kpi-sub"><a href="{{ url_for('contratos') }}" style="color:var(--accent);font-weight:600;font-size:.72rem">Regularizar →</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Gráfico status + Resumo operacional ── -->
+<div class="row g-3 mt-1">
+  <div class="col-lg-5">
+    <div class="chart-card h-100">
+      <div class="chart-header">
+        <div class="chart-header-title"><i class="bi bi-pie-chart"></i>Status dos Contratos</div>
+      </div>
+      <div class="chart-body" style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+        <div style="position:relative;width:150px;height:150px;flex-shrink:0">
+          <canvas id="chartStatus" width="150" height="150"></canvas>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+            <div style="font-size:1.5rem;font-weight:800;color:var(--ink);letter-spacing:-.04em">{{ ativos + vencendo_30 + vencidos_sem_tre }}</div>
+            <div style="font-size:.65rem;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.5px">total</div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:120px">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                <span style="font-size:.78rem;color:var(--ink-2);font-weight:500;display:flex;align-items:center;gap:6px">
+                  <span style="width:10px;height:10px;border-radius:3px;background:#059669;display:inline-block"></span>Ativos
+                </span>
+                <span style="font-size:.88rem;font-weight:800;color:#059669">{{ ativos }}</span>
+              </div>
+              <div style="height:4px;background:#E2E8F0;border-radius:2px"><div style="height:4px;background:#059669;border-radius:2px;width:{{ ((ativos/(ativos+vencendo_30+vencidos_sem_tre+1))*100)|round|int }}%"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                <span style="font-size:.78rem;color:var(--ink-2);font-weight:500;display:flex;align-items:center;gap:6px">
+                  <span style="width:10px;height:10px;border-radius:3px;background:#D97706;display:inline-block"></span>Vencendo
+                </span>
+                <span style="font-size:.88rem;font-weight:800;color:#D97706">{{ vencendo_30 }}</span>
+              </div>
+              <div style="height:4px;background:#E2E8F0;border-radius:2px"><div style="height:4px;background:#D97706;border-radius:2px;width:{{ ((vencendo_30/(ativos+vencendo_30+vencidos_sem_tre+1))*100)|round|int }}%"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                <span style="font-size:.78rem;color:var(--ink-2);font-weight:500;display:flex;align-items:center;gap:6px">
+                  <span style="width:10px;height:10px;border-radius:3px;background:#EA1D2C;display:inline-block"></span>Vencidos
+                </span>
+                <span style="font-size:.88rem;font-weight:800;color:#EA1D2C">{{ vencidos_sem_tre }}</span>
+              </div>
+              <div style="height:4px;background:#E2E8F0;border-radius:2px"><div style="height:4px;background:#EA1D2C;border-radius:2px;width:{{ ((vencidos_sem_tre/(ativos+vencendo_30+vencidos_sem_tre+1))*100)|round|int }}%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="chart-card h-100">
+      <div class="chart-header">
+        <div class="chart-header-title"><i class="bi bi-check2-circle"></i>Resumo Operacional</div>
+      </div>
+      <div class="chart-body py-0 px-3">
+        <div class="op-row">
+          <div class="op-icon" style="background:#EFF6FF"><i class="bi bi-file-earmark-check" style="color:var(--brand)"></i></div>
+          <div class="op-label">Contratos ativos</div>
+          <div class="op-val" style="color:var(--brand)">{{ ativos }}</div>
+        </div>
+        <div class="op-row">
+          <div class="op-icon" style="background:#D1FAE5"><i class="bi bi-rocket-takeoff" style="color:#059669"></i></div>
+          <div class="op-label">Implantações concluídas</div>
+          <div class="op-val" style="color:#059669">{{ imp_concluidas }}</div>
+        </div>
+        <div class="op-row">
+          <div class="op-icon" style="background:#EFF6FF"><i class="bi bi-person-check" style="color:var(--brand)"></i></div>
+          <div class="op-label">Aprovados aguard. contrato</div>
+          <div class="op-val">{{ vagas_candidatos }}</div>
+        </div>
+        <div class="op-row">
+          <div class="op-icon" style="background:#D1FAE5"><i class="bi bi-building-check" style="color:#059669"></i></div>
+          <div class="op-label">Clientes ativos (CRM)</div>
+          <div class="op-val" style="color:#059669">{{ crm_ativos }}</div>
+        </div>
+        {% if imp_paradas %}
+        <div class="op-row">
+          <div class="op-icon" style="background:#FEF3C7"><i class="bi bi-hourglass-split" style="color:#D97706"></i></div>
+          <div class="op-label">Implantações paradas 30d+</div>
+          <div class="op-val" style="color:#D97706">{{ imp_paradas }}</div>
+        </div>
+        {% endif %}
+        <div class="op-row">
+          <div class="op-icon" style="background:#F3F4F6"><i class="bi bi-people" style="color:#6B7280"></i></div>
+          <div class="op-label">Candidatos no banco</div>
+          <div class="op-val">{{ total_candidatos }}</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- ── KPIs Comercial ── -->
-<p class="section-title"><i class="bi bi-kanban me-1"></i>Comercial</p>
-<div class="row g-3 mb-2">
+<div class="dash-section-label mt-3"><i class="bi bi-kanban"></i>Comercial</div>
+<div class="row g-3 mb-1">
   <div class="col-6 col-md-3">
-    <div class="kpi-card" style="background:linear-gradient(135deg,#0d6efd,#3b82f6)">
-      <i class="bi bi-funnel kpi-icon"></i>
+    <div class="kpi-tile blue">
+      <i class="bi bi-funnel kpi-tile-icon"></i>
       <div class="kpi-val">{{ crm_total }}</div>
       <div class="kpi-label">Leads no funil</div>
       <div class="kpi-sub">{{ crm_novos_mes }} novo(s) este mês</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="kpi-card" style="background:linear-gradient(135deg,#198754,#22c55e)">
-      <i class="bi bi-building-check kpi-icon"></i>
+    <div class="kpi-tile green">
+      <i class="bi bi-building-check kpi-tile-icon"></i>
       <div class="kpi-val">{{ crm_ativos }}</div>
       <div class="kpi-label">Clientes ativos (CRM)</div>
-      <div class="kpi-sub">Taxa de conversão: {{ crm_taxa }}%</div>
+      <div class="kpi-sub">Conversão: {{ crm_taxa }}%</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="kpi-card" style="background:linear-gradient(135deg,#7c3aed,#8b5cf6)">
-      <i class="bi bi-rocket-takeoff kpi-icon"></i>
+    <div class="kpi-tile purple">
+      <i class="bi bi-rocket-takeoff kpi-tile-icon"></i>
       <div class="kpi-val">{{ imp_andamento }}</div>
       <div class="kpi-label">Implantações em curso</div>
       <div class="kpi-sub">Progresso médio: {{ imp_progresso }}%</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="kpi-card" style="background:linear-gradient(135deg,#0891b2,#06b6d4)">
-      <i class="bi bi-briefcase kpi-icon"></i>
+    <div class="kpi-tile teal">
+      <i class="bi bi-briefcase kpi-tile-icon"></i>
       <div class="kpi-val">{{ vagas_abertas }}</div>
       <div class="kpi-label">Vagas abertas</div>
       <div class="kpi-sub">{{ total_candidatos }} candidato(s) no banco</div>
@@ -110,64 +257,117 @@
   </div>
 </div>
 
-<!-- ── Funil visual ── -->
+<!-- ── Funil CRM (Chart.js) ── -->
 <div class="row g-3 mt-1">
-  <div class="col-lg-7">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-bar-chart-steps me-1"></i>Distribuição do Funil</span>
-        <a href="{{ url_for('crm_kanban') }}" class="btn btn-sm btn-outline-secondary py-0" style="font-size:.75rem">Abrir funil</a>
+  <div class="col-12">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-header-title"><i class="bi bi-bar-chart-horizontal"></i>Distribuição do Funil CRM</div>
+        <a href="{{ url_for('crm_kanban') }}" class="btn btn-sm" style="font-size:.74rem;color:var(--ink-3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px 12px">Abrir funil</a>
       </div>
-      <div class="card-body">
+      <div class="chart-body">
         {% if crm_total > 0 %}
-        <div class="funil-bar mb-3">
-          {% for etapa in etapas_crm %}
-          {% set n = crm_etapa_map.get(etapa, 0) %}
-          {% if n > 0 %}
-          <div class="funil-seg" style="flex:{{ n }};background:{{ cores_crm[etapa] }}"
-               title="{{ etapa }}: {{ n }}">
-            {% if n > 1 %}{{ n }}{% endif %}
-          </div>
-          {% endif %}
-          {% endfor %}
+        <canvas id="chartFunil" style="max-height:200px"></canvas>
+        {% else %}
+        <div style="text-align:center;padding:32px 0;color:var(--ink-4);font-size:.84rem">
+          <i class="bi bi-funnel" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3"></i>
+          Nenhum lead no funil no momento
         </div>
-        {% endif %}
-        {% for etapa in etapas_crm %}
-        {% set n = crm_etapa_map.get(etapa, 0) %}
-        <div class="d-flex align-items-center gap-2 mb-1" style="font-size:.82rem">
-          <span style="width:10px;height:10px;border-radius:50%;background:{{ cores_crm[etapa] }};flex-shrink:0"></span>
-          <span class="flex-grow-1 text-truncate">{{ etapa }}</span>
-          <span class="fw-semibold">{{ n }}</span>
-          <div class="progress flex-grow-1" style="height:5px;max-width:80px">
-            <div class="progress-bar" style="width:{{ (n/crm_total*100)|round|int if crm_total else 0 }}%;background:{{ cores_crm[etapa] }}"></div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
-
-  <div class="col-lg-5">
-    <div class="card h-100">
-      <div class="card-header"><i class="bi bi-check2-circle me-1"></i>Resumo Operacional</div>
-      <div class="card-body py-2">
-        {% macro kpi_row(icone, label, val, cor='dark') %}
-        <div class="d-flex align-items-center gap-3 py-2 border-bottom">
-          <i class="bi {{ icone }} text-{{ cor }} fs-5 flex-shrink-0" style="width:22px;text-align:center"></i>
-          <span class="flex-grow-1" style="font-size:.85rem">{{ label }}</span>
-          <span class="fw-bold fs-5">{{ val }}</span>
-        </div>
-        {% endmacro %}
-        {{ kpi_row('bi-file-earmark-check', 'Contratos ativos', ativos, 'primary') }}
-        {{ kpi_row('bi-rocket-takeoff', 'Implantações concluídas', imp_concluidas, 'success') }}
-        {{ kpi_row('bi-person-check', 'Aprovados aguard. contrato', vagas_candidatos, 'info') }}
-        {{ kpi_row('bi-building-check', 'Clientes ativos (CRM)', crm_ativos, 'success') }}
-        {% if imp_paradas %}
-        {{ kpi_row('bi-hourglass-split', 'Implantações paradas 30d+', imp_paradas, 'warning') }}
         {% endif %}
       </div>
     </div>
   </div>
 </div>
 
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+Chart.defaults.font.family = "'Plus Jakarta Sans', system-ui, sans-serif";
+Chart.defaults.color = '#64748B';
+
+/* Donut — Status dos Contratos */
+(function(){
+  var ctx = document.getElementById('chartStatus');
+  if (!ctx) return;
+  var ativos = {{ ativos }};
+  var vencendo = {{ vencendo_30 }};
+  var vencidos = {{ vencidos_sem_tre }};
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Ativos', 'Vencendo', 'Vencidos'],
+      datasets: [{
+        data: [ativos, vencendo, vencidos],
+        backgroundColor: ['#059669', '#D97706', '#EA1D2C'],
+        borderWidth: 0,
+        hoverOffset: 4
+      }]
+    },
+    options: {
+      cutout: '72%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx){ return ' ' + ctx.label + ': ' + ctx.parsed; }
+          }
+        }
+      },
+      animation: { duration: 600 }
+    }
+  });
+})();
+
+/* Barra horizontal — Funil CRM */
+(function(){
+  var ctx = document.getElementById('chartFunil');
+  if (!ctx) return;
+  var labels = {{ etapas_crm | tojson }};
+  var values = labels.map(function(e){
+    var m = {{ crm_etapa_map | tojson }};
+    return m[e] || 0;
+  });
+  var colors = {{ etapas_crm | map(attribute=0) | list | tojson }};
+  var coresMap = {{ cores_crm | tojson }};
+  var bgs = labels.map(function(e){ return coresMap[e] || '#2563EB'; });
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: bgs,
+        borderRadius: 5,
+        borderSkipped: false,
+        barThickness: 22
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx){ return '  ' + ctx.parsed.x + ' lead(s)'; }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(0,0,0,.04)' },
+          border: { display: false },
+          ticks: { stepSize: 1, font: { size: 11 } }
+        },
+        y: {
+          grid: { display: false },
+          border: { display: false },
+          ticks: { font: { size: 11 } }
+        }
+      },
+      animation: { duration: 600 }
+    }
+  });
+})();
+</script>
 {% endblock %}
