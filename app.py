@@ -1613,6 +1613,42 @@ def api_area_atividades(area_id):
     return jsonify([r['descricao'] for r in atividades])
 
 
+@app.route('/api/ia/atividades')
+@login_required
+def api_ia_atividades():
+    import os
+    key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if not key:
+        return jsonify({'erro': 'ANTHROPIC_API_KEY não configurada no servidor.'}), 503
+    curso = request.args.get('curso', '').strip()
+    area  = request.args.get('area', '').strip()
+    if not curso and not area:
+        return jsonify({'erro': 'Informe o curso ou a área de atuação.'}), 400
+    try:
+        import anthropic as _ant
+        client = _ant.Anthropic(api_key=key)
+        desc = f"curso de {curso}" if curso else ""
+        if area:
+            desc += (" na área de " if desc else "") + area
+        msg = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=512,
+            messages=[{
+                'role': 'user',
+                'content': (
+                    f"Liste exatamente 8 atividades típicas de estágio para estudante de {desc}. "
+                    "Cada atividade deve começar com verbo no infinitivo (ex: Auxiliar, Elaborar, Analisar). "
+                    "Máximo 110 caracteres por item. Sem numeração, sem traço, sem ponto final. "
+                    "Uma atividade por linha. Somente a lista, sem texto adicional."
+                )
+            }]
+        )
+        atividades = [l.strip(' -–•') for l in msg.content[0].text.strip().splitlines() if l.strip()][:8]
+        return jsonify({'atividades': atividades})
+    except Exception as ex:
+        return jsonify({'erro': str(ex)}), 500
+
+
 # ─── CONTRATOS ────────────────────────────────────────────────────────────────
 
 @app.route('/contratos')

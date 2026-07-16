@@ -165,6 +165,46 @@
 
       <hr>
       <h6 class="text-muted mb-3">Jornada / Horários</h6>
+
+      <!-- Assistente de Horário IA -->
+      <div class="card border-0 bg-light mb-3" id="card-ai-horario">
+        <div class="card-header bg-transparent border-bottom d-flex align-items-center gap-2 py-2"
+             style="cursor:pointer" onclick="toggleAiHorario()">
+          <span class="badge bg-primary rounded-pill" style="font-size:.7rem">✨ IA</span>
+          <span class="small fw-semibold">Preencher horário em linguagem natural</span>
+          <i class="bi bi-chevron-down ms-auto" id="ic-ai-horario"></i>
+        </div>
+        <div id="body-ai-horario" style="display:none" class="card-body pb-2">
+          <div class="input-group mb-2">
+            <input type="text" id="inp-ai-horario" class="form-control"
+                   placeholder="Ex: Segunda a sexta das 8:00 às 13:00"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();preencherHorario();}">
+            <button type="button" class="btn btn-primary" onclick="preencherHorario()">
+              <i class="bi bi-check2"></i> Preencher
+            </button>
+            <button type="button" class="btn btn-outline-secondary" onclick="limparHorario()">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+          <div class="text-muted" style="font-size:.78rem">
+            <strong>Exemplos:</strong>
+            <span class="badge bg-secondary ms-1" style="cursor:pointer;font-weight:400"
+                  onclick="document.getElementById('inp-ai-horario').value=this.dataset.v"
+                  data-v="Segunda a sexta das 8:00 às 13:00">Seg-Sex 8h-13h</span>
+            <span class="badge bg-secondary ms-1" style="cursor:pointer;font-weight:400"
+                  onclick="document.getElementById('inp-ai-horario').value=this.dataset.v"
+                  data-v="Segunda a sábado das 8:00 às 13:00">Seg-Sáb 8h-13h</span>
+            <span class="badge bg-secondary ms-1" style="cursor:pointer;font-weight:400"
+                  onclick="document.getElementById('inp-ai-horario').value=this.dataset.v"
+                  data-v="Segunda a sexta das 13:00 às 18:00">Seg-Sex 13h-18h</span>
+            <span class="badge bg-secondary ms-1" style="cursor:pointer;font-weight:400"
+                  onclick="document.getElementById('inp-ai-horario').value=this.dataset.v"
+                  data-v="Seg, ter, qua das 8:00 às 12:00">Seg,Ter,Qua alternado</span>
+          </div>
+          <div id="ai-horario-msg" class="mt-2"></div>
+        </div>
+      </div>
+
       {% set jd = (c.jornada | from_json) if c and c.jornada else {} %}
       <div class="table-responsive mb-3">
         <table class="table table-sm table-bordered align-middle text-center" style="font-size:0.875rem">
@@ -270,9 +310,30 @@
         </div>
         {% endfor %}
       </div>
-      <button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="btn-add-at">
-        <i class="bi bi-plus me-1"></i>Adicionar atividade
-      </button>
+      <div class="d-flex gap-2 flex-wrap mt-1">
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-add-at">
+          <i class="bi bi-plus me-1"></i>Adicionar atividade
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary" id="btn-ia-ats" onclick="sugerirAtividadesIA()">
+          <span class="badge bg-primary me-1" style="font-size:.65rem;vertical-align:middle">✨ IA</span>Sugerir atividades
+        </button>
+      </div>
+
+      <!-- Painel sugestões IA -->
+      <div id="painel-ia-ats" class="border rounded p-3 mt-3" style="display:none;border-color:#0d6efd !important;background:#f0f4ff">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="fw-semibold small"><span class="badge bg-primary me-1" style="font-size:.7rem">✨ IA</span>Sugestões para a área — marque as que se aplicam</span>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-marcar-todas-ia">Marcar todas</button>
+            <button type="button" class="btn btn-sm btn-primary" id="btn-aplicar-ia">
+              <i class="bi bi-check2-circle me-1"></i>Aplicar selecionadas
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('painel-ia-ats').style.display='none'">×</button>
+          </div>
+        </div>
+        <div id="lista-ia-ats" class="row g-2"></div>
+        <div id="ia-ats-msg" class="mt-2"></div>
+      </div>
 
       <div id="painel-sugestao-ats" class="border rounded p-3 mt-3 bg-light" style="display:none">
         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -1276,5 +1337,186 @@ document.querySelector('form').addEventListener('submit', function(e) {
     document.querySelector('.is-invalid')?.scrollIntoView({behavior:'smooth', block:'center'});
   }
 }, true);
+
+// ── Assistente de Horário IA ──────────────────────────────────────────────────
+function toggleAiHorario() {
+  const body = document.getElementById('body-ai-horario');
+  const ic   = document.getElementById('ic-ai-horario');
+  const open = body.style.display === '';
+  body.style.display = open ? 'none' : '';
+  ic.className = 'bi ms-auto ' + (open ? 'bi-chevron-down' : 'bi-chevron-up');
+}
+
+(function() {
+  const DIAS_MAP = {
+    'domingo':'dom','dom':'dom',
+    'segunda':'seg','seg':'seg','segunda-feira':'seg',
+    'terça':'ter','terca':'ter','ter':'ter','terça-feira':'ter',
+    'quarta':'qua','qua':'qua','quarta-feira':'qua',
+    'quinta':'qui','qui':'qui','quinta-feira':'qui',
+    'sexta':'sex','sex':'sex','sexta-feira':'sex',
+    'sábado':'sab','sabado':'sab','sab':'sab'
+  };
+  const ORDER = ['dom','seg','ter','qua','qui','sex','sab'];
+
+  function normalizar(t) {
+    return t.toLowerCase()
+      .replace(/[àá]/g,'a').replace(/[éê]/g,'e').replace(/[íî]/g,'i')
+      .replace(/[óô]/g,'o').replace(/[úû]/g,'u').replace(/ç/g,'c')
+      .replace(/\bàs\b|\bate\b|\baté\b/g,'a').replace(/\bdas\b|\bde\b/g,'')
+      .replace(/(\d)h(\d)/g,'$1:$2').replace(/(\d)h\b/g,'$1:00')
+      .replace(/[–—]/g,'-').replace(/\s+/g,' ').trim();
+  }
+
+  function parseHora(s) {
+    s = s.trim();
+    const m = s.match(/^(\d{1,2})(?::(\d{2}))?$/);
+    if (!m) return null;
+    const h = m[1].padStart(2,'0'), mi = (m[2]||'00');
+    return h + ':' + mi;
+  }
+
+  function parseDias(seg) {
+    seg = seg.trim();
+    // "segunda a sexta" / "seg a sab"
+    const rangeM = seg.match(/^(.+?)\s+a\s+(.+)$/);
+    if (rangeM) {
+      const f = DIAS_MAP[rangeM[1].trim()], t = DIAS_MAP[rangeM[2].trim()];
+      if (f && t) {
+        const fi = ORDER.indexOf(f), ti = ORDER.indexOf(t);
+        if (fi !== -1 && ti !== -1) return ORDER.slice(fi, ti+1);
+      }
+    }
+    // lista "seg, ter, qui" ou "seg e ter"
+    const partes = seg.split(/[,\s]+e\s+|,\s*/).map(p => DIAS_MAP[p.trim()]).filter(Boolean);
+    if (partes.length) return partes;
+    // todos os dias
+    if (seg.includes('todos') || seg.includes('diariamente')) return ORDER.slice(1);
+    return [];
+  }
+
+  function turno(hora) {
+    const h = parseInt(hora.split(':')[0]);
+    if (h < 12) return 'mat';
+    if (h < 18) return 'ves';
+    return 'not';
+  }
+
+  function parseTexto(texto) {
+    const t = normalizar(texto);
+    const resultados = [];
+    // Divide por ponto-e-vírgula ou " e " seguido de dia
+    const partes = t.split(/;\s*|\s+e\s+(?=(?:segunda|terca|quarta|quinta|sexta|sabado|domingo|seg|ter|qua|qui|sex|sab|dom|todos))/);
+    for (const parte of partes) {
+      const p = parte.trim();
+      // Formato: [dias] HH:MM a HH:MM  ou [dias] HH:MM - HH:MM
+      const m = p.match(/^(.+?)\s+(\d{1,2}(?::\d{2})?)\s+(?:a|-)\s+(\d{1,2}(?::\d{2})?)$/);
+      if (m) {
+        const dias = parseDias(m[1]);
+        const ini = parseHora(m[2]), fim = parseHora(m[3]);
+        if (dias.length && ini && fim) {
+          dias.forEach(d => resultados.push({dia: d, ini, fim}));
+        }
+      }
+    }
+    return resultados;
+  }
+
+  window.preencherHorario = function() {
+    const texto = document.getElementById('inp-ai-horario').value.trim();
+    const msg   = document.getElementById('ai-horario-msg');
+    if (!texto) return;
+    const entradas = parseTexto(texto);
+    if (!entradas.length) {
+      msg.innerHTML = '<div class="alert alert-warning py-1 mb-0 small">Não entendi o formato. Tente: <em>Segunda a sexta das 8:00 às 13:00</em></div>';
+      return;
+    }
+    document.querySelectorAll('input[type="time"]').forEach(el => el.value = '');
+    entradas.forEach(({dia, ini, fim}) => {
+      const t = turno(ini);
+      const elIni = document.querySelector(`[name="${dia}_${t}_ini"]`);
+      const elFim = document.querySelector(`[name="${dia}_${t}_fim"]`);
+      if (elIni) elIni.value = ini;
+      if (elFim) elFim.value = fim;
+    });
+    verificarJornada();
+    const diasNomes = [...new Set(entradas.map(e => e.dia))];
+    msg.innerHTML = `<div class="alert alert-success py-1 mb-0 small"><i class="bi bi-check-circle me-1"></i>Preenchido: ${diasNomes.join(', ')} (${entradas[0].ini}–${entradas[0].fim})</div>`;
+  };
+
+  window.limparHorario = function() {
+    document.querySelectorAll('input[type="time"]').forEach(el => el.value = '');
+    document.getElementById('ai-horario-msg').innerHTML = '';
+  };
+})();
+
+// ── Sugestão de Atividades via IA ─────────────────────────────────────────────
+window.sugerirAtividadesIA = function() {
+  const curso = document.querySelector('[name="curso"]').value.trim();
+  const area  = (document.getElementById('inp-area-atuacao') || {}).value || '';
+  const msg   = document.getElementById('ia-ats-msg');
+  const lista = document.getElementById('lista-ia-ats');
+  const painel = document.getElementById('painel-ia-ats');
+
+  if (!curso && !area) {
+    painel.style.display = '';
+    lista.innerHTML = '';
+    msg.innerHTML = '<div class="alert alert-warning py-1 small">Preencha o <strong>Curso</strong> ou a <strong>Área de Atuação</strong> antes de sugerir.</div>';
+    return;
+  }
+
+  painel.style.display = '';
+  lista.innerHTML = '';
+  msg.innerHTML = '<div class="text-muted small"><span class="spinner-border spinner-border-sm me-1"></span>Consultando IA…</div>';
+
+  const params = new URLSearchParams({curso, area});
+  fetch('/api/ia/atividades?' + params)
+    .then(r => r.json())
+    .then(d => {
+      msg.innerHTML = '';
+      if (d.erro) {
+        msg.innerHTML = `<div class="alert alert-danger py-1 small">${d.erro}</div>`;
+        return;
+      }
+      lista.innerHTML = '';
+      d.atividades.forEach((desc, i) => {
+        const col = document.createElement('div');
+        col.className = 'col-12';
+        col.innerHTML = `<div class="form-check">
+          <input class="form-check-input check-ia-at" type="checkbox" id="ia_at_${i}" value="${desc.replace(/"/g,'&quot;')}" checked>
+          <label class="form-check-label small" for="ia_at_${i}">${desc}</label>
+        </div>`;
+        lista.appendChild(col);
+      });
+    })
+    .catch(() => {
+      msg.innerHTML = '<div class="alert alert-danger py-1 small">Erro ao conectar ao servidor.</div>';
+    });
+};
+
+document.getElementById('btn-marcar-todas-ia').addEventListener('click', function() {
+  const checks = document.querySelectorAll('.check-ia-at');
+  const allChecked = Array.from(checks).every(c => c.checked);
+  checks.forEach(c => c.checked = !allChecked);
+  this.textContent = allChecked ? 'Marcar todas' : 'Desmarcar todas';
+});
+
+document.getElementById('btn-aplicar-ia').addEventListener('click', function() {
+  const sel = Array.from(document.querySelectorAll('.check-ia-at:checked')).map(c => c.value);
+  if (!sel.length) return;
+  const inputs = document.querySelectorAll('[name^="atividade_"]');
+  // Encontra primeiro campo vazio
+  let idx = Array.from(inputs).findIndex(inp => !inp.value.trim());
+  if (idx === -1) idx = 0;
+  sel.forEach(desc => {
+    if (idx < inputs.length) {
+      inputs[idx].value = desc;
+      inputs[idx].closest('.atividade-row').style.display = '';
+      idx++;
+    }
+  });
+  visibleAts = Array.from(document.querySelectorAll('.atividade-row')).filter(r => r.style.display !== 'none').length;
+  document.getElementById('painel-ia-ats').style.display = 'none';
+});
 </script>
 {% endblock %}
