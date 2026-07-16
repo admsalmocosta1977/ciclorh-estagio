@@ -11,6 +11,42 @@
     <form method="post">
 
       <h6 class="text-muted mb-3">Partes Envolvidas</h6>
+
+      <!-- Assistente de Partes IA -->
+      <div class="card border-0 bg-light mb-3" id="card-ai-partes">
+        <div class="card-header bg-transparent border-bottom d-flex align-items-center gap-2 py-2"
+             style="cursor:pointer" onclick="toggleAiPartes()">
+          <span class="badge bg-primary rounded-pill" style="font-size:.7rem">✨ IA</span>
+          <span class="small fw-semibold">Busca rápida de partes</span>
+          <i class="bi bi-chevron-down ms-auto" id="ic-ai-partes"></i>
+        </div>
+        <div id="body-ai-partes" style="display:none" class="card-body pb-2">
+          <div class="row g-2 mb-2">
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold mb-1">Estagiário</label>
+              <input type="text" id="ai-est-q" class="form-control form-control-sm" placeholder="Parte do nome…"
+                     oninput="filtrarPartes('est')" autocomplete="off">
+              <div id="ai-est-res" class="mt-1" style="max-height:140px;overflow-y:auto"></div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold mb-1">Empresa</label>
+              <input type="text" id="ai-emp-q" class="form-control form-control-sm" placeholder="Parte do nome…"
+                     oninput="filtrarPartes('emp')" autocomplete="off">
+              <div id="ai-emp-res" class="mt-1" style="max-height:140px;overflow-y:auto"></div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold mb-1">Instituição de Ensino</label>
+              <input type="text" id="ai-ie-q" class="form-control form-control-sm" placeholder="Nome ou sigla…"
+                     oninput="filtrarPartes('ie')" autocomplete="off">
+              <div id="ai-ie-res" class="mt-1" style="max-height:140px;overflow-y:auto"></div>
+            </div>
+          </div>
+          <div id="ai-partes-sel" class="d-flex flex-wrap gap-2 align-items-center mt-1" style="min-height:28px">
+            <span class="text-muted small">Clique nos resultados para selecionar cada parte.</span>
+          </div>
+        </div>
+      </div>
+
       <div class="row g-3 mb-4">
         <div class="col-md-6">
           <label class="form-label fw-semibold">Estagiário *</label>
@@ -1337,6 +1373,91 @@ document.querySelector('form').addEventListener('submit', function(e) {
     document.querySelector('.is-invalid')?.scrollIntoView({behavior:'smooth', block:'center'});
   }
 }, true);
+
+// ── Assistente de Partes IA ───────────────────────────────────────────────────
+(function() {
+  const CFG = {
+    est: { data: () => DATA_EST, qId: 'ai-est-q', resId: 'ai-est-res', hidId: 'sel-estagiario', txtId: 'txt-estagiario', label: 'Estagiário' },
+    emp: { data: () => DATA_EMP, qId: 'ai-emp-q', resId: 'ai-emp-res', hidId: 'sel-empresa',    txtId: 'txt-empresa',    label: 'Empresa' },
+    ie:  { data: () => DATA_IE,  qId: 'ai-ie-q',  resId: 'ai-ie-res',  hidId: 'sel-ie',         txtId: 'txt-ie',         label: 'IE' },
+  };
+  const selecionados = {};
+
+  window.toggleAiPartes = function() {
+    const body = document.getElementById('body-ai-partes');
+    const ic   = document.getElementById('ic-ai-partes');
+    const open = body.style.display === '';
+    body.style.display = open ? 'none' : '';
+    ic.className = 'bi ms-auto ' + (open ? 'bi-chevron-down' : 'bi-chevron-up');
+    if (!open) document.getElementById('ai-est-q').focus();
+  };
+
+  function renderSelecionados() {
+    const div = document.getElementById('ai-partes-sel');
+    const items = Object.values(selecionados);
+    if (!items.length) {
+      div.innerHTML = '<span class="text-muted small">Clique nos resultados para selecionar cada parte.</span>';
+      return;
+    }
+    div.innerHTML = items.map(s =>
+      `<span class="badge bg-success">${s.tipo}: ${s.label} <button type="button" class="btn-close btn-close-white ms-1" style="font-size:.5rem" onclick="removerParteIA('${s.tipo}')"></button></span>`
+    ).join('') +
+    (items.length === 3
+      ? '<button type="button" class="btn btn-sm btn-primary ms-2" onclick="aplicarPartesIA()"><i class="bi bi-check2-circle me-1"></i>Aplicar no formulário</button>'
+      : '');
+  }
+
+  window.filtrarPartes = function(tipo) {
+    const c = CFG[tipo];
+    const q = document.getElementById(c.qId).value.trim().toLowerCase();
+    const res = document.getElementById(c.resId);
+    if (q.length < 1) { res.innerHTML = ''; return; }
+    const matches = c.data().filter(d => d.label.toLowerCase().includes(q)).slice(0, 8);
+    if (!matches.length) { res.innerHTML = '<div class="text-muted small px-1">Nenhum resultado</div>'; return; }
+    const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
+    res.innerHTML = matches.map(d =>
+      `<div class="border rounded px-2 py-1 mb-1 small" style="cursor:pointer;background:#f8f9fa"
+            onclick="selecionarParteIA('${tipo}', ${d.id}, ${JSON.stringify(d.label)})">
+        ${d.label.replace(re, '<strong>$1</strong>')}
+      </div>`
+    ).join('');
+  };
+
+  window.selecionarParteIA = function(tipo, id, label) {
+    selecionados[tipo] = { tipo: CFG[tipo].label, id, label };
+    document.getElementById(CFG[tipo].qId).value = label;
+    document.getElementById(CFG[tipo].resId).innerHTML =
+      `<div class="text-success small px-1"><i class="bi bi-check-circle-fill me-1"></i>${label}</div>`;
+    renderSelecionados();
+  };
+
+  window.removerParteIA = function(tipoLabel) {
+    const tipo = Object.keys(CFG).find(k => CFG[k].label === tipoLabel);
+    if (!tipo) return;
+    delete selecionados[tipo];
+    document.getElementById(CFG[tipo].qId).value = '';
+    document.getElementById(CFG[tipo].resId).innerHTML = '';
+    renderSelecionados();
+  };
+
+  window.aplicarPartesIA = function() {
+    Object.keys(selecionados).forEach(tipo => {
+      const s = selecionados[tipo];
+      const c = CFG[tipo];
+      document.getElementById(c.hidId).value = s.id;
+      document.getElementById(c.txtId).value = s.label;
+      document.getElementById(c.txtId).classList.remove('is-invalid');
+    });
+    // Dispara eventos para que outros listeners reajam
+    ['sel-estagiario','sel-empresa'].forEach(id => {
+      document.getElementById(id).dispatchEvent(new Event('change'));
+    });
+    // Fecha o painel
+    document.getElementById('body-ai-partes').style.display = 'none';
+    document.getElementById('ic-ai-partes').className = 'bi ms-auto bi-chevron-down';
+    document.getElementById('ai-partes-sel').innerHTML = '<span class="text-success small"><i class="bi bi-check-circle-fill me-1"></i>Partes aplicadas no formulário.</span>';
+  };
+})();
 
 // ── Assistente de Horário IA ──────────────────────────────────────────────────
 function toggleAiHorario() {
