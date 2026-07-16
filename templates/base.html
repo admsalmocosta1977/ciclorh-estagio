@@ -504,6 +504,9 @@
       <a href="{{ url_for('crm_kanban') }}" class="nav-link {% if ep=='crm_kanban' %}active{% endif %}">
         <i class="bi bi-kanban"></i> Funil de Vendas
       </a>
+      <a href="{{ url_for('crm_prospeccao') }}" class="nav-link {% if 'prospeccao' in ep %}active{% endif %}">
+        <i class="bi bi-geo-alt"></i> Prospecção
+      </a>
       <a href="{{ url_for('crm_lead_novo') }}" class="nav-link">
         <i class="bi bi-plus-circle"></i> Novo Lead
       </a>
@@ -668,6 +671,9 @@
   <div class="collapse {{ 'show' if sec_crm }}" id="sb-crm">
     <a href="{{ url_for('crm_kanban') }}" class="nav-link {% if ep=='crm_kanban' %}active{% endif %}">
       <i class="bi bi-kanban"></i> Funil de Vendas
+    </a>
+    <a href="{{ url_for('crm_prospeccao') }}" class="nav-link {% if 'prospeccao' in ep %}active{% endif %}">
+      <i class="bi bi-geo-alt"></i> Prospecção
     </a>
     <a href="{{ url_for('crm_lead_novo') }}" class="nav-link">
       <i class="bi bi-plus-circle"></i> Novo Lead

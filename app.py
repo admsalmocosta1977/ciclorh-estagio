@@ -62,6 +62,57 @@ ETAPAS_CRM_COR = {
     'Cliente Ativo': '#198754',
 }
 
+SEGMENTOS_PROSPECTO = [
+    'Saúde', 'Educação', 'Comércio', 'Indústria', 'Tecnologia',
+    'Serviços', 'Construção Civil', 'Alimentação', 'Agronegócio',
+    'Jurídico / Contábil', 'Setor Público', 'Financeiro', 'Logística', 'Outro',
+]
+PORTES_EMPRESA = ['MEI', 'ME', 'EPP', 'Médio', 'Grande']
+STATUS_PROSPECTO = ['novo', 'contatado', 'convertido', 'descartado']
+CNAE_GRUPOS = [
+    ('85 — Educação', '85'),
+    ('86 — Atividades de atenção à saúde humana', '86'),
+    ('87 — Atividades de atenção residencial', '87'),
+    ('47 — Comércio varejista', '47'),
+    ('46 — Comércio atacadista', '46'),
+    ('45 — Comércio e reparação de veículos', '45'),
+    ('62 — Tecnologia da informação', '62'),
+    ('63 — Serviços de informação', '63'),
+    ('41 — Construção de edifícios', '41'),
+    ('42 — Obras de infraestrutura', '42'),
+    ('43 — Serviços especializados de construção', '43'),
+    ('56 — Alimentação e bebidas', '56'),
+    ('10 — Fabricação de alimentos', '10'),
+    ('64 — Serviços financeiros', '64'),
+    ('65 — Seguros e previdência', '65'),
+    ('69 — Jurídico e contabilidade', '69'),
+    ('84 — Administração pública', '84'),
+    ('01 — Agricultura e pecuária', '01'),
+    ('49 — Transporte terrestre / logística', '49'),
+    ('55 — Alojamento', '55'),
+    ('71 — Arquitetura e engenharia', '71'),
+    ('73 — Publicidade e pesquisa de mercado', '73'),
+]
+BAIRROS_VDC = sorted([
+    'Alto Maron', 'Ângela Maron', 'Antônio Ferreira', 'Bateias',
+    'Brasil', 'Candeias', 'Capinal', 'Centro', 'Conquista', 'Cruzeiro',
+    'Espírito Santo', 'Felícia', 'Guarani', 'Ibirapuera', 'Índio Paraná',
+    'Jurema', 'Lagoa das Flores', 'Leopoldina', 'Liberdade', 'Malhado',
+    'Miro Cairo', 'Morada das Árvores', 'Nações', 'Nova Conquista',
+    'Patagônia', 'Pedrinhas', 'Pradoso', 'Primavera', 'Recreio',
+    'Renato Gonçalves', 'Santa Helena', 'Santa Inês', 'Santa Rita',
+    'São Cristóvão', 'São Pedro', 'Sesqui', 'Simões Filho',
+    'Universidade', 'Urbis I', 'Urbis II', 'Urbis III', 'Urbis IV',
+    'Boa Vista', 'Zabelê',
+])
+SEGMENTO_COR = {
+    'Saúde': '#059669', 'Educação': '#2563EB', 'Comércio': '#D97706',
+    'Indústria': '#7C3AED', 'Tecnologia': '#0891B2', 'Serviços': '#6B7280',
+    'Construção Civil': '#B45309', 'Alimentação': '#DC2626', 'Agronegócio': '#65A30D',
+    'Jurídico / Contábil': '#4338CA', 'Setor Público': '#0369A1',
+    'Financeiro': '#0F766E', 'Logística': '#C2410C', 'Outro': '#9CA3AF',
+}
+
 
 class User(UserMixin):
     def __init__(self, id, username, nome, role, acesso_crm=False, crm_role='vendedor'):
@@ -451,6 +502,31 @@ def init_db():
             entidade TEXT NOT NULL,
             entidade_id INTEGER,
             descricao TEXT
+        )""")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS prospecto (
+            id SERIAL PRIMARY KEY,
+            empresa_nome TEXT NOT NULL,
+            cnpj TEXT,
+            segmento TEXT,
+            cnae_codigo TEXT,
+            cnae_descricao TEXT,
+            porte TEXT,
+            cidade TEXT DEFAULT 'Vitória da Conquista',
+            bairro TEXT,
+            endereco TEXT,
+            telefone TEXT,
+            email TEXT,
+            contato_nome TEXT,
+            contato_cargo TEXT,
+            site TEXT,
+            vagas_estimadas INTEGER,
+            obs TEXT,
+            status TEXT DEFAULT 'novo',
+            lead_id INTEGER REFERENCES crm_lead(id),
+            responsavel_id INTEGER REFERENCES usuario(id),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""")
         for chave in ['seg_seguradora', 'seg_apolice', 'seg_coberturas', 'seg_vigencia',
                       'int_nome', 'int_cnpj', 'int_endereco', 'int_cidade', 'int_estado',
@@ -3619,6 +3695,186 @@ def relatorio_indicadores_xlsx():
     ws2.freeze_panes = 'A2'
 
     return _xlsx_response(wb, f'indicadores_{hoje}.xlsx')
+
+
+# ─── PROSPECÇÃO COMERCIAL ────────────────────────────────────────────────────
+
+@app.route('/crm/bairros')
+@crm_required
+def crm_bairros():
+    cidade = request.args.get('cidade', '').strip()
+    if not cidade:
+        return jsonify([])
+    db_bairros = [r['bairro'] for r in
+                  _q("SELECT DISTINCT bairro FROM prospecto WHERE cidade=%s AND bairro IS NOT NULL AND bairro<>'' ORDER BY bairro", (cidade,))]
+    seed = BAIRROS_VDC if cidade == 'Vitória da Conquista' else []
+    merged = sorted(set(db_bairros) | set(seed))
+    return jsonify(merged)
+
+
+@app.route('/crm/prospeccao')
+@crm_required
+def crm_prospeccao():
+    seg    = request.args.get('segmento', '')
+    cnae   = request.args.get('cnae', '').strip()
+    porte  = request.args.get('porte', '')
+    cidade = request.args.get('cidade', '')
+    bairro = request.args.get('bairro', '')
+    status = request.args.get('status', '')
+
+    sql = """SELECT p.*, u.nome as resp_nome FROM prospecto p
+             LEFT JOIN usuario u ON u.id = p.responsavel_id
+             WHERE 1=1"""
+    params = []
+    if seg:
+        sql += " AND p.segmento=%s"; params.append(seg)
+    if cnae:
+        sql += " AND (p.cnae_codigo ILIKE %s OR p.cnae_descricao ILIKE %s)"; params += [f'%{cnae}%', f'%{cnae}%']
+    if porte:
+        sql += " AND p.porte=%s"; params.append(porte)
+    if cidade:
+        sql += " AND p.cidade=%s"; params.append(cidade)
+    if bairro:
+        sql += " AND p.bairro=%s"; params.append(bairro)
+    if status:
+        sql += " AND p.status=%s"; params.append(status)
+    sql += " ORDER BY p.updated_at DESC"
+    prospectos = _q(sql, params)
+
+    cidades = [r['cidade'] for r in
+               _q("SELECT DISTINCT cidade FROM prospecto WHERE cidade IS NOT NULL AND cidade<>'' ORDER BY cidade")]
+    bairros_sel = []
+    if cidade:
+        bairros_sel = [r['bairro'] for r in
+                       _q("SELECT DISTINCT bairro FROM prospecto WHERE cidade=%s AND bairro IS NOT NULL AND bairro<>'' ORDER BY bairro", (cidade,))]
+        if cidade == 'Vitória da Conquista':
+            bairros_sel = sorted(set(bairros_sel) | set(BAIRROS_VDC))
+
+    por_status = {s: 0 for s in STATUS_PROSPECTO}
+    por_seg    = {}
+    for p in _q("SELECT segmento, status, COUNT(*) n FROM prospecto GROUP BY segmento, status"):
+        por_status[p['status']] = por_status.get(p['status'], 0) + p['n']
+        if p['segmento']:
+            por_seg[p['segmento']] = por_seg.get(p['segmento'], 0) + p['n']
+
+    return render_template('crm/prospeccao.html',
+        prospectos=prospectos,
+        segmentos=SEGMENTOS_PROSPECTO,
+        portes=PORTES_EMPRESA,
+        cnae_grupos=CNAE_GRUPOS,
+        status_list=STATUS_PROSPECTO,
+        cidades=cidades,
+        bairros_sel=bairros_sel,
+        por_status=por_status,
+        por_seg=por_seg,
+        seg_cor=SEGMENTO_COR,
+        filtros=dict(segmento=seg, cnae=cnae, porte=porte, cidade=cidade, bairro=bairro, status=status),
+    )
+
+
+@app.route('/crm/prospeccao/novo', methods=['GET', 'POST'])
+@crm_required
+def crm_prospeccao_novo():
+    if request.method == 'POST':
+        _run("""INSERT INTO prospecto
+                (empresa_nome,cnpj,segmento,cnae_codigo,cnae_descricao,porte,
+                 cidade,bairro,endereco,telefone,email,contato_nome,contato_cargo,
+                 site,vagas_estimadas,obs,status,responsavel_id)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+             (request.form['empresa_nome'].strip(),
+              request.form.get('cnpj') or None,
+              request.form.get('segmento') or None,
+              request.form.get('cnae_codigo') or None,
+              request.form.get('cnae_descricao') or None,
+              request.form.get('porte') or None,
+              request.form.get('cidade') or 'Vitória da Conquista',
+              request.form.get('bairro') or None,
+              request.form.get('endereco') or None,
+              request.form.get('telefone') or None,
+              request.form.get('email') or None,
+              request.form.get('contato_nome') or None,
+              request.form.get('contato_cargo') or None,
+              request.form.get('site') or None,
+              request.form.get('vagas_estimadas') or None,
+              request.form.get('obs') or None,
+              request.form.get('status', 'novo'),
+              request.form.get('responsavel_id') or current_user.id))
+        flash('Prospecto cadastrado!', 'success')
+        return redirect(url_for('crm_prospeccao'))
+    return render_template('crm/prospeccao_form.html',
+        p=None, segmentos=SEGMENTOS_PROSPECTO, portes=PORTES_EMPRESA,
+        cnae_grupos=CNAE_GRUPOS, status_list=STATUS_PROSPECTO,
+        bairros_vdc=BAIRROS_VDC, usuarios_crm=_crm_usuarios(),
+        pode_ver_todos=_crm_pode_ver_todos(), current_user_id=int(current_user.id))
+
+
+@app.route('/crm/prospeccao/<int:id>/editar', methods=['GET', 'POST'])
+@crm_required
+def crm_prospeccao_editar(id):
+    p = _q("SELECT * FROM prospecto WHERE id=%s", (id,), one=True)
+    if not p:
+        abort(404)
+    if request.method == 'POST':
+        _run("""UPDATE prospecto SET
+                empresa_nome=%s,cnpj=%s,segmento=%s,cnae_codigo=%s,cnae_descricao=%s,
+                porte=%s,cidade=%s,bairro=%s,endereco=%s,telefone=%s,email=%s,
+                contato_nome=%s,contato_cargo=%s,site=%s,vagas_estimadas=%s,obs=%s,
+                status=%s,responsavel_id=%s,updated_at=CURRENT_TIMESTAMP
+                WHERE id=%s""",
+             (request.form['empresa_nome'].strip(),
+              request.form.get('cnpj') or None,
+              request.form.get('segmento') or None,
+              request.form.get('cnae_codigo') or None,
+              request.form.get('cnae_descricao') or None,
+              request.form.get('porte') or None,
+              request.form.get('cidade') or 'Vitória da Conquista',
+              request.form.get('bairro') or None,
+              request.form.get('endereco') or None,
+              request.form.get('telefone') or None,
+              request.form.get('email') or None,
+              request.form.get('contato_nome') or None,
+              request.form.get('contato_cargo') or None,
+              request.form.get('site') or None,
+              request.form.get('vagas_estimadas') or None,
+              request.form.get('obs') or None,
+              request.form.get('status', 'novo'),
+              request.form.get('responsavel_id') or current_user.id,
+              id))
+        flash('Prospecto atualizado!', 'success')
+        return redirect(url_for('crm_prospeccao'))
+    bairros_cidade = BAIRROS_VDC if (p['cidade'] or '') == 'Vitória da Conquista' else []
+    return render_template('crm/prospeccao_form.html',
+        p=p, segmentos=SEGMENTOS_PROSPECTO, portes=PORTES_EMPRESA,
+        cnae_grupos=CNAE_GRUPOS, status_list=STATUS_PROSPECTO,
+        bairros_vdc=bairros_cidade, usuarios_crm=_crm_usuarios(),
+        pode_ver_todos=_crm_pode_ver_todos(), current_user_id=int(current_user.id))
+
+
+@app.route('/crm/prospeccao/<int:id>/excluir', methods=['POST'])
+@crm_required
+def crm_prospeccao_excluir(id):
+    _run("DELETE FROM prospecto WHERE id=%s", (id,))
+    flash('Prospecto excluído.', 'success')
+    return redirect(url_for('crm_prospeccao'))
+
+
+@app.route('/crm/prospeccao/<int:id>/converter', methods=['POST'])
+@crm_required
+def crm_prospeccao_converter(id):
+    p = _q("SELECT * FROM prospecto WHERE id=%s", (id,), one=True)
+    if not p:
+        abort(404)
+    lead_id = _ins("""INSERT INTO crm_lead
+        (empresa_nome,empresa_cnpj,cidade,segmento,vagas_estimadas,etapa,
+         origem,responsavel_id,contato_nome,contato_email,contato_whatsapp,obs)
+        VALUES (%s,%s,%s,%s,%s,'Lead Captado','Prospecção ativa',%s,%s,%s,%s,%s)""",
+        (p['empresa_nome'], p['cnpj'], p['cidade'], p['segmento'],
+         p['vagas_estimadas'], p['responsavel_id'] or current_user.id,
+         p['contato_nome'], p['email'], p['telefone'], p['obs']))
+    _run("UPDATE prospecto SET status='convertido', lead_id=%s, updated_at=CURRENT_TIMESTAMP WHERE id=%s",
+         (lead_id, id))
+    flash(f'"{p["empresa_nome"]}" convertido em lead no CRM!', 'success')
+    return redirect(url_for('crm_lead_detalhe', id=lead_id))
 
 
 init_db()

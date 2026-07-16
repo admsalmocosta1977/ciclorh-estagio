@@ -1,0 +1,345 @@
+{% extends 'base.html' %}
+{% block title %}Prospecção Comercial{% endblock %}
+{% block content %}
+<style>
+/* ── tokens reutilizados de base.html ── */
+.kpi-tile { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow-card);
+  padding:16px 18px; border-left:3px solid transparent; }
+.kpi-val  { font-size:1.8rem; font-weight:800; letter-spacing:-.05em; line-height:1; }
+.kpi-label{ font-size:.72rem; font-weight:600; color:var(--ink-3); margin-top:5px; }
+
+/* Filtro bar */
+.filter-bar { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow-card);
+  padding:14px 16px; margin-bottom:16px; display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
+.filter-bar label { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px;
+  color:var(--ink-3); display:block; margin-bottom:3px; }
+.filter-bar select, .filter-bar input[type=text] {
+  font-size:.82rem; font-family:var(--font); border:1px solid var(--border-md);
+  border-radius:var(--radius-sm); padding:5px 10px; color:var(--ink);
+  background:var(--canvas); outline:none; transition:.15s; min-width:140px; }
+.filter-bar select:focus, .filter-bar input:focus { border-color:var(--brand); box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+.filter-bar .fg { display:flex; flex-direction:column; }
+
+/* Seg badge */
+.seg-badge { display:inline-flex; align-items:center; padding:2px 9px; border-radius:20px;
+  font-size:.69rem; font-weight:700; white-space:nowrap; color:#fff; }
+.porte-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:4px;
+  font-size:.67rem; font-weight:700; border:1px solid; white-space:nowrap; }
+.porte-MEI { background:#EEF2FF; border-color:#C7D2FE; color:#4338CA; }
+.porte-ME  { background:#D1FAE5; border-color:#A7F3D0; color:#065F46; }
+.porte-EPP { background:#FEF3C7; border-color:#FDE68A; color:#92400E; }
+.porte-Médio { background:#E0F2FE; border-color:#BAE6FD; color:#0369A1; }
+.porte-Grande{ background:#FCE7F3; border-color:#FBCFE8; color:#9D174D; }
+
+.st-novo      { background:#EEF2FF; color:#4338CA; }
+.st-contatado { background:#D1FAE5; color:#065F46; }
+.st-convertido{ background:#DCFCE7; color:#166534; }
+.st-descartado{ background:#F1F5F9; color:#64748B; }
+.status-pill  { display:inline-flex; padding:2px 9px; border-radius:20px; font-size:.69rem; font-weight:700; }
+
+/* Tabela */
+.bi-table { width:100%; border-collapse:collapse; font-size:.82rem; }
+.bi-table th { font-size:.67rem; font-weight:700; text-transform:uppercase; letter-spacing:.6px;
+  color:var(--ink-3); padding:10px 14px; border-bottom:1px solid var(--border); white-space:nowrap; text-align:left; }
+.bi-table td { padding:11px 14px; color:var(--ink-2); border-bottom:1px solid rgba(0,0,0,.04); vertical-align:middle; }
+.bi-table tbody tr:last-child td { border-bottom:none; }
+.bi-table tbody tr:hover td { background:#F8FAFC; }
+
+.btn-action { display:inline-flex; align-items:center; gap:4px; padding:4px 10px;
+  border-radius:var(--radius-sm); font-size:.73rem; font-weight:600; border:1px solid;
+  cursor:pointer; white-space:nowrap; text-decoration:none; font-family:var(--font); transition:.15s; }
+.btn-action.primary { background:var(--brand-soft); border-color:rgba(37,99,235,.25); color:var(--brand); }
+.btn-action.primary:hover { background:var(--brand); color:#fff; border-color:var(--brand); }
+.btn-action.success { background:#D1FAE5; border-color:rgba(5,150,105,.25); color:#065F46; }
+.btn-action.success:hover { background:#059669; color:#fff; border-color:#059669; }
+.btn-action.ghost { background:transparent; border-color:var(--border-md); color:var(--ink-3); }
+.btn-action.ghost:hover { background:#F1F5F9; color:var(--ink); }
+.btn-action.danger { background:var(--accent-soft); border-color:rgba(234,29,44,.25); color:#991B1B; }
+.btn-action.danger:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+.empty-state { text-align:center; padding:48px 0; color:var(--ink-4); }
+.empty-state i { font-size:2.4rem; display:block; margin-bottom:10px; opacity:.25; }
+.section-card { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow-card); overflow:hidden; }
+.section-header { display:flex; align-items:center; gap:10px; padding:13px 18px;
+  border-bottom:1px solid var(--border); font-size:.88rem; font-weight:700; color:var(--ink); }
+</style>
+
+<!-- Page header -->
+<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px">
+  <div>
+    <div style="font-size:1.3rem;font-weight:800;color:var(--ink);letter-spacing:-.4px">
+      <i class="bi bi-geo-alt" style="color:var(--brand);margin-right:8px;font-size:1.1rem"></i>Prospecção Comercial
+    </div>
+    <div style="font-size:.78rem;color:var(--ink-3);margin-top:3px">
+      Mapa de empresas por segmento, CNAE, porte, cidade e bairro
+    </div>
+  </div>
+  <a href="{{ url_for('crm_prospeccao_novo') }}" class="btn btn-primary" style="font-size:.82rem;display:flex;align-items:center;gap:6px">
+    <i class="bi bi-plus-lg"></i>Nova Empresa
+  </a>
+</div>
+
+<!-- KPI strip -->
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="kpi-tile" style="border-left-color:#6366F1">
+      <div class="kpi-val" style="color:#6366F1">{{ por_status.get('novo',0) }}</div>
+      <div class="kpi-label">Novos</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-tile" style="border-left-color:var(--warn)">
+      <div class="kpi-val" style="color:var(--warn)">{{ por_status.get('contatado',0) }}</div>
+      <div class="kpi-label">Contatados</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-tile" style="border-left-color:var(--success)">
+      <div class="kpi-val" style="color:var(--success)">{{ por_status.get('convertido',0) }}</div>
+      <div class="kpi-label">Convertidos</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-tile" style="border-left-color:var(--ink-4)">
+      <div class="kpi-val" style="color:var(--ink-3)">{{ por_status.get('descartado',0) }}</div>
+      <div class="kpi-label">Descartados</div>
+    </div>
+  </div>
+</div>
+
+<!-- Segmento resumo (só se houver dados) -->
+{% if por_seg %}
+<div class="section-card mb-3" style="padding:12px 16px">
+  <div style="font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-3);margin-bottom:10px">
+    Por segmento
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px">
+    {% for s, n in por_seg.items()|sort(attribute='1', reverse=True) %}
+    <a href="{{ url_for('crm_prospeccao', segmento=s) }}"
+       style="display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:20px;
+              background:{{ seg_cor.get(s,'#9CA3AF') }}1A;border:1px solid {{ seg_cor.get(s,'#9CA3AF') }}44;
+              color:{{ seg_cor.get(s,'#374151') }};font-size:.74rem;font-weight:700;text-decoration:none;transition:.12s"
+       onmouseover="this.style.opacity='.75'" onmouseout="this.style.opacity='1'">
+      {{ s }} <span style="background:{{ seg_cor.get(s,'#9CA3AF') }};color:#fff;border-radius:20px;
+                            padding:0 6px;font-size:.65rem">{{ n }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Barra de filtros -->
+<form method="get" class="filter-bar" id="filterForm">
+  <div class="fg">
+    <label>Segmento</label>
+    <select name="segmento" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      {% for s in segmentos %}
+      <option value="{{ s }}" {% if filtros.segmento==s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="fg">
+    <label>CNAE</label>
+    <input type="text" name="cnae" placeholder="código ou descrição…" value="{{ filtros.cnae }}" style="min-width:180px">
+  </div>
+  <div class="fg">
+    <label>Porte</label>
+    <select name="porte" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      {% for p in portes %}
+      <option value="{{ p }}" {% if filtros.porte==p %}selected{% endif %}>{{ p }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="fg">
+    <label>Cidade</label>
+    <select name="cidade" id="cidadeSelect" onchange="this.form.submit()">
+      <option value="">Todas</option>
+      {% if 'Vitória da Conquista' not in cidades %}
+      <option value="Vitória da Conquista" {% if filtros.cidade=='Vitória da Conquista' %}selected{% endif %}>Vitória da Conquista</option>
+      {% endif %}
+      {% for c in cidades %}
+      <option value="{{ c }}" {% if filtros.cidade==c %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="fg" id="bairroBox" style="{{ 'display:none' if not filtros.cidade }}">
+    <label>Bairro</label>
+    <select name="bairro" id="bairroSelect" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      {% for b in bairros_sel %}
+      <option value="{{ b }}" {% if filtros.bairro==b %}selected{% endif %}>{{ b }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="fg">
+    <label>Status</label>
+    <select name="status" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      <option value="novo"       {% if filtros.status=='novo' %}selected{% endif %}>Novo</option>
+      <option value="contatado"  {% if filtros.status=='contatado' %}selected{% endif %}>Contatado</option>
+      <option value="convertido" {% if filtros.status=='convertido' %}selected{% endif %}>Convertido</option>
+      <option value="descartado" {% if filtros.status=='descartado' %}selected{% endif %}>Descartado</option>
+    </select>
+  </div>
+  <div class="fg" style="justify-content:flex-end">
+    <label>&nbsp;</label>
+    <button type="submit" class="btn-action primary">
+      <i class="bi bi-search"></i>Filtrar
+    </button>
+  </div>
+  {% if filtros.segmento or filtros.cnae or filtros.porte or filtros.cidade or filtros.bairro or filtros.status %}
+  <div class="fg" style="justify-content:flex-end">
+    <label>&nbsp;</label>
+    <a href="{{ url_for('crm_prospeccao') }}" class="btn-action ghost">
+      <i class="bi bi-x-circle"></i>Limpar
+    </a>
+  </div>
+  {% endif %}
+</form>
+
+<!-- Tabela de resultados -->
+<div class="section-card">
+  <div class="section-header">
+    <i class="bi bi-building fs-5" style="color:var(--brand)"></i>
+    Empresas prospectadas
+    <span style="background:var(--brand-soft);color:var(--brand);border-radius:20px;padding:1px 9px;
+                 font-size:.72rem;font-weight:800;margin-left:4px">{{ prospectos|length }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="bi-table">
+      <thead><tr>
+        <th>Empresa</th>
+        <th>Segmento / CNAE</th>
+        <th>Porte</th>
+        <th>Localização</th>
+        <th>Contato</th>
+        <th>Vagas est.</th>
+        <th>Status</th>
+        <th style="text-align:right;padding-right:18px">Ações</th>
+      </tr></thead>
+      <tbody>
+      {% for p in prospectos %}
+      <tr>
+        <td>
+          <strong style="font-weight:600">{{ p.empresa_nome }}</strong>
+          {% if p.cnpj %}<br><span style="font-size:.71rem;color:var(--ink-4)">{{ p.cnpj }}</span>{% endif %}
+        </td>
+        <td>
+          {% if p.segmento %}
+          <span class="seg-badge" style="background:{{ seg_cor.get(p.segmento,'#9CA3AF') }}">{{ p.segmento }}</span>
+          {% endif %}
+          {% if p.cnae_codigo %}
+          <br><span style="font-size:.69rem;color:var(--ink-3)">{{ p.cnae_codigo }}{% if p.cnae_descricao %} — {{ p.cnae_descricao[:40] }}{% endif %}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if p.porte %}
+          <span class="porte-badge porte-{{ p.porte }}">{{ p.porte }}</span>
+          {% else %}—{% endif %}
+        </td>
+        <td style="white-space:nowrap">
+          {% if p.cidade %}
+          <span style="font-size:.8rem">{{ p.cidade }}</span>
+          {% if p.bairro %}<br><span style="font-size:.71rem;color:var(--ink-3)">{{ p.bairro }}</span>{% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if p.contato_nome %}
+          <span style="font-size:.8rem;font-weight:500">{{ p.contato_nome }}</span>
+          {% if p.contato_cargo %}<br><span style="font-size:.69rem;color:var(--ink-3)">{{ p.contato_cargo }}</span>{% endif %}
+          {% endif %}
+          {% if p.telefone %}
+          <br><a href="https://wa.me/55{{ p.telefone | replace(' ','') | replace('-','') | replace('(','') | replace(')','') }}"
+               target="_blank" style="font-size:.71rem;color:#059669;text-decoration:none">
+            <i class="bi bi-whatsapp"></i> {{ p.telefone }}
+          </a>
+          {% endif %}
+        </td>
+        <td style="text-align:center">
+          {% if p.vagas_estimadas %}
+          <strong style="color:var(--brand)">{{ p.vagas_estimadas }}</strong>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          <span class="status-pill st-{{ p.status }}">{{ p.status | title }}</span>
+          {% if p.lead_id %}
+          <br><a href="{{ url_for('crm_lead_detalhe', id=p.lead_id) }}" style="font-size:.69rem;color:var(--brand)">
+            <i class="bi bi-link-45deg"></i>Lead #{{ p.lead_id }}
+          </a>
+          {% endif %}
+        </td>
+        <td style="text-align:right;white-space:nowrap;padding-right:18px">
+          <div style="display:inline-flex;gap:5px">
+            <a href="{{ url_for('crm_prospeccao_editar', id=p.id) }}" class="btn-action ghost">
+              <i class="bi bi-pencil"></i>
+            </a>
+            {% if p.status != 'convertido' %}
+            <form method="post" action="{{ url_for('crm_prospeccao_converter', id=p.id) }}" class="d-inline"
+                  onsubmit="return confirm('Converter {{ p.empresa_nome }} em lead no CRM?')">
+              <button type="submit" class="btn-action success" title="Converter em Lead">
+                <i class="bi bi-arrow-right-circle"></i>CRM
+              </button>
+            </form>
+            {% endif %}
+            <form method="post" action="{{ url_for('crm_prospeccao_excluir', id=p.id) }}" class="d-inline"
+                  onsubmit="return confirm('Excluir este prospecto?')">
+              <button type="submit" class="btn-action danger" title="Excluir">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if not prospectos %}
+      <tr><td colspan="8">
+        <div class="empty-state">
+          <i class="bi bi-building-add"></i>
+          <p>Nenhuma empresa encontrada com os filtros selecionados.</p>
+          <a href="{{ url_for('crm_prospeccao_novo') }}" class="btn-action primary" style="margin:0 auto">
+            <i class="bi bi-plus-lg"></i>Cadastrar empresa
+          </a>
+        </div>
+      </td></tr>
+      {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+(function () {
+  var cidadeSel = document.getElementById('cidadeSelect');
+  var bairroBox = document.getElementById('bairroBox');
+  var bairroSel = document.getElementById('bairroSelect');
+
+  function atualizarBairros(cidade, bairroAtual) {
+    if (!cidade) { bairroBox.style.display = 'none'; return; }
+    bairroBox.style.display = 'flex';
+    fetch('/crm/bairros?cidade=' + encodeURIComponent(cidade))
+      .then(function(r){ return r.json(); })
+      .then(function(lista) {
+        bairroSel.innerHTML = '<option value="">Todos</option>';
+        lista.forEach(function(b) {
+          var opt = document.createElement('option');
+          opt.value = b; opt.textContent = b;
+          if (b === bairroAtual) opt.selected = true;
+          bairroSel.appendChild(opt);
+        });
+      });
+  }
+
+  cidadeSel.addEventListener('change', function() {
+    bairroSel.innerHTML = '<option value="">Todos</option>';
+    atualizarBairros(this.value, '');
+    document.getElementById('filterForm').submit();
+  });
+
+  if (cidadeSel.value) {
+    atualizarBairros(cidadeSel.value, {{ filtros.bairro | tojson }});
+  }
+})();
+</script>
+{% endblock %}
