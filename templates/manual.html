@@ -233,6 +233,8 @@
   <div class="nav-group">Comercial</div>
   <div class="nav-item"><a href="#calculadora">Calculadora CLT</a></div>
   <div class="nav-item"><a href="#landing">Landing Page Pública</a></div>
+  <div class="nav-group">Interface</div>
+  <div class="nav-item"><a href="#design">Design Visual do Sistema</a></div>
 </nav>
 
 <!-- ── Conteúdo ── -->
@@ -264,7 +266,7 @@
       relatórios e regras de negócio aplicadas ao processo de intermediação de estágios.
     </div>
 
-    <div class="cover-version">Versão 5.0 &nbsp;·&nbsp; Julho de 2026</div>
+    <div class="cover-version">Versão 6.0 &nbsp;·&nbsp; Julho de 2026</div>
 
     <div class="cover-bottom-bar">
       <span>Ciclo RH &copy; 2026 — Todos os direitos reservados</span>
@@ -1298,16 +1300,88 @@
     <h3>Conteúdo da landing page</h3>
     <table>
       <tr><th>Seção</th><th>Objetivo</th></tr>
-      <tr><td><strong>Hero</strong></td><td>Chamada principal + botão para a calculadora</td></tr>
+      <tr><td><strong>Hero</strong></td><td>Chamada principal com fundo escuro, textura sutil e estatísticas de impacto em destaque</td></tr>
       <tr><td><strong>Calculadora CLT</strong></td><td>Mesma lógica da calculadora interna, com resultado em tempo real</td></tr>
       <tr><td><strong>CLT vs. Estagiário</strong></td><td>Comparativo visual de custos para R$ 2.000 de bolsa no Lucro Presumido</td></tr>
       <tr><td><strong>Quebra de objeções</strong></td><td>6 objeções comuns respondidas em accordion expansível</td></tr>
-      <tr><td><strong>Como funciona</strong></td><td>Processo em 3 passos: calcule → entre em contato → receba o estagiário</td></tr>
+      <tr><td><strong>Como funciona</strong></td><td>Processo em 3 passos: defina o perfil → Ciclo RH formaliza → estagiário começa</td></tr>
       <tr><td><strong>CTA final</strong></td><td>Botão WhatsApp linkado para o número da Ciclo RH</td></tr>
     </table>
 
     <div class="tip">
       <strong>Custo do estagiário na comparação:</strong> o comparativo considera bolsa + taxa de gestão da Ciclo RH (~R$ 100/mês, que inclui o seguro obrigatório). O percentual de overhead mostrado após o cálculo refere-se ao custo CLT em relação ao salário bruto — quanto maior, mais convincente a economia com o estágio.
+    </div>
+
+    <div class="info">
+      <strong>Design atualizado (v6.0):</strong> A landing recebeu redesign completo em julho/2026 — tipografia Plus Jakarta Sans, hero com grid pontilhado e gradientes radiais, botão principal em vermelho iFood (#EA1D2C), monograma "C" na navbar e cards com sombra em 3 camadas. O visual é coerente com o sistema interno.
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════ DESIGN ══════════════════════════════════════ -->
+  <div class="section" id="design">
+    <h2>20. Design Visual do Sistema</h2>
+
+    <p>Em julho de 2026 o sistema recebeu um <strong>redesign visual completo</strong>, substituindo a aparência genérica Bootstrap por uma identidade refinada e coerente com a marca Ciclo RH e seu parceiro iFood. As mudanças afetam tanto o sistema interno (sidebar, cards, tabelas, formulários) quanto a landing page pública.</p>
+
+    <h3>Tipografia</h3>
+    <p>A fonte padrão foi alterada de Arial/Segoe UI para <strong>Plus Jakarta Sans</strong> — uma typeface humanista disponível no Google Fonts, com pesos 400, 500, 600, 700 e 800. A escala tipográfica segue hierarquia por peso e cor:</p>
+    <table>
+      <tr><th>Nível</th><th>Uso</th><th>Peso</th></tr>
+      <tr><td>Primário</td><td>Títulos de página, valores de KPI</td><td>700–800</td></tr>
+      <tr><td>Secundário</td><td>Labels, cabeçalhos de card, nav ativo</td><td>600</td></tr>
+      <tr><td>Terciário</td><td>Texto de corpo, linhas de tabela</td><td>500</td></tr>
+      <tr><td>Muted</td><td>Metadados, subtítulos, placeholders</td><td>400</td></tr>
+    </table>
+
+    <h3>Paleta de cores (tokens CSS)</h3>
+    <p>Todas as cores são definidas como variáveis CSS (<code>custom properties</code>), facilitando manutenção e temas futuros:</p>
+    <table>
+      <tr><th>Token</th><th>Valor</th><th>Uso</th></tr>
+      <tr><td><code>--brand</code></td><td>#2563EB</td><td>Azul Ciclo RH — nav ativo, botões primários, foco</td></tr>
+      <tr><td><code>--accent</code></td><td>#EA1D2C</td><td>Vermelho iFood — alertas críticos, CTA landing, badges vencido</td></tr>
+      <tr><td><code>--success</code></td><td>#059669</td><td>Verde — contratos ativos, confirmações</td></tr>
+      <tr><td><code>--warn</code></td><td>#D97706</td><td>Âmbar — contratos vencendo, atenção</td></tr>
+      <tr><td><code>--sb-bg</code></td><td>#0F172A</td><td>Fundo da sidebar (carvão profundo)</td></tr>
+      <tr><td><code>--canvas</code></td><td>#F1F5F9</td><td>Fundo do conteúdo (cinza frio)</td></tr>
+      <tr><td><code>--surface</code></td><td>#FFFFFF</td><td>Superfície de cards e formulários</td></tr>
+    </table>
+
+    <h3>Sidebar</h3>
+    <p>O menu lateral foi completamente redesenhado:</p>
+    <ul>
+      <li><strong>Fundo:</strong> <code>#0F172A</code> (antes <code>#1a2845</code>) — mais profundo e refinado.</li>
+      <li><strong>Logotipo:</strong> substituído por um <strong>monograma "C" azul</strong> em bloco quadrado arredondado, seguido de "Ciclo RH" + "Sistema de Estágio" em tipografia hierarquizada.</li>
+      <li><strong>Links ativos:</strong> acento lateral de <strong>3 px azul</strong> (#2563EB) + fundo azul translúcido — identifica visualmente a seção atual sem poluição visual.</li>
+      <li><strong>Seções do menu:</strong> labels em uppercase/tracked discretos (<code>#475569</code>) separando os grupos de navegação.</li>
+    </ul>
+
+    <h3>Cards e sombras</h3>
+    <p>Os cards usam um sistema de <strong>sombra em 3 camadas</strong> que cria profundidade sutil sem peso visual excessivo:</p>
+    <div class="highlight-box" style="font-family:monospace;font-size:.82rem">
+      0 1px 2px rgba(0,0,0,.04),<br>
+      0 2px 8px rgba(0,0,0,.06),<br>
+      0 4px 20px rgba(0,0,0,.04)
+    </div>
+    <p>Cards de status de contrato recebem adicionalmente uma <strong>borda esquerda colorida de 3 px</strong> como semáforo visual imediato:</p>
+    <ul>
+      <li><span class="badge-demo bd-green">Ativo</span> — borda verde <code>#059669</code></li>
+      <li><span class="badge-demo bd-yellow">Vencendo</span> — borda âmbar <code>#D97706</code></li>
+      <li><span class="badge-demo bd-red">Vencido</span> — borda vermelha iFood <code>#EA1D2C</code></li>
+    </ul>
+
+    <h3>Formulários e tabelas</h3>
+    <ul>
+      <li>Inputs com fundo <code>#F8FAFC</code> (ligeiramente mais escuro que a superfície) — sinaliza campo editável sem borda pesada.</li>
+      <li>Focus ring azul translúcido: <code>box-shadow: 0 0 0 3px rgba(37,99,235,.12)</code>.</li>
+      <li>Cabeçalhos de tabela em uppercase 11 px, peso 600, cor muted — leituras densas sem ruído visual.</li>
+    </ul>
+
+    <div class="info">
+      <strong>Compatibilidade:</strong> O redesign usa apenas CSS nativo (custom properties + flexbox/grid) e não introduz nenhuma dependência nova além do Google Fonts. O Bootstrap 5 e Bootstrap Icons permanecem como base funcional — apenas os estilos visuais foram sobrescritos.
+    </div>
+
+    <div class="tip">
+      <strong>Manutenção do tema:</strong> Para ajustar qualquer cor do sistema, edite apenas os tokens em <code>:root { }</code> no início do <code>base.html</code>. Todas as referências de cor no CSS apontam para variáveis — nenhuma cor está repetida como valor fixo.
     </div>
   </div>
 
