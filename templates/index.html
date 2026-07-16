@@ -1,138 +1,269 @@
 {% extends 'base.html' %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Início{% endblock %}
 {% block content %}
-<h4 class="mb-4 fw-bold"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h4>
+<style>
+/* ── Reutiliza tokens do base.html ── */
+.kpi-tile    { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow-card); padding:20px 22px; border-left:3px solid transparent; position:relative; overflow:hidden; }
+.kpi-tile.blue   { border-left-color:var(--brand); }
+.kpi-tile.green  { border-left-color:var(--success); }
+.kpi-tile.teal   { border-left-color:#0891B2; }
+.kpi-tile.purple { border-left-color:#7C3AED; }
+.kpi-bg-icon { position:absolute; right:16px; top:50%; transform:translateY(-50%); font-size:2rem; opacity:.07; color:var(--ink); pointer-events:none; }
+.kpi-val   { font-size:2.2rem; font-weight:800; letter-spacing:-.06em; line-height:1; }
+.kpi-tile.blue   .kpi-val { color:var(--brand); }
+.kpi-tile.green  .kpi-val { color:var(--success); }
+.kpi-tile.teal   .kpi-val { color:#0891B2; }
+.kpi-tile.purple .kpi-val { color:#7C3AED; }
+.kpi-label { font-size:.76rem; font-weight:600; color:var(--ink-3); margin-top:6px; }
 
-<div class="row g-3 mb-4">
-  <div class="col-md-3">
-    <div class="card text-center p-3">
-      <div class="fs-1 fw-bold text-primary">{{ total }}</div>
-      <div class="text-muted small">Contratos Ativos</div>
+/* Painel de alertas */
+.alert-panel { border-radius:var(--radius); box-shadow:var(--shadow-card); overflow:hidden; margin-bottom:16px; }
+.alert-panel-header { display:flex; align-items:center; gap:10px; padding:13px 18px; font-size:.88rem; font-weight:700; }
+.alert-panel.danger  .alert-panel-header { background:#FEF2F2; border-bottom:1px solid rgba(234,29,44,.15); color:#991B1B; }
+.alert-panel.warning .alert-panel-header { background:#FEF3C7; border-bottom:1px solid rgba(217,119,6,.2);  color:#92400E; }
+.alert-panel.neutral .alert-panel-header { background:var(--surface); border-bottom:1px solid var(--border); color:var(--ink); }
+.alert-panel-body { background:var(--surface); }
+
+/* Tabelas internas */
+.bi-table { width:100%; border-collapse:collapse; font-size:.82rem; }
+.bi-table th { font-size:.67rem; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--ink-3); padding:10px 16px; border-bottom:1px solid var(--border); white-space:nowrap; text-align:left; }
+.bi-table td { padding:11px 16px; color:var(--ink-2); border-bottom:1px solid rgba(0,0,0,.04); vertical-align:middle; }
+.bi-table tbody tr:last-child td { border-bottom:none; }
+.bi-table tbody tr:hover td { background:#F8FAFC; }
+.bi-table .row-danger td:first-child { border-left:3px solid var(--accent); }
+.bi-table .row-warn   td:first-child { border-left:3px solid var(--warn); }
+
+/* Badges de data */
+.date-badge { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:.72rem; font-weight:700; white-space:nowrap; }
+.date-badge.danger  { background:var(--accent-soft); color:#991B1B; }
+.date-badge.warning { background:var(--warn-soft);   color:#92400E; }
+.date-badge.success { background:var(--success-soft);color:#065F46; }
+
+/* Botões de ação */
+.btn-action { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:var(--radius-sm); font-size:.75rem; font-weight:600; border:1px solid; cursor:pointer; white-space:nowrap; text-decoration:none; font-family:var(--font); transition:.15s; }
+.btn-action.danger  { background:var(--accent-soft); border-color:rgba(234,29,44,.25); color:#991B1B; }
+.btn-action.danger:hover  { background:var(--accent); color:#fff; border-color:var(--accent); }
+.btn-action.primary { background:var(--brand-soft); border-color:rgba(37,99,235,.25); color:var(--brand); }
+.btn-action.primary:hover { background:var(--brand); color:#fff; border-color:var(--brand); }
+.btn-action.ghost   { background:transparent; border-color:var(--border-md); color:var(--ink-3); }
+.btn-action.ghost:hover   { background:#F1F5F9; color:var(--ink); }
+
+/* Chips de documento */
+.doc-chip { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:.7rem; font-weight:700; border:1px solid; text-decoration:none; transition:.12s; white-space:nowrap; }
+.doc-chip.tce    { background:#EFF6FF; border-color:rgba(37,99,235,.25); color:var(--brand); }
+.doc-chip.plano  { background:#D1FAE5; border-color:rgba(5,150,105,.25); color:#065F46; }
+.doc-chip.ciencia{ background:#E0E7FF; border-color:rgba(79,70,229,.25);  color:#4338CA; }
+.doc-chip.tre    { background:#FEF3C7; border-color:rgba(217,119,6,.25);  color:#92400E; }
+.doc-chip.rel    { background:#F3F4F6; border-color:rgba(107,114,128,.25);color:#374151; }
+.doc-chip:hover  { filter:brightness(.94); }
+
+/* Section divider */
+.section-divider { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:var(--ink-4); margin:22px 0 10px; display:flex; align-items:center; gap:8px; }
+.section-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* Empty state */
+.empty-state { text-align:center; padding:36px 0; color:var(--ink-4); }
+.empty-state i { font-size:2rem; display:block; margin-bottom:8px; opacity:.3; }
+.empty-state p { font-size:.84rem; }
+</style>
+
+<!-- ── Page header ── -->
+<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px">
+  <div>
+    <div style="font-size:1.3rem;font-weight:800;color:var(--ink);letter-spacing:-.4px">
+      <i class="bi bi-house" style="color:var(--brand);margin-right:8px;font-size:1.15rem"></i>Início
+    </div>
+    <div style="font-size:.78rem;color:var(--ink-3);margin-top:3px">Painel operacional — visão geral de contratos e atividades</div>
+  </div>
+  <a href="{{ url_for('contrato_novo') }}" class="btn btn-primary" style="font-size:.82rem;display:flex;align-items:center;gap:6px">
+    <i class="bi bi-plus-lg"></i>Novo Contrato
+  </a>
+</div>
+
+<!-- ── KPI tiles ── -->
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="kpi-tile blue">
+      <i class="bi bi-file-earmark-check kpi-bg-icon"></i>
+      <div class="kpi-val">{{ total }}</div>
+      <div class="kpi-label">Contratos Ativos</div>
     </div>
   </div>
-  <div class="col-md-3">
-    <div class="card text-center p-3">
-      <div class="fs-1 fw-bold text-success">{{ total_est }}</div>
-      <div class="text-muted small">Estagiários</div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-tile green">
+      <i class="bi bi-person-badge kpi-bg-icon"></i>
+      <div class="kpi-val">{{ total_est }}</div>
+      <div class="kpi-label">Estagiários</div>
     </div>
   </div>
-  <div class="col-md-3">
-    <div class="card text-center p-3">
-      <div class="fs-1 fw-bold text-info">{{ total_emp }}</div>
-      <div class="text-muted small">Empresas</div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-tile teal">
+      <i class="bi bi-building kpi-bg-icon"></i>
+      <div class="kpi-val">{{ total_emp }}</div>
+      <div class="kpi-label">Empresas Concedentes</div>
     </div>
   </div>
-  <div class="col-md-3">
-    <div class="card text-center p-3">
-      <div class="fs-1 fw-bold text-warning">{{ total_ie }}</div>
-      <div class="text-muted small">Instituições de Ensino</div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-tile purple">
+      <i class="bi bi-mortarboard kpi-bg-icon"></i>
+      <div class="kpi-val">{{ total_ie }}</div>
+      <div class="kpi-label">Instituições de Ensino</div>
     </div>
   </div>
 </div>
 
+<!-- ── Contratos vencidos aguardando confirmação ── -->
 {% if pendentes %}
-<div class="card mb-4 border-danger">
-  <div class="card-header d-flex align-items-center gap-2" style="background:#fff3cd;border-bottom:1px solid #f5c842">
-    <i class="bi bi-clock-history text-danger fs-5"></i>
-    <span class="fw-semibold">Contratos vencidos aguardando confirmação ({{ pendentes|length }})</span>
+<div class="section-divider"><i class="bi bi-exclamation-octagon" style="color:var(--accent)"></i>Requer atenção</div>
+<div class="alert-panel danger mb-3">
+  <div class="alert-panel-header">
+    <i class="bi bi-clock-history fs-5 flex-shrink-0"></i>
+    Contratos vencidos aguardando confirmação
+    <span style="background:var(--accent);color:#fff;border-radius:20px;padding:1px 9px;font-size:.72rem;font-weight:800;margin-left:4px">{{ pendentes|length }}</span>
   </div>
-  <div class="card-body p-0">
-    <table class="table table-hover align-middle mb-0" style="font-size:.75rem">
-      <thead class="table-light"><tr>
-        <th>Estagiário</th><th>Empresa</th><th>Venceu em</th><th class="text-center">Ação</th>
-      </tr></thead>
-      <tbody>
-      {% for r in pendentes %}
-      <tr class="table-warning">
-        <td class="fw-semibold">{{ r.est_nome }}</td>
-        <td>{{ r.emp_display }}</td>
-        <td><span class="badge bg-danger">{{ fmt_date(r.data_efetiva) }}</span></td>
-        <td class="text-center">
-          <form method="post" action="{{ url_for('contrato_encerrar', id=r.id) }}" class="d-inline"
-                onsubmit="return confirm('Confirmar encerramento do estágio de {{ r.est_nome }}?')">
-            <button type="submit" class="btn btn-sm btn-danger">
-              <i class="bi bi-check-circle me-1"></i>Confirmar Encerramento
-            </button>
-          </form>
-          <a href="{{ url_for('contrato_editar', id=r.id) }}" class="btn btn-sm btn-outline-primary ms-1">
-            <i class="bi bi-arrow-repeat me-1"></i>Renovar
-          </a>
-        </td>
-      </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+  <div class="alert-panel-body">
+    <div class="table-responsive">
+      <table class="bi-table">
+        <thead><tr>
+          <th>Estagiário</th>
+          <th>Empresa</th>
+          <th>Venceu em</th>
+          <th style="text-align:right;padding-right:20px">Ação</th>
+        </tr></thead>
+        <tbody>
+        {% for r in pendentes %}
+        <tr class="row-danger">
+          <td><strong style="font-weight:600">{{ r.est_nome }}</strong></td>
+          <td style="color:var(--ink-3)">{{ r.emp_display }}</td>
+          <td>
+            <span class="date-badge danger">
+              <i class="bi bi-calendar-x" style="font-size:.7rem"></i>
+              {{ fmt_date(r.data_efetiva) }}
+            </span>
+          </td>
+          <td style="text-align:right;white-space:nowrap">
+            <form method="post" action="{{ url_for('contrato_encerrar', id=r.id) }}" class="d-inline"
+                  onsubmit="return confirm('Confirmar encerramento do estágio de {{ r.est_nome }}?')">
+              <button type="submit" class="btn-action danger">
+                <i class="bi bi-check-circle"></i>Confirmar Encerramento
+              </button>
+            </form>
+            <a href="{{ url_for('contrato_editar', id=r.id) }}" class="btn-action primary ms-1">
+              <i class="bi bi-arrow-repeat"></i>Renovar
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 {% endif %}
 
+<!-- ── Contratos vencendo em 30 dias ── -->
 {% if vencendo %}
-<div class="card mb-4">
-  <div class="card-header d-flex align-items-center gap-2">
-    <i class="bi bi-exclamation-triangle-fill text-warning"></i>
-    <span>Contratos vencendo nos próximos 30 dias ({{ vencendo|length }})</span>
+<div class="alert-panel warning mb-3">
+  <div class="alert-panel-header">
+    <i class="bi bi-exclamation-triangle-fill fs-5 flex-shrink-0"></i>
+    Contratos vencendo nos próximos 30 dias
+    <span style="background:var(--warn);color:#fff;border-radius:20px;padding:1px 9px;font-size:.72rem;font-weight:800;margin-left:4px">{{ vencendo|length }}</span>
   </div>
-  <div class="card-body p-0">
-    <table class="table table-hover mb-0" style="font-size:.75rem">
-      <thead class="table-light"><tr>
-        <th>Estagiário</th><th>Empresa</th><th>Vencimento</th><th>Situação</th><th></th>
-      </tr></thead>
-      <tbody>
-      {% for r in vencendo %}
-      <tr>
-        <td>{{ r.est_nome }}</td>
-        <td>{{ r.emp_display }}</td>
-        <td>{{ fmt_date(r.data_efetiva) }}</td>
-        <td>{% set st = calcular_status(r.data_efetiva) %}
-          {% if 'DIAS' in st %}<span class="badge badge-vencendo">{{ st }}</span>
-          {% else %}<span class="badge badge-ativo">ATIVO</span>{% endif %}
-        </td>
-        <td>
-          <a href="{{ url_for('contrato_editar', id=r.id) }}" class="btn btn-sm btn-outline-secondary">Editar</a>
-          <a href="{{ url_for('doc_tce', id=r.id) }}" class="btn btn-sm btn-outline-primary" target="_blank">TCE</a>
-        </td>
-      </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+  <div class="alert-panel-body">
+    <div class="table-responsive">
+      <table class="bi-table">
+        <thead><tr>
+          <th>Estagiário</th>
+          <th>Empresa</th>
+          <th>Vencimento</th>
+          <th>Status</th>
+          <th style="text-align:right;padding-right:20px">Ações</th>
+        </tr></thead>
+        <tbody>
+        {% for r in vencendo %}
+        <tr class="row-warn">
+          <td><strong style="font-weight:600">{{ r.est_nome }}</strong></td>
+          <td style="color:var(--ink-3)">{{ r.emp_display }}</td>
+          <td>
+            <span class="date-badge warning">
+              <i class="bi bi-calendar-event" style="font-size:.7rem"></i>
+              {{ fmt_date(r.data_efetiva) }}
+            </span>
+          </td>
+          <td>
+            {% set st = calcular_status(r.data_efetiva) %}
+            {% if 'DIAS' in st %}
+              <span class="badge-vencendo" style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:.72rem;font-weight:700">{{ st }}</span>
+            {% else %}
+              <span class="badge-ativo" style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:.72rem;font-weight:700">ATIVO</span>
+            {% endif %}
+          </td>
+          <td style="text-align:right;white-space:nowrap">
+            <a href="{{ url_for('contrato_editar', id=r.id) }}" class="btn-action ghost">
+              <i class="bi bi-pencil"></i>Editar
+            </a>
+            <a href="{{ url_for('doc_tce', id=r.id) }}" class="btn-action primary ms-1" target="_blank">
+              <i class="bi bi-file-earmark-text"></i>TCE
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 {% endif %}
 
-<div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <span><i class="bi bi-clock-history me-2"></i>Contratos recentes</span>
-    <a href="{{ url_for('contrato_novo') }}" class="btn btn-sm btn-primary">
-      <i class="bi bi-plus-lg me-1"></i>Novo Contrato
-    </a>
+<!-- ── Contratos recentes ── -->
+<div class="section-divider"><i class="bi bi-clock-history" style="color:var(--brand)"></i>Contratos recentes</div>
+<div class="alert-panel neutral">
+  <div class="alert-panel-header">
+    <i class="bi bi-file-earmark-text fs-5 flex-shrink-0" style="color:var(--brand)"></i>
+    <span style="color:var(--ink)">Últimos contratos</span>
+    <span style="margin-left:auto">
+      <a href="{{ url_for('contratos') }}" style="font-size:.76rem;color:var(--brand);font-weight:600;text-decoration:none">Ver todos →</a>
+    </span>
   </div>
-  <div class="card-body p-0">
-    <table class="table table-hover mb-0" style="font-size:.75rem">
-      <thead class="table-light"><tr>
-        <th>Estagiário</th><th>Empresa</th><th>Vigência</th><th>Documentos</th>
-      </tr></thead>
-      <tbody>
-      {% for r in recentes %}
-      <tr>
-        <td>{{ r.est_nome }}</td>
-        <td>{{ r.emp_display }}</td>
-        <td>{{ fmt_date(r.data_inicio) }} – {{ fmt_date(r.data_fim) }}</td>
-        <td class="d-flex gap-1 flex-wrap">
-          <a href="{{ url_for('doc_tce', id=r.id) }}" class="btn btn-sm btn-outline-primary btn-doc" target="_blank">TCE</a>
-          <a href="{{ url_for('doc_plano', id=r.id) }}" class="btn btn-sm btn-outline-success btn-doc" target="_blank">Plano</a>
-          <a href="{{ url_for('doc_ciencia', id=r.id) }}" class="btn btn-sm btn-outline-info btn-doc" target="_blank">Ciência</a>
-          <a href="{{ url_for('doc_tre', id=r.id) }}" class="btn btn-sm btn-outline-warning btn-doc" target="_blank">TRE</a>
-          <a href="{{ url_for('doc_relatorio', id=r.id) }}" class="btn btn-sm btn-outline-secondary btn-doc" target="_blank">Relatório</a>
-        </td>
-      </tr>
-      {% endfor %}
-      {% if not recentes %}
-      <tr><td colspan="4" class="text-center text-muted py-4">
-        Nenhum contrato ativo. <a href="{{ url_for('contrato_novo') }}">Criar o primeiro</a>
-      </td></tr>
-      {% endif %}
-      </tbody>
-    </table>
+  <div class="alert-panel-body">
+    <div class="table-responsive">
+      <table class="bi-table">
+        <thead><tr>
+          <th>Estagiário</th>
+          <th>Empresa</th>
+          <th>Vigência</th>
+          <th>Documentos</th>
+        </tr></thead>
+        <tbody>
+        {% for r in recentes %}
+        <tr>
+          <td><strong style="font-weight:600">{{ r.est_nome }}</strong></td>
+          <td style="color:var(--ink-3)">{{ r.emp_display }}</td>
+          <td style="color:var(--ink-3);white-space:nowrap;font-size:.79rem">
+            {{ fmt_date(r.data_inicio) }} – {{ fmt_date(r.data_fim) }}
+          </td>
+          <td>
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              <a href="{{ url_for('doc_tce', id=r.id) }}" class="doc-chip tce" target="_blank">TCE</a>
+              <a href="{{ url_for('doc_plano', id=r.id) }}" class="doc-chip plano" target="_blank">Plano</a>
+              <a href="{{ url_for('doc_ciencia', id=r.id) }}" class="doc-chip ciencia" target="_blank">Ciência</a>
+              <a href="{{ url_for('doc_tre', id=r.id) }}" class="doc-chip tre" target="_blank">TRE</a>
+              <a href="{{ url_for('doc_relatorio', id=r.id) }}" class="doc-chip rel" target="_blank">Relatório</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        {% if not recentes %}
+        <tr><td colspan="4">
+          <div class="empty-state">
+            <i class="bi bi-file-earmark-plus"></i>
+            <p>Nenhum contrato ativo. <a href="{{ url_for('contrato_novo') }}" style="color:var(--brand);font-weight:600">Criar o primeiro</a></p>
+          </div>
+        </td></tr>
+        {% endif %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 {% endblock %}
