@@ -1416,12 +1416,18 @@ document.querySelector('form').addEventListener('submit', function(e) {
     if (!matches.length) { res.innerHTML = '<div class="text-muted small px-1">Nenhum resultado</div>'; return; }
     const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
     res.innerHTML = matches.map(d =>
-      `<div class="border rounded px-2 py-1 mb-1 small" style="cursor:pointer;background:#f8f9fa"
-            onclick="selecionarParteIA('${tipo}', ${d.id}, ${JSON.stringify(d.label)})">
+      `<div class="border rounded px-2 py-1 mb-1 small ai-parte-item" style="cursor:pointer;background:#f8f9fa"
+            data-tipo="${tipo}" data-id="${d.id}" data-label="${d.label.replace(/"/g,'&quot;')}">
         ${d.label.replace(re, '<strong>$1</strong>')}
       </div>`
     ).join('');
   };
+
+  document.addEventListener('click', function(e) {
+    const item = e.target.closest('.ai-parte-item');
+    if (!item) return;
+    window.selecionarParteIA(item.dataset.tipo, item.dataset.id, item.dataset.label);
+  });
 
   window.selecionarParteIA = function(tipo, id, label) {
     selecionados[tipo] = { tipo: CFG[tipo].label, id, label };
