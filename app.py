@@ -4027,13 +4027,16 @@ def crm_brasilio_buscar():
     if nome:     params['search']     = nome
     if situacao: params['situacao']   = situacao
     params['page'] = page
-    headers = {'Accept': 'application/json'}
+    headers = {
+        'Accept': 'application/json',
+        'User-Agent': 'CicloRH-CRM/1.0 (contact: adm.salmocosta@gmail.com)',
+    }
     if token:
         headers['Authorization'] = f'Token {token}'
     try:
         r = _http.get(
             'https://brasil.io/api/v1/dataset/socios-brasil/empresas/data/',
-            headers=headers, params=params, timeout=20)
+            headers=headers, params=params, timeout=45)
         if r.status_code in (401, 403):
             if not token:
                 return jsonify({'erro': 'O Brasil.IO requer autenticação. Crie uma conta gratuita em brasil.io, gere um token e configure em Administração → Configurações.'}), 401
