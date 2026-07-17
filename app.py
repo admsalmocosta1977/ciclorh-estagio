@@ -4034,8 +4034,12 @@ def crm_brasilio_buscar():
         r = _http.get(
             'https://brasil.io/api/v1/dataset/socios-brasil/empresas/data/',
             headers=headers, params=params, timeout=20)
-        if r.status_code == 401:
+        if r.status_code in (401, 403):
+            if not token:
+                return jsonify({'erro': 'O Brasil.IO requer autenticação. Crie uma conta gratuita em brasil.io, gere um token e configure em Administração → Configurações.'}), 401
             return jsonify({'erro': 'Token inválido ou expirado. Verifique em Administração → Configurações.'}), 401
+        if r.status_code == 429:
+            return jsonify({'erro': 'Limite de requisições atingido (429). Aguarde um minuto ou configure um token em Administração → Configurações.'}), 429
         if r.status_code != 200:
             return jsonify({'erro': f'Brasil.IO retornou HTTP {r.status_code}.'}), 502
         data = r.json()

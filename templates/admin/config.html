@@ -44,9 +44,12 @@
       <h6 class="fw-bold mb-3"><i class="bi bi-database-fill-check me-2" style="color:#2196F3"></i>Brasil.IO — Busca de Empresas</h6>
       <p class="text-muted small mb-3">
         Token de acesso à API do <strong>Brasil.IO</strong> (espelho gratuito da Receita Federal).
-        Obtenha o seu: acesse <a href="https://brasil.io/api/v1/auth/token/" target="_blank">brasil.io/api/v1/auth/token/</a>
-        (faça login com seu usuário/senha pelo formulário) — o token aparece no campo <strong>token</strong> da resposta JSON.
-        Limite público sem token: 30 req/min. Com token autenticado o limite é maior.
+        <strong class="text-danger">Token obrigatório</strong> — o Brasil.IO exige autenticação mesmo no plano gratuito.
+        <br>Como obter: <strong>1.</strong> Crie uma conta gratuita em
+        <a href="https://brasil.io/accounts/register/" target="_blank">brasil.io/accounts/register/</a> &nbsp;
+        <strong>2.</strong> Faça login e acesse
+        <a href="https://brasil.io/api/v1/auth/token/" target="_blank">brasil.io/api/v1/auth/token/</a>
+        (POST com usuário e senha) — o campo <strong>token</strong> da resposta JSON é o valor a colar abaixo.
       </p>
       <div class="row g-3">
         <div class="col-md-8">
