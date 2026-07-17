@@ -342,7 +342,19 @@ function enriquecerDados(id) {
     headers:{'Content-Type':'application/json'}})
   .then(function(r){ return r.json(); })
   .then(function(d) {
-    if (d.erro) { alert('Erro: ' + d.erro); return; }
+    if (d.erro) {
+      toast.style.display = 'block';
+      toast.style.background = '#FEF2F2';
+      toast.style.borderColor = '#FCA5A5';
+      toast.style.color = '#991B1B';
+      toast.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> ' + d.erro;
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-stars"></i>Enriquecer Dados';
+      return;
+    }
+    toast.style.background = '';
+    toast.style.borderColor = '';
+    toast.style.color = '';
 
     var preenchidos = [];
 
@@ -370,14 +382,17 @@ function enriquecerDados(id) {
       if (fObs && !fObs.value) { fObs.value = d.obs_enriquecimento; fObs.style.borderColor='#7C3AED'; preenchidos.push('Observações'); }
     }
 
+    var fonteIA = (d._fonte === 'ia');
+    var fonteLabel = fonteIA
+      ? '<i class="bi bi-stars" style="color:#7C3AED"></i> <strong>IA preencheu</strong>'
+      : '<i class="bi bi-database-fill-check" style="color:#2563EB"></i> <strong>Dados inferidos</strong>';
+    var fonteRodape = fonteIA ? '' : ' (baseado em CNPJ, porte e CNAE — sem créditos de IA disponíveis)';
+
+    toast.style.display = 'block';
     if (preenchidos.length) {
-      toast.style.display = 'block';
-      toast.innerHTML = '<i class="bi bi-stars" style="color:#7C3AED"></i> <strong>IA preencheu:</strong> '
-        + preenchidos.join(', ')
-        + ' — revise antes de salvar.';
+      toast.innerHTML = fonteLabel + ': ' + preenchidos.join(', ') + fonteRodape + ' — revise antes de salvar.';
     } else {
-      toast.style.display = 'block';
-      toast.innerHTML = '<i class="bi bi-info-circle"></i> Nenhum campo novo encontrado. Os campos já estavam preenchidos ou não foram localizados dados adicionais.';
+      toast.innerHTML = '<i class="bi bi-info-circle"></i> Nenhum campo novo encontrado. Os campos já estavam preenchidos ou não há dados adicionais disponíveis.';
     }
     btn.disabled = false;
     btn.innerHTML = '<i class="bi bi-stars"></i>Enriquecer novamente';

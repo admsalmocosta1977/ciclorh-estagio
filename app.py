@@ -4009,43 +4009,84 @@ def crm_prospeccao_excluir(id):
     return redirect(url_for('crm_prospeccao'))
 
 
+def _enriquecer_free(p):
+    """Enriquecimento gratuito: BrasilAPI + inferência por porte/CNAE + domínio do e-mail."""
+    dados = {}
+    # 1. Rebusca o CNPJ para pegar campos que podem ter ficado de fora
+    if p['cnpj']:
+        emp, _ = _lookup_cnpj(p['cnpj'])
+        if emp:
+            if not p['email'] and emp.get('email'):
+                dados['email'] = emp['email']
+            # Tenta inferir site pelo domínio do e-mail
+            email = emp.get('email') or p.get('email') or ''
+            if email and '@' in email:
+                domain = email.split('@')[1].lower()
+                _dominios_genericos = {'gmail.com','hotmail.com','yahoo.com','outlook.com',
+                                       'bol.com.br','uol.com.br','ig.com.br','terra.com.br'}
+                if domain not in _dominios_genericos and not p.get('site'):
+                    dados['site'] = 'https://www.' + domain
+    # 2. Faixas de funcionários e faturamento por porte (RFB/SEBRAE)
+    porte = (p.get('porte') or '').lower()
+    _faixas = {
+        'mei':   (1,    1,    'Até R$ 81 mil/ano'),
+        'me':    (1,    19,   'R$ 81 mil – R$ 360 mil/ano'),
+        'epp':   (10,   49,   'R$ 360 mil – R$ 4,8 milhões/ano'),
+        'médio': (50,   499,  'R$ 4,8 milhões – R$ 300 milhões/ano'),
+        'medio': (50,   499,  'R$ 4,8 milhões – R$ 300 milhões/ano'),
+        'grande':(500, 9999,  'Acima de R$ 300 milhões/ano'),
+    }
+    for k, (mn, mx, fat) in _faixas.items():
+        if k in porte:
+            if not p.get('num_funcionarios'):
+                dados['num_funcionarios'] = mn  # mínimo da faixa como estimativa
+            if not p.get('faturamento_estimado'):
+                dados['faturamento_estimado'] = fat
+            break
+    # 3. Observações a partir do CNAE
+    if p.get('cnae_descricao') and not p.get('obs_enriquecimento'):
+        porte_txt = p.get('porte') or 'não informado'
+        cidade    = p.get('cidade') or ''
+        dados['obs_enriquecimento'] = (
+            f"Empresa de {porte_txt} com atividade principal em {p['cnae_descricao']}."
+            + (f" Localizada em {cidade}." if cidade else '')
+        )
+    dados['_fonte'] = 'gratuito'
+    return dados
+
+
 @app.route('/crm/prospeccao/<int:id>/enriquecer', methods=['POST'])
 @crm_required
 def crm_prospeccao_enriquecer(id):
     p = _q("SELECT * FROM prospecto WHERE id=%s", (id,), one=True)
     if not p:
         abort(404)
+    # Tenta via Anthropic; se falhar (sem créditos ou sem chave), usa enriquecimento gratuito
     key = os.environ.get('ANTHROPIC_API_KEY', '')
-    if not key:
-        return jsonify({'erro': 'ANTHROPIC_API_KEY não configurada.'}), 503
-    import anthropic as _ant
-    client = _ant.Anthropic(api_key=key)
-    nome    = p['empresa_nome'] or ''
-    cnpj    = p['cnpj'] or ''
-    cidade  = p['cidade'] or ''
-    atividade = p['cnae_descricao'] or ''
-    porte   = p['porte'] or ''
-    prompt = (
-        f"Você é um analista de inteligência comercial. Pesquise e informe dados sobre a empresa brasileira abaixo.\n"
-        f"Nome: {nome}\nCNPJ: {cnpj}\nCidade: {cidade}\nAtividade: {atividade}\nPorte: {porte}\n\n"
-        f"Retorne SOMENTE um objeto JSON com os campos abaixo (null se não souber):\n"
-        f'{{"site":"URL do site oficial","email":"e-mail de contato público","linkedin":"URL do LinkedIn da empresa",'
-        f'"num_funcionarios":numero_inteiro_estimado,"faturamento_estimado":"faixa ex: R$ 1M – R$ 10M",'
-        f'"obs_enriquecimento":"informações relevantes como fundação, especialidade, presença regional"}}'
-    )
-    try:
-        resp = client.messages.create(
-            model='claude-haiku-4-5-20251001',
-            max_tokens=600,
-            messages=[{'role': 'user', 'content': prompt}]
-        )
-        texto = resp.content[0].text.strip()
-        inicio = texto.find('{')
-        fim    = texto.rfind('}') + 1
-        dados  = json.loads(texto[inicio:fim]) if inicio >= 0 else {}
-    except Exception as e:
-        return jsonify({'erro': str(e)}), 500
-    return jsonify(dados)
+    if key:
+        try:
+            import anthropic as _ant
+            client = _ant.Anthropic(api_key=key)
+            prompt = (
+                f"Você é um analista de inteligência comercial. Informe dados sobre a empresa brasileira:\n"
+                f"Nome: {p['empresa_nome'] or ''}\nCNPJ: {p['cnpj'] or ''}\n"
+                f"Cidade: {p['cidade'] or ''}\nAtividade: {p['cnae_descricao'] or ''}\nPorte: {p['porte'] or ''}\n\n"
+                f"Retorne SOMENTE JSON (null para campos desconhecidos):\n"
+                f'{{"site":null,"email":null,"linkedin":null,'
+                f'"num_funcionarios":null,"faturamento_estimado":null,'
+                f'"obs_enriquecimento":null}}'
+            )
+            resp = client.messages.create(
+                model='claude-haiku-4-5-20251001', max_tokens=600,
+                messages=[{'role': 'user', 'content': prompt}])
+            texto = resp.content[0].text.strip()
+            inicio = texto.find('{'); fim = texto.rfind('}') + 1
+            dados = json.loads(texto[inicio:fim]) if inicio >= 0 else {}
+            dados['_fonte'] = 'ia'
+            return jsonify(dados)
+        except Exception:
+            pass  # cai no fallback gratuito
+    return jsonify(_enriquecer_free(p))
 
 
 @app.route('/crm/prospeccao/<int:id>/converter', methods=['POST'])
