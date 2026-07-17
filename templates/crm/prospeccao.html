@@ -125,6 +125,9 @@
       <button class="rfb-tab" id="tab2" onclick="trocarTab(2)" style="padding:10px 16px;font-size:.8rem;font-weight:700;border:none;border-bottom:2px solid transparent;background:none;color:var(--ink-3);cursor:pointer;margin-bottom:-1px">
         <i class="bi bi-list-ol me-1"></i>Importar em lote
       </button>
+      <button class="rfb-tab" id="tab3" onclick="trocarTab(3)" style="padding:10px 16px;font-size:.8rem;font-weight:700;border:none;border-bottom:2px solid transparent;background:none;color:var(--ink-3);cursor:pointer;margin-bottom:-1px">
+        <i class="bi bi-clipboard2-data me-1"></i>Colar da Web
+      </button>
     </div>
 
     <!-- Tab 1: Buscar por CNPJ único -->
@@ -162,6 +165,35 @@
         <span id="loteStatus" style="font-size:.78rem;color:var(--ink-3)"></span>
       </div>
       <div id="loteResultado" style="margin-top:14px"></div>
+    </div>
+
+    <!-- Tab 3: Colar da Web -->
+    <div id="rfbTab3" style="padding:16px 18px;display:none">
+      <div style="background:rgba(37,99,235,.05);border:1px solid rgba(37,99,235,.15);border-radius:var(--radius-sm);padding:11px 14px;margin-bottom:14px;font-size:.77rem;color:var(--ink-2);line-height:1.7">
+        <strong style="color:var(--brand)"><i class="bi bi-lightbulb me-1"></i>Como usar:</strong>
+        abra qualquer site de busca de empresas no seu navegador (listasdeempresa.com, Google Maps, casadosdados.com.br etc.),
+        selecione todo o conteúdo da página com <kbd>Ctrl+A</kbd> → <kbd>Ctrl+C</kbd> e cole aqui abaixo.
+        O sistema extrai automaticamente todos os CNPJs encontrados no texto.
+      </div>
+
+      <textarea id="webTexto" rows="8"
+        style="width:100%;font-size:.78rem;font-family:monospace;resize:vertical;
+               padding:10px 12px;border:1px solid var(--border-md);border-radius:var(--radius-sm);
+               background:var(--canvas);color:var(--ink);outline:none;line-height:1.5"
+        placeholder="Cole aqui o texto copiado da página (Ctrl+A → Ctrl+C no site, depois Ctrl+V aqui)…"></textarea>
+
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn-action primary" onclick="extrairCNPJs()" id="webBtn">
+          <i class="bi bi-search"></i>Extrair CNPJs do texto
+        </button>
+        <button class="btn-action" onclick="document.getElementById('webTexto').value='';document.getElementById('webPreview').innerHTML='';document.getElementById('webInfo').textContent=''" style="background:var(--canvas);border:1px solid var(--border-md);color:var(--ink-3)">
+          <i class="bi bi-x-lg"></i>Limpar
+        </button>
+        <span id="webInfo" style="font-size:.78rem;color:var(--ink-3)"></span>
+      </div>
+
+      <!-- Prévia e botão importar -->
+      <div id="webPreview" style="margin-top:14px"></div>
     </div>
 
   </div>
@@ -524,6 +556,154 @@ function importarLote() {
   })
   .catch(function(e){ status.textContent = 'Erro: '+(e.message||e); })
   .finally(function(){ btn.disabled=false; btn.innerHTML='<i class="bi bi-cloud-download"></i>Importar CNPJs'; });
+}
+
+/* ── Tab 3: Colar da Web — extrai CNPJs de qualquer texto ── */
+function extrairCNPJs() {
+  var texto  = document.getElementById('webTexto').value;
+  var info   = document.getElementById('webInfo');
+  var box    = document.getElementById('webPreview');
+  var btn    = document.getElementById('webBtn');
+
+  if (!texto.trim()) { alert('Cole o texto da página primeiro.'); return; }
+
+  /* Regex: captura CNPJs no formato XX.XXX.XXX/XXXX-XX */
+  var re = /\d{2}[\.\s]?\d{3}[\.\s]?\d{3}[\/\\\s]?\d{4}[-\s]?\d{2}/g;
+  var encontrados = texto.match(re) || [];
+
+  /* Normaliza para 14 dígitos e remove duplicatas */
+  var vistos = {};
+  var cnpjs = [];
+  encontrados.forEach(function(c) {
+    var d = c.replace(/\D/g, '');
+    if (d.length === 14 && !vistos[d]) { vistos[d] = true; cnpjs.push(d); }
+  });
+
+  if (!cnpjs.length) {
+    info.innerHTML = '<span style="color:#991B1B">Nenhum CNPJ encontrado no texto. Verifique se a página mostra CNPJs no formato XX.XXX.XXX/XXXX-XX.</span>';
+    box.innerHTML = '';
+    return;
+  }
+
+  info.textContent = cnpjs.length + ' CNPJ(s) encontrado(s). Consultando a Receita Federal…';
+  box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ink-3);font-size:.82rem"><i class="bi bi-hourglass-split" style="font-size:1.6rem;display:block;margin-bottom:8px;opacity:.4"></i>Enriquecendo dados via Receita Federal…</div>';
+  btn.disabled = true;
+
+  /* Processa em lotes de 10 para não travar a UI */
+  var resultados = [];
+  var total = cnpjs.length;
+
+  function processarLote(idx) {
+    if (idx >= total) {
+      renderizarResultados(resultados);
+      btn.disabled = false;
+      return;
+    }
+    var lote = cnpjs.slice(idx, idx + 10);
+    fetch('/crm/prospeccao/importar-lote', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({cnpjs: lote, apenas_consultar: true})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(lista) {
+      resultados = resultados.concat(lista);
+      info.textContent = resultados.length + '/' + total + ' consultados…';
+      processarLote(idx + 10);
+    })
+    .catch(function() { processarLote(idx + 10); });
+  }
+
+  processarLote(0);
+}
+
+function renderizarResultados(lista) {
+  var info = document.getElementById('webInfo');
+  var box  = document.getElementById('webPreview');
+
+  var total     = lista.length;
+  var novas     = lista.filter(function(r){ return r.ok || (r.dados && !r.ja_importado); });
+  var jaExist   = lista.filter(function(r){ return r.msg === 'Já importado'; });
+  var comErro   = lista.filter(function(r){ return !r.ok && r.msg !== 'Já importado'; });
+
+  info.innerHTML =
+    '<span style="color:#065F46;font-weight:700">' + total + ' CNPJs encontrados</span>'
+    + (novas.length   ? ' · <span style="color:var(--brand)">'    + novas.length   + ' novas</span>' : '')
+    + (jaExist.length ? ' · <span style="color:var(--ink-3)">'    + jaExist.length + ' já existem</span>' : '')
+    + (comErro.length ? ' · <span style="color:#991B1B">'         + comErro.length + ' não encontradas</span>' : '');
+
+  /* Botão importar todas as novas de uma vez */
+  var cnpjsNovos = lista.filter(function(r){ return r.ok; }).map(function(r){ return r.cnpj; });
+  var h = '';
+  if (cnpjsNovos.length > 0) {
+    h += '<div style="margin-bottom:12px">'
+       + '<button class="btn-action success" id="webImportarBtn" onclick="importarTodasWeb('+JSON.stringify(cnpjsNovos)+')">'
+       + '<i class="bi bi-download"></i>Importar todas as ' + cnpjsNovos.length + ' empresas novas'
+       + '</button></div>';
+  }
+
+  /* Lista de resultados */
+  h += '<div style="display:flex;flex-direction:column;gap:5px">';
+  lista.forEach(function(r) {
+    if (r.ok) {
+      /* empresa encontrada e nova */
+      var cnpjFmt = r.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+      h += '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);background:rgba(5,150,105,.05);border:1px solid rgba(5,150,105,.2)">'
+         + '<i class="bi bi-check-circle-fill" style="color:#059669;flex-shrink:0"></i>'
+         + '<div style="flex:1;min-width:0">'
+         + '<div style="font-size:.8rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (r.razao_social || '') + '</div>'
+         + '<div style="font-size:.68rem;color:var(--ink-3);font-family:monospace">' + cnpjFmt + (r.municipio ? '  ·  ' + r.municipio : '') + '</div>'
+         + '</div>'
+         + '<span style="font-size:.67rem;font-weight:700;background:#D1FAE5;color:#065F46;border-radius:4px;padding:2px 6px;flex-shrink:0">NOVA</span>'
+         + '</div>';
+    } else if (r.msg === 'Já importado') {
+      var cnpjFmt = (r.cnpj||'').replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+      h += '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--radius-sm);background:var(--canvas);border:1px solid var(--border)">'
+         + '<i class="bi bi-dash-circle" style="color:var(--ink-3);flex-shrink:0"></i>'
+         + '<span style="font-size:.78rem;color:var(--ink-3);font-family:monospace">' + cnpjFmt + '</span>'
+         + '<span style="font-size:.73rem;color:var(--ink-2)">' + (r.razao_social || '') + '</span>'
+         + '<span style="margin-left:auto;font-size:.67rem;color:var(--ink-4)">já existe</span>'
+         + '</div>';
+    } else {
+      var cnpjFmt = (r.cnpj||'').replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+      h += '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--radius-sm);background:rgba(153,27,27,.04);border:1px solid rgba(153,27,27,.15)">'
+         + '<i class="bi bi-x-circle" style="color:#991B1B;flex-shrink:0"></i>'
+         + '<span style="font-size:.78rem;color:var(--ink-3);font-family:monospace">' + cnpjFmt + '</span>'
+         + '<span style="margin-left:auto;font-size:.67rem;color:#991B1B">' + (r.msg || 'não encontrado') + '</span>'
+         + '</div>';
+    }
+  });
+  h += '</div>';
+  box.innerHTML = h;
+}
+
+function importarTodasWeb(cnpjs) {
+  var btn = document.getElementById('webImportarBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i>Importando…';
+
+  fetch('/crm/prospeccao/importar-lote', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({cnpjs: cnpjs})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(lista) {
+    var ok = lista.filter(function(r){ return r.ok; }).length;
+    btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>' + ok + ' empresas importadas com sucesso!';
+    btn.style.background = '#059669';
+    /* Atualiza badges na lista */
+    lista.forEach(function(r) {
+      if (r.ok) {
+        var badge = document.querySelector('[data-cnpj="'+r.cnpj+'"] .web-badge');
+        if (badge) { badge.textContent = 'IMPORTADA'; badge.style.background = '#059669'; }
+      }
+    });
+  })
+  .catch(function(e) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-exclamation-triangle"></i>Erro — tente novamente';
+  });
 }
 
 /* ── Importar empresa individual (card) ── */

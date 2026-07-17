@@ -3763,17 +3763,28 @@ def crm_prospeccao_lookup_cnpj():
 @app.route('/crm/prospeccao/importar-lote', methods=['POST'])
 @crm_required
 def crm_prospeccao_importar_lote():
-    cnpjs_raw = (request.get_json(silent=True) or {}).get('cnpjs', [])
+    body = request.get_json(silent=True) or {}
+    cnpjs_raw = body.get('cnpjs', [])
+    apenas_consultar = body.get('apenas_consultar', False)
     resultados = []
     for c in cnpjs_raw[:50]:
         emp, erro = _lookup_cnpj(c)
         if erro:
-            resultados.append({'cnpj': c, 'ok': False, 'msg': erro})
+            resultados.append({'cnpj': re.sub(r'\D', '', c), 'ok': False, 'msg': erro})
             continue
         existe = _q("SELECT id FROM prospecto WHERE cnpj=%s", (emp['cnpj'],), one=True)
         if existe:
             resultados.append({'cnpj': emp['cnpj'], 'ok': False, 'msg': 'Já importado',
-                               'razao_social': emp['razao_social']})
+                               'razao_social': emp['razao_social'],
+                               'municipio': emp['municipio']})
+            continue
+        if apenas_consultar:
+            resultados.append({'cnpj': emp['cnpj'], 'ok': True,
+                               'razao_social': emp['razao_social'],
+                               'municipio': emp['municipio'],
+                               'porte': emp['porte'],
+                               'cnae_fiscal': emp['cnae_fiscal'],
+                               'cnae_fiscal_descricao': emp['cnae_fiscal_descricao']})
             continue
         endereco = ' '.join(filter(None, [emp.get('logradouro',''), emp.get('numero','')])).strip() or None
         pid = _ins("""INSERT INTO prospecto
@@ -3786,7 +3797,8 @@ def crm_prospeccao_importar_lote():
                     emp['ddd_telefone_1'] or None, emp['email'] or None,
                     current_user.id))
         resultados.append({'cnpj': emp['cnpj'], 'ok': True, 'id': pid,
-                           'razao_social': emp['razao_social']})
+                           'razao_social': emp['razao_social'],
+                           'municipio': emp['municipio']})
     return jsonify(resultados)
 
 
