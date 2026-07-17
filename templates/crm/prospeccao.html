@@ -62,6 +62,16 @@
 .section-card { background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow-card); overflow:hidden; }
 .section-header { display:flex; align-items:center; gap:10px; padding:13px 18px;
   border-bottom:1px solid var(--border); font-size:.88rem; font-weight:700; color:var(--ink); }
+
+/* Seleção múltipla */
+.prospect-cb { width:15px; height:15px; cursor:pointer; accent-color:var(--brand); }
+.bi-table tbody tr.selected td { background:#EFF6FF; }
+.bulk-bar { display:none; align-items:center; gap:10px; padding:9px 16px;
+  background:#EFF6FF; border-bottom:1px solid #BFDBFE; font-size:.78rem; }
+.bulk-bar.visible { display:flex; }
+.bulk-bar .sel-count { font-weight:700; color:var(--brand); }
+.bulk-bar .sep { width:1px; height:16px; background:var(--border-md); flex-shrink:0; }
+.bulk-bar .spacer { flex:1; }
 </style>
 
 <!-- Page header -->
@@ -379,9 +389,31 @@
     <span style="background:var(--brand-soft);color:var(--brand);border-radius:20px;padding:1px 9px;
                  font-size:.72rem;font-weight:800;margin-left:4px">{{ prospectos|length }}</span>
   </div>
+
+  <!-- Barra de ações em lote -->
+  <div class="bulk-bar" id="bulkBar">
+    <i class="bi bi-check2-square" style="color:var(--brand)"></i>
+    <span class="sel-count" id="selCount">0</span> selecionadas
+    <div class="sep"></div>
+    <button class="btn-action success" id="btnLoteConverter" onclick="loteConverter()">
+      <i class="bi bi-arrow-right-circle"></i>Lançar no CRM
+    </button>
+    <button class="btn-action danger" id="btnLoteExcluir" onclick="loteExcluir()">
+      <i class="bi bi-trash"></i>Excluir
+    </button>
+    <div class="spacer"></div>
+    <button class="btn-action ghost" onclick="deselecionarTodos()" style="font-size:.7rem">
+      <i class="bi bi-x-lg"></i>Cancelar
+    </button>
+  </div>
+
   <div class="table-responsive">
     <table class="bi-table">
       <thead><tr>
+        <th style="width:36px;padding-left:14px">
+          <input type="checkbox" class="prospect-cb" id="cbAll" title="Selecionar todos"
+                 onchange="toggleTodos(this.checked)">
+        </th>
         <th>Empresa</th>
         <th>Segmento / CNAE</th>
         <th>Porte</th>
@@ -393,7 +425,11 @@
       </tr></thead>
       <tbody>
       {% for p in prospectos %}
-      <tr>
+      <tr data-id="{{ p.id }}" data-status="{{ p.status }}">
+        <td style="padding-left:14px">
+          <input type="checkbox" class="prospect-cb row-cb" data-id="{{ p.id }}"
+                 data-status="{{ p.status }}" onchange="atualizarBulkBar()">
+        </td>
         <td>
           <strong style="font-weight:600;font-size:.77rem">{{ p.empresa_nome }}</strong>
           {% if p.cnpj %}<br><span style="font-size:.65rem;color:var(--ink-4);font-family:monospace">{{ p.cnpj }}</span>{% endif %}
@@ -466,7 +502,7 @@
       </tr>
       {% endfor %}
       {% if not prospectos %}
-      <tr><td colspan="8">
+      <tr><td colspan="9">
         <div class="empty-state">
           <i class="bi bi-building-add"></i>
           <p>Nenhuma empresa encontrada com os filtros selecionados.</p>
@@ -482,6 +518,70 @@
 </div>
 
 <script>
+/* ── Seleção múltipla ── */
+function _cbsSelecionados() {
+  return Array.from(document.querySelectorAll('.row-cb:checked'));
+}
+function atualizarBulkBar() {
+  var sels = _cbsSelecionados();
+  var bar  = document.getElementById('bulkBar');
+  var cnt  = document.getElementById('selCount');
+  var cbAll = document.getElementById('cbAll');
+  var total = document.querySelectorAll('.row-cb').length;
+  cnt.textContent = sels.length;
+  bar.classList.toggle('visible', sels.length > 0);
+  cbAll.indeterminate = sels.length > 0 && sels.length < total;
+  cbAll.checked = sels.length === total && total > 0;
+  // Destaca as linhas selecionadas
+  document.querySelectorAll('.row-cb').forEach(function(cb) {
+    cb.closest('tr').classList.toggle('selected', cb.checked);
+  });
+}
+function toggleTodos(checked) {
+  document.querySelectorAll('.row-cb').forEach(function(cb) { cb.checked = checked; });
+  atualizarBulkBar();
+}
+function deselecionarTodos() {
+  document.querySelectorAll('.row-cb').forEach(function(cb) { cb.checked = false; });
+  document.getElementById('cbAll').checked = false;
+  atualizarBulkBar();
+}
+function loteExcluir() {
+  var ids = _cbsSelecionados().map(function(cb){ return cb.dataset.id; });
+  if (!ids.length) return;
+  if (!confirm('Excluir ' + ids.length + ' empresa(s) selecionada(s)? Esta ação não pode ser desfeita.')) return;
+  fetch('/crm/prospeccao/lote/excluir', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ids: ids})
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    if (d.ok) { location.reload(); }
+    else { alert(d.erro || 'Erro ao excluir.'); }
+  }).catch(function(){ alert('Falha de conexão.'); });
+}
+function loteConverter() {
+  var cbs = _cbsSelecionados().filter(function(cb){ return cb.dataset.status !== 'convertido'; });
+  if (!cbs.length) { alert('Nenhuma empresa pendente selecionada (já convertidas são ignoradas).'); return; }
+  if (!confirm('Lançar ' + cbs.length + ' empresa(s) no funil de vendas?')) return;
+  var ids = cbs.map(function(cb){ return cb.dataset.id; });
+  var btn = document.getElementById('btnLoteConverter');
+  btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i>Aguarde...';
+  fetch('/crm/prospeccao/lote/converter', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ids: ids})
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-right-circle"></i>Lançar no CRM';
+    var msg = d.ok + ' empresa(s) lançada(s) no CRM.';
+    if (d.pulados) {
+      msg += '\n\n' + d.pulados + ' ignorada(s):';
+      (d.detalhes || []).forEach(function(x){ msg += '\n• ' + x.nome + ': ' + x.motivo; });
+    }
+    alert(msg);
+    location.reload();
+  }).catch(function(){ btn.disabled=false; btn.innerHTML='<i class="bi bi-arrow-right-circle"></i>Lançar no CRM'; alert('Falha de conexão.'); });
+}
+
 /* ── Subfiltro bairro ── */
 (function () {
   var cidadeSel = document.getElementById('cidadeSelect');

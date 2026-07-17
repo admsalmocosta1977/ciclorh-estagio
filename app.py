@@ -4221,6 +4221,49 @@ def crm_prospeccao_converter(id):
     return redirect(url_for('crm_lead_detalhe', id=lead_id))
 
 
+@app.route('/crm/prospeccao/lote/excluir', methods=['POST'])
+@crm_required
+def crm_prospeccao_lote_excluir():
+    ids = [int(i) for i in (request.json or {}).get('ids', [])]
+    if not ids:
+        return jsonify({'erro': 'Nenhum item selecionado.'}), 400
+    _run("DELETE FROM prospecto WHERE id = ANY(%s)", (ids,))
+    return jsonify({'ok': True, 'count': len(ids)})
+
+
+@app.route('/crm/prospeccao/lote/converter', methods=['POST'])
+@crm_required
+def crm_prospeccao_lote_converter():
+    ids = [int(i) for i in (request.json or {}).get('ids', [])]
+    if not ids:
+        return jsonify({'erro': 'Nenhum item selecionado.'}), 400
+    ok_list, skip_list = [], []
+    for pid in ids:
+        p = _q("SELECT * FROM prospecto WHERE id=%s AND status != 'convertido'", (pid,), one=True)
+        if not p:
+            skip_list.append({'nome': f'ID {pid}', 'motivo': 'Já convertido'})
+            continue
+        cnpj_digits = re.sub(r'\D', '', p['cnpj'] or '')
+        if cnpj_digits:
+            concedente = _q(
+                "SELECT nome FROM empresa WHERE regexp_replace(cnpj,'\\D','','g') = %s LIMIT 1",
+                (cnpj_digits,), one=True)
+            if concedente:
+                skip_list.append({'nome': p['empresa_nome'], 'motivo': f'CNPJ já na base: {concedente["nome"]}'})
+                continue
+        lead_id = _ins("""INSERT INTO crm_lead
+            (empresa_nome,empresa_cnpj,cidade,segmento,vagas_estimadas,etapa,
+             origem,responsavel_id,contato_nome,contato_email,contato_whatsapp,obs)
+            VALUES (%s,%s,%s,%s,%s,'Lead Captado','Prospecção ativa',%s,%s,%s,%s,%s)""",
+            (p['empresa_nome'], p['cnpj'], p['cidade'], p['segmento'],
+             p['vagas_estimadas'], p['responsavel_id'] or current_user.id,
+             p['contato_nome'], p['email'], p['telefone'], p['obs']))
+        _run("UPDATE prospecto SET status='convertido', lead_id=%s, updated_at=CURRENT_TIMESTAMP WHERE id=%s",
+             (lead_id, pid))
+        ok_list.append(p['empresa_nome'])
+    return jsonify({'ok': len(ok_list), 'pulados': len(skip_list), 'detalhes': skip_list})
+
+
 init_db()
 
 
