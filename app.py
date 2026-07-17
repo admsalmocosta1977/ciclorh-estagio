@@ -3995,93 +3995,74 @@ def crm_brasilio_buscar():
     uf     = request.args.get('uf', '').strip().upper()
     cidade = _norm_mun(request.args.get('municipio', ''))
     cnae   = request.args.get('cnae', '').strip()
-    porte  = request.args.get('porte', '').strip()
     nome   = request.args.get('nome', '').strip().upper()
-    page   = int(request.args.get('page', '1') or 1)
 
-    # Passo 1: Casa dos Dados v5 — filtra por cidade/UF (gratuito, sem token)
-    CDD_URL = 'https://api.casadosdados.com.br/v5/public/cnpj/pesquisa'
-    payload = {'situacao_cadastral': ['ATIVA'], 'limite': 20, 'pagina': page}
-    if uf:     payload['uf']        = [uf]
-    if cidade: payload['municipio'] = [cidade]
-    if cnae:   payload['codigo_atividade_principal'] = [cnae]
+    CDD_URL   = 'https://api.casadosdados.com.br/v5/public/cnpj/pesquisa'
+    LIMITE    = 100
+    MAX_ITENS = 1000  # cap de segurança: 10 páginas de 100
 
-    try:
-        r = requests.post(CDD_URL, json=payload,
-                          headers={'Content-Type': 'application/json'}, timeout=15)
-        if r.status_code == 429:
-            return jsonify({'erro': 'Limite de requisições atingido. Aguarde um momento.'}), 429
-        if r.status_code != 200:
-            return jsonify({'erro': f'Casa dos Dados retornou HTTP {r.status_code}.'}), 502
-        data = r.json()
-    except Exception as e:
-        return jsonify({'erro': f'Falha na conexão com Casa dos Dados: {e}'}), 502
+    def _payload(pagina):
+        p = {'situacao_cadastral': ['ATIVA'], 'limite': LIMITE, 'pagina': pagina}
+        if uf:     p['uf']        = [uf]
+        if cidade: p['municipio'] = [cidade]
+        if cnae:   p['codigo_atividade_principal'] = [cnae]
+        return p
 
-    itens = data.get('cnpjs', [])
-    total = data.get('total', 0)
-
-    # Filtro por nome (client-side, pois CDD não suporta no v5 público)
-    if nome:
-        itens = [i for i in itens if nome in (i.get('razao_social') or '').upper()
-                                           or nome in (i.get('nome_fantasia') or '').upper()]
-
-    # Verifica quais CNPJs já estão na base (query única no thread principal — g.db não é thread-safe)
-    cnpjs_raw = [re.sub(r'\D', '', item.get('cnpj') or '') for item in itens]
-    ja_na_base_set = set()
-    if cnpjs_raw:
-        rows = _q("SELECT cnpj FROM prospecto WHERE cnpj = ANY(%s)", (cnpjs_raw,))
-        ja_na_base_set = {r['cnpj'] for r in rows}
-
-    # Passo 2: Enriquece cada CNPJ via BrasilAPI (paralelo, 5 workers)
-    # _q não pode ser chamado dentro das threads — usa ja_na_base_set calculado acima
-    def _enriquecer(item):
-        cnpj_d = re.sub(r'\D', '', item.get('cnpj') or '')
-        emp = {}
+    def _fetch(pagina):
         try:
-            br = requests.get(f'https://brasilapi.com.br/api/cnpj/v1/{cnpj_d}', timeout=8)
-            if br.status_code == 200:
-                emp = br.json()
+            r = requests.post(CDD_URL, json=_payload(pagina),
+                              headers={'Content-Type': 'application/json'}, timeout=20)
+            if r.status_code == 200:
+                return r.json()
+            if r.status_code == 429:
+                return {'erro': 'rate_limit'}
         except Exception:
             pass
+        return None
 
-        # Filtra por porte se especificado
-        porte_emp = (emp.get('porte') or '').upper()
-        if porte and porte != 'DEMAIS':
-            if porte == 'MEI'  and 'MEI'  not in porte_emp: return None
-            if porte == 'ME'   and porte_emp not in ('ME', 'MICRO EMPRESA'): return None
-            if porte == 'EPP'  and 'EPP'  not in porte_emp and 'PEQUENA' not in porte_emp: return None
-        if porte == 'DEMAIS' and any(x in porte_emp for x in ('MEI','ME','MICRO','EPP','PEQUENA')): return None
+    # Página 1 para descobrir o total
+    primeiro = _fetch(1)
+    if not primeiro:
+        return jsonify({'erro': 'Falha na conexão com Casa dos Dados.'}), 502
+    if primeiro.get('erro') == 'rate_limit':
+        return jsonify({'erro': 'Limite de requisições atingido. Aguarde um momento.'}), 429
 
-        cnae_cod = str(emp.get('cnae_fiscal') or '')
-        # Filtra por CNAE se especificado e BrasilAPI retornou dados
-        if cnae and emp and cnae.replace('.','').replace('-','') not in cnae_cod.replace('.','').replace('-',''):
-            return None
+    total    = primeiro.get('total', 0)
+    todos    = list(primeiro.get('cnpjs', []))
+    n_pags   = min((total + LIMITE - 1) // LIMITE, MAX_ITENS // LIMITE)
 
-        return {
-            'cnpj':           cnpj_d,
-            'razao_social':   (emp.get('razao_social') or item.get('razao_social') or '').title(),
-            'nome_fantasia':  (emp.get('nome_fantasia') or item.get('nome_fantasia') or '').title(),
-            'cnae_codigo':    cnae_cod,
-            'cnae_descricao': emp.get('cnae_fiscal_descricao') or '',
-            'porte':          emp.get('porte') or '',
-            'municipio':      (emp.get('municipio') or cidade.title()),
-            'uf':             emp.get('uf') or uf,
-            'bairro':         (emp.get('bairro') or '').title(),
-            'email':          (emp.get('email') or '').lower(),
-            'telefone':       re.sub(r'\D', '', (emp.get('ddd_telefone_1') or '')),
-            'ja_na_base':     cnpj_d in ja_na_base_set,
-        }
+    # Busca demais páginas em paralelo (5 simultâneas)
+    if n_pags > 1:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
+            for data in ex.map(_fetch, range(2, n_pags + 1)):
+                if data and not data.get('erro'):
+                    todos.extend(data.get('cnpjs', []))
 
-    resultados = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
-        for res in ex.map(_enriquecer, itens):
-            if res:
-                resultados.append(res)
+    # Filtro por nome (CDD não suporta nativamente)
+    if nome:
+        todos = [i for i in todos if nome in (i.get('razao_social') or '').upper()
+                                          or nome in (i.get('nome_fantasia') or '').upper()]
+
+    # CNPJs já na base — query única no thread principal
+    cnpjs_digits = [re.sub(r'\D', '', i.get('cnpj') or '') for i in todos]
+    ja_set = set()
+    if cnpjs_digits:
+        rows = _q("SELECT cnpj FROM prospecto WHERE cnpj = ANY(%s)", (cnpjs_digits,))
+        ja_set = {r['cnpj'] for r in rows}
+
+    resultados = [{
+        'cnpj':          re.sub(r'\D', '', i.get('cnpj') or ''),
+        'razao_social':  (i.get('razao_social') or '').title(),
+        'nome_fantasia': (i.get('nome_fantasia') or '').title(),
+        'municipio':     cidade.title() if cidade else '',
+        'uf':            uf,
+        'ja_na_base':    re.sub(r'\D', '', i.get('cnpj') or '') in ja_set,
+    } for i in todos]
 
     return jsonify({
-        'count':    total,
-        'next':     total > page * 20,
-        'previous': page > 1,
+        'total':    total,
+        'count':    len(resultados),
+        'capped':   total > MAX_ITENS,
         'results':  resultados,
     })
 
