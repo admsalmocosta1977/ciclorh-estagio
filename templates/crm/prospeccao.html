@@ -633,7 +633,7 @@ function _atualizarBtnProspectar() {
     btn.disabled = false;
     btn.style.opacity = '1';
     btn.style.cursor = 'pointer';
-    btn.innerHTML = '<i class="bi bi-funnel-fill"></i>Prospectar ' + selecionados + ' selecionada' + (selecionados > 1 ? 's' : '') + ' no Funil';
+    btn.innerHTML = '<i class="bi bi-plus-circle-fill"></i>Adicionar ' + selecionados + ' à lista de prospecção';
   }
   var chkAll = document.getElementById('webChkAll');
   if (chkAll) {
@@ -676,7 +676,7 @@ function renderizarResultados(lista) {
        + '<button id="webProspectarBtn" disabled onclick="prospectarSelecionadas()"'
        +   ' style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:var(--radius-sm);'
        +   'background:var(--brand);color:#fff;font-size:.8rem;font-weight:700;border:none;cursor:pointer;transition:.15s;opacity:.5">'
-       + '<i class="bi bi-funnel-fill"></i>Selecione empresas para prospectar</button>'
+       + '<i class="bi bi-plus-circle-fill"></i>Selecione empresas para prospectar</button>'
        + '<span id="webFunilInfo" style="font-size:.76rem;color:var(--ink-3)"></span>'
        + '</div>';
   }
@@ -740,31 +740,29 @@ function prospectarSelecionadas() {
   var btn = document.getElementById('webProspectarBtn');
   btn.disabled = true;
   btn.style.opacity = '.6';
-  btn.innerHTML = '<i class="bi bi-hourglass-split"></i>Enviando ' + cnpjs.length + ' para o funil…';
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i>Adicionando ' + cnpjs.length + ' à lista…';
 
   fetch('/crm/prospeccao/importar-lote', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({cnpjs: cnpjs, prospectar: true})
+    body: JSON.stringify({cnpjs: cnpjs})
   })
   .then(function(r){ return r.json(); })
   .then(function(lista) {
     var ok = lista.filter(function(r){ return r.ok; }).length;
-    btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>' + ok + ' empresa' + (ok !== 1 ? 's' : '') + ' adicionada' + (ok !== 1 ? 's' : '') + ' ao funil!';
+    btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>' + ok + ' empresa' + (ok !== 1 ? 's' : '') + ' adicionada' + (ok !== 1 ? 's' : '') + ' à lista de prospecção!';
     btn.style.background = '#059669';
     btn.style.opacity = '1';
     document.getElementById('webFunilInfo').innerHTML =
-      '<a href="/crm/funil" style="color:var(--brand);font-weight:600;text-decoration:none"><i class="bi bi-arrow-right-circle"></i> Abrir Funil de Prospecção</a>';
-    /* Marca os cards selecionados como "no funil" */
+      '<a href="/crm/prospeccao" style="color:var(--brand);font-weight:600;text-decoration:none"><i class="bi bi-arrow-right-circle"></i> Ver lista de prospecção</a>';
+    /* Marca os cards como adicionados */
     lista.forEach(function(r) {
       if (r.ok) {
-        var chk = document.querySelector('.web-chk[data-cnpj="'+r.cnpj+'"]');
-        if (chk) chk.closest('[data-cnpj]').style.opacity = '.5';
         var card = document.querySelector('[data-cnpj="'+r.cnpj+'"]');
         if (card) {
-          var badge = card.querySelector('span[style*="NOVA"]') || card.querySelector('.web-badge');
-          if (!badge) badge = Array.from(card.querySelectorAll('span')).find(function(s){ return s.textContent.trim()==='NOVA'; });
-          if (badge) { badge.textContent = 'NO FUNIL'; badge.style.background = '#2563EB'; badge.style.color = '#fff'; }
+          card.style.opacity = '.6';
+          var badge = Array.from(card.querySelectorAll('span')).find(function(s){ return s.textContent.trim()==='NOVA'; });
+          if (badge) { badge.textContent = 'ADICIONADA'; badge.style.background = '#2563EB'; badge.style.color = '#fff'; }
         }
       }
     });
