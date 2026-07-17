@@ -3729,23 +3729,43 @@ def _lookup_cnpj(cnpj_raw):
         return None, str(e)
 
     ativ = (d.get('cnae_fiscal_descricao') or '')
-    tel  = (d.get('ddd_telefone_1') or '') + (d.get('telefone_1') or '')
-    emp  = {
-        'cnpj':                cnpj_digits,
-        'razao_social':        d.get('razao_social') or '',
-        'nome_fantasia':       d.get('nome_fantasia') or '',
-        'cnae_fiscal':         str(d.get('cnae_fiscal') or ''),
+    tel1 = re.sub(r'\D', '', (d.get('ddd_telefone_1') or '') + (d.get('telefone_1') or ''))
+    tel2 = re.sub(r'\D', '', (d.get('ddd_telefone_2') or '') + (d.get('telefone_2') or ''))
+    tel  = tel1 or tel2
+
+    # Quadro societário — extrai primeiro sócio/administrador
+    qsa = d.get('qsa') or []
+    socio_nome  = qsa[0].get('nome_socio', '').title()  if qsa else ''
+    socio_qual  = qsa[0].get('qualificacao_socio', '')   if qsa else ''
+    todos_socios = '; '.join(s.get('nome_socio','').title() for s in qsa if s.get('nome_socio'))
+
+    nome_empresa = d.get('nome_fantasia') or d.get('razao_social') or ''
+    cidade       = (d.get('municipio') or '').title()
+    maps_query   = f"{nome_empresa} {cidade} {d.get('uf','')}"
+
+    emp = {
+        'cnpj':                  cnpj_digits,
+        'razao_social':          (d.get('razao_social') or '').title(),
+        'nome_fantasia':         (d.get('nome_fantasia') or '').title(),
+        'cnae_fiscal':           str(d.get('cnae_fiscal') or ''),
         'cnae_fiscal_descricao': ativ,
-        'municipio':           (d.get('municipio') or '').title(),
-        'uf':                  d.get('uf') or '',
-        'bairro':              (d.get('bairro') or '').title(),
-        'logradouro':          (d.get('logradouro') or '').title(),
-        'numero':              d.get('numero') or '',
-        'email':               (d.get('email') or '').lower(),
-        'ddd_telefone_1':      re.sub(r'\D', '', tel)[:11],
-        'porte':               (d.get('porte') or '').title(),
-        'situacao':            d.get('descricao_situacao_cadastral') or '',
-        'ja_importado':        bool(_q("SELECT id FROM prospecto WHERE cnpj=%s", (cnpj_digits,), one=True)),
+        'municipio':             cidade,
+        'uf':                    d.get('uf') or '',
+        'bairro':                (d.get('bairro') or '').title(),
+        'logradouro':            (d.get('logradouro') or '').title(),
+        'numero':                d.get('numero') or '',
+        'cep':                   re.sub(r'\D', '', d.get('cep') or ''),
+        'email':                 (d.get('email') or '').lower(),
+        'ddd_telefone_1':        tel[:11],
+        'porte':                 (d.get('porte') or '').title(),
+        'situacao':              d.get('descricao_situacao_cadastral') or '',
+        'capital_social':        d.get('capital_social') or 0,
+        'contato_nome':          socio_nome,
+        'contato_cargo':         socio_qual,
+        'todos_socios':          todos_socios,
+        'maps_url':              'https://www.google.com/maps/search/' + _http.utils.quote(maps_query),
+        'whatsapp_url':          ('https://wa.me/55' + tel) if tel else '',
+        'ja_importado':          bool(_q("SELECT id FROM prospecto WHERE cnpj=%s", (cnpj_digits,), one=True)),
     }
     return emp, None
 
@@ -3781,20 +3801,32 @@ def crm_prospeccao_importar_lote():
         if apenas_consultar:
             resultados.append({'cnpj': emp['cnpj'], 'ok': True,
                                'razao_social': emp['razao_social'],
+                               'nome_fantasia': emp['nome_fantasia'],
                                'municipio': emp['municipio'],
+                               'uf': emp['uf'],
                                'porte': emp['porte'],
                                'cnae_fiscal': emp['cnae_fiscal'],
-                               'cnae_fiscal_descricao': emp['cnae_fiscal_descricao']})
+                               'cnae_fiscal_descricao': emp['cnae_fiscal_descricao'],
+                               'bairro': emp['bairro'],
+                               'email': emp['email'],
+                               'ddd_telefone_1': emp['ddd_telefone_1'],
+                               'contato_nome': emp['contato_nome'],
+                               'contato_cargo': emp['contato_cargo'],
+                               'todos_socios': emp['todos_socios'],
+                               'maps_url': emp['maps_url'],
+                               'whatsapp_url': emp['whatsapp_url']})
             continue
         endereco = ' '.join(filter(None, [emp.get('logradouro',''), emp.get('numero','')])).strip() or None
         pid = _ins("""INSERT INTO prospecto
                       (empresa_nome, cnpj, cnae_codigo, cnae_descricao, porte,
-                       cidade, bairro, endereco, telefone, email, status, responsavel_id)
-                      VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'novo',%s)""",
+                       cidade, bairro, endereco, telefone, email,
+                       contato_nome, contato_cargo, status, responsavel_id)
+                      VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'novo',%s)""",
                    (emp['razao_social'], emp['cnpj'], emp['cnae_fiscal'],
                     emp['cnae_fiscal_descricao'], emp['porte'],
                     emp['municipio'], emp['bairro'], endereco,
                     emp['ddd_telefone_1'] or None, emp['email'] or None,
+                    emp['contato_nome'] or None, emp['contato_cargo'] or None,
                     current_user.id))
         resultados.append({'cnpj': emp['cnpj'], 'ok': True, 'id': pid,
                            'razao_social': emp['razao_social'],
