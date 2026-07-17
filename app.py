@@ -4026,12 +4026,21 @@ def crm_brasilio_buscar():
     porte  = request.args.get('porte', '').strip()
     nome   = request.args.get('nome', '').strip()
 
-    # Parâmetros enviados à API (sem municipio — faremos filtro interno)
+    # Parâmetros base enviados à API
     params_api = {}
-    if uf:    params_api['uf']          = uf
-    if cnae:  params_api['cnae_fiscal'] = cnae
-    if porte: params_api['porte']       = porte
-    if nome:  params_api['search']      = nome
+    if uf:   params_api['uf']          = uf
+    if cnae: params_api['cnae_fiscal'] = cnae
+    if porte: params_api['porte']      = porte
+
+    # Quando há cidade: usa a cidade como termo de busca para orientar a API,
+    # depois filtramos internamente pelo campo municipio (correspondência exata).
+    # Quando não há cidade: usa o nome normalmente.
+    if cidade:
+        # Combina cidade + nome no search para resultados mais próximos do alvo
+        termos = ' '.join(filter(None, [nome, cidade]))
+        params_api['search'] = termos
+    elif nome:
+        params_api['search'] = nome
 
     headers = {
         'Accept': 'application/json',
@@ -4058,40 +4067,48 @@ def crm_brasilio_buscar():
             'ja_na_base':     ja,
         }
 
-    # Se há filtro de cidade: varre páginas até coletar 50 resultados ou esgotar
-    META      = 50   # resultados desejados
-    MAX_PAG   = 20   # limite de páginas varridas para não travar
-    API_URL   = 'https://brasil.io/api/v1/dataset/socios-brasil/empresas/data/'
+    API_URL = 'https://brasil.io/api/v1/dataset/socios-brasil/empresas/data/'
+
+    def _fetch_page(p):
+        try:
+            r = _http.get(API_URL, headers=headers, params=p, timeout=25)
+            return r
+        except Exception as e:
+            return None
+
+    def _check_status(r):
+        if r is None:
+            return 'timeout'
+        if r.status_code in (401, 403):
+            return 'auth'
+        if r.status_code == 429:
+            return 'rate'
+        if r.status_code != 200:
+            return 'error'
+        return 'ok'
 
     if cidade:
+        # Varre até 5 páginas (search orientado já filtra bastante)
         resultados = []
         paginas_varridas = 0
-        proxima = None
-        total_api = 0
         api_page = 1
+        MAX_PAG = 5
 
-        while len(resultados) < META and paginas_varridas < MAX_PAG:
+        while len(resultados) < 50 and paginas_varridas < MAX_PAG:
             p = dict(params_api)
             p['page'] = api_page
-            try:
-                r = _http.get(API_URL, headers=headers, params=p, timeout=30)
-            except Exception as e:
-                if not resultados:
-                    return jsonify({'erro': f'Falha na conexão com Brasil.IO: {e}'}), 502
-                break
-            if r.status_code in (401, 403):
-                if not token:
-                    return jsonify({'erro': 'O Brasil.IO requer autenticação. Configure o token em Administração → Configurações.'}), 401
-                return jsonify({'erro': 'Token inválido ou expirado. Verifique em Administração → Configurações.'}), 401
-            if r.status_code == 429:
+            r = _fetch_page(p)
+            st = _check_status(r)
+            if st == 'auth':
+                msg = 'O Brasil.IO requer autenticação. Configure o token em Administração → Configurações.' if not token else 'Token inválido ou expirado.'
+                return jsonify({'erro': msg}), 401
+            if st == 'rate':
                 return jsonify({'erro': 'Limite de requisições atingido (429). Aguarde um minuto.'}), 429
-            if r.status_code != 200:
+            if st in ('timeout', 'error'):
                 if not resultados:
-                    return jsonify({'erro': f'Brasil.IO retornou HTTP {r.status_code}.'}), 502
+                    return jsonify({'erro': 'Falha ou timeout na conexão com Brasil.IO. Tente novamente.'}), 502
                 break
             data = r.json()
-            if paginas_varridas == 0:
-                total_api = data.get('count', 0)
             paginas_varridas += 1
             for emp in data.get('results', []):
                 if _norm_mun(emp.get('municipio') or '') == cidade:
@@ -4101,29 +4118,24 @@ def crm_brasilio_buscar():
             api_page += 1
 
         return jsonify({
-            'count':           len(resultados),
-            'total_estado':    total_api,
+            'count':            len(resultados),
             'paginas_varridas': paginas_varridas,
-            'results':         resultados,
+            'results':          resultados,
         })
 
-    # Sem filtro de cidade: retorna 1 página normal
+    # Sem filtro de cidade: 1 página normal com paginação pelo front
     page = request.args.get('page', '1').strip()
     params_api['page'] = page
-    try:
-        r = _http.get(API_URL, headers=headers, params=params_api, timeout=45)
-        if r.status_code in (401, 403):
-            if not token:
-                return jsonify({'erro': 'O Brasil.IO requer autenticação. Configure o token em Administração → Configurações.'}), 401
-            return jsonify({'erro': 'Token inválido ou expirado. Verifique em Administração → Configurações.'}), 401
-        if r.status_code == 429:
-            return jsonify({'erro': 'Limite de requisições atingido (429). Aguarde um minuto.'}), 429
-        if r.status_code != 200:
-            return jsonify({'erro': f'Brasil.IO retornou HTTP {r.status_code}.'}), 502
-        data = r.json()
-    except Exception as e:
-        return jsonify({'erro': f'Falha na conexão com Brasil.IO: {e}'}), 502
-
+    r = _fetch_page(params_api)
+    st = _check_status(r)
+    if st == 'auth':
+        msg = 'O Brasil.IO requer autenticação. Configure o token em Administração → Configurações.' if not token else 'Token inválido ou expirado.'
+        return jsonify({'erro': msg}), 401
+    if st == 'rate':
+        return jsonify({'erro': 'Limite de requisições atingido (429). Aguarde um minuto.'}), 429
+    if st in ('timeout', 'error'):
+        return jsonify({'erro': 'Falha ou timeout na conexão com Brasil.IO. Tente novamente.'}), 502
+    data = r.json()
     resultados = [_processar(emp) for emp in data.get('results', [])]
     return jsonify({'count': data.get('count', 0), 'next': data.get('next'),
                     'previous': data.get('previous'), 'results': resultados})
