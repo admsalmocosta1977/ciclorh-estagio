@@ -4014,8 +4014,12 @@ def crm_prospeccao_excluir(id):
 def crm_brasilio_buscar():
     cfg   = _get_config()
     token = cfg.get('brasilio_token', '').strip() or os.environ.get('BRASILIO_TOKEN', '').strip()
+    def _norm_municipio(s):
+        s = re.sub(r'[\s\-/]+[A-Za-z]{2}$', '', s.strip().upper())
+        s = unicodedata.normalize('NFD', s)
+        return ''.join(c for c in s if unicodedata.category(c) != 'Mn').strip()
     params = {}
-    cidade = request.args.get('municipio', '').strip().upper()
+    cidade = _norm_municipio(request.args.get('municipio', ''))
     cnae   = request.args.get('cnae', '').strip()
     porte  = request.args.get('porte', '').strip()
     nome   = request.args.get('nome', '').strip()

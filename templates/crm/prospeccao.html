@@ -208,12 +208,28 @@
         O token de acesso é configurado em <a href="/admin/config" style="color:var(--brand)">Administração → Configurações</a>.
       </div>
 
+      <datalist id="bio-municipios-list"></datalist>
       <!-- Filtros -->
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px">
         <div class="fg">
-          <label>Município</label>
-          <input type="text" id="bioMunicipio" class="filter-bar select" placeholder="VITORIA DA CONQUISTA"
-                 value="VITORIA DA CONQUISTA" style="min-width:200px;text-transform:uppercase">
+          <label>UF</label>
+          <select id="bioUF" class="filter-bar select" onchange="bioCarregarMunicipios()" style="width:70px">
+            <option value="">—</option>
+            <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option>
+            <option value="AM">AM</option><option value="BA" selected>BA</option><option value="CE">CE</option>
+            <option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option>
+            <option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option>
+            <option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option>
+            <option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option>
+            <option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option>
+            <option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option>
+            <option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Município <span id="bioMunicipioLoading" style="font-size:.7rem;color:var(--ink-3)"></span></label>
+          <input type="text" id="bioMunicipio" list="bio-municipios-list" class="filter-bar select"
+                 placeholder="Digite para filtrar..." style="min-width:200px">
         </div>
         <div class="fg">
           <label>CNAE (código)</label>
@@ -525,6 +541,29 @@ function trocarTab(n) {
 /* ── Brasil.IO ── */
 var _bioPaginaAtual = 1;
 var _bioLista = [];
+
+function bioCarregarMunicipios() {
+  var uf = document.getElementById('bioUF').value;
+  var dl = document.getElementById('bio-municipios-list');
+  var lbl = document.getElementById('bioMunicipioLoading');
+  dl.innerHTML = '';
+  document.getElementById('bioMunicipio').value = '';
+  if (!uf) return;
+  lbl.textContent = '(carregando…)';
+  fetch('https://brasilapi.com.br/api/ibge/municipios/v1/' + uf)
+    .then(function(r){ return r.json(); })
+    .then(function(lista){
+      lista.forEach(function(m){
+        var opt = document.createElement('option');
+        opt.value = m.nome;
+        dl.appendChild(opt);
+      });
+      lbl.textContent = '(' + lista.length + ' municípios)';
+    })
+    .catch(function(){ lbl.textContent = '(erro ao carregar)'; });
+}
+// Carrega BA na inicialização
+window.addEventListener('DOMContentLoaded', function(){ bioCarregarMunicipios(); });
 
 function bioBuscar(pagina) {
   var btn  = document.getElementById('bioBuscarBtn');
