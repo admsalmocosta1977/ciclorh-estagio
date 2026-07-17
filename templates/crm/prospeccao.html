@@ -581,7 +581,8 @@ function bioBuscar(pagina) {
   pag.innerHTML = '';
 
   var params = new URLSearchParams({
-    municipio: document.getElementById('bioMunicipio').value.trim().toUpperCase(),
+    uf:        document.getElementById('bioUF').value,
+    municipio: document.getElementById('bioMunicipio').value.trim(),
     cnae:      document.getElementById('bioCnae').value.trim(),
     porte:     document.getElementById('bioPorte').value,
     nome:      document.getElementById('bioNome').value.trim(),

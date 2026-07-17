@@ -4019,17 +4019,17 @@ def crm_brasilio_buscar():
         s = unicodedata.normalize('NFD', s)
         return ''.join(c for c in s if unicodedata.category(c) != 'Mn').strip()
     params = {}
+    uf     = request.args.get('uf', '').strip().upper()
     cidade = _norm_municipio(request.args.get('municipio', ''))
     cnae   = request.args.get('cnae', '').strip()
     porte  = request.args.get('porte', '').strip()
     nome   = request.args.get('nome', '').strip()
     page   = request.args.get('page', '1').strip()
-    situacao = request.args.get('situacao', 'ATIVA').strip()
-    if cidade:   params['municipio']  = cidade
-    if cnae:     params['cnae_fiscal'] = cnae
-    if porte:    params['porte']      = porte
-    if nome:     params['search']     = nome
-    if situacao: params['situacao']   = situacao
+    if uf:     params['uf']          = uf
+    if cidade: params['municipio']   = cidade
+    if cnae:   params['cnae_fiscal'] = cnae
+    if porte:  params['porte']       = porte
+    if nome:   params['search']      = nome
     params['page'] = page
     headers = {
         'Accept': 'application/json',
