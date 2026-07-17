@@ -1,4 +1,5 @@
-import os, io, json, re, psycopg2, psycopg2.extras, smtplib, calendar, unicodedata
+import os, io, json, re, csv, zipfile, threading, tempfile
+import psycopg2, psycopg2.extras, smtplib, calendar, unicodedata
 import openpyxl
 import requests as _http
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -113,6 +114,8 @@ SEGMENTO_COR = {
     'Jurídico / Contábil': '#4338CA', 'Setor Público': '#0369A1',
     'Financeiro': '#0F766E', 'Logística': '#C2410C', 'Outro': '#9CA3AF',
 }
+
+RFB_BASE = 'https://dadosabertos.rfb.gov.br/CNPJ/'
 
 
 class User(UserMixin):
@@ -3966,6 +3969,198 @@ def crm_prospeccao_converter(id):
          (lead_id, id))
     flash(f'"{p["empresa_nome"]}" convertido em lead no CRM!', 'success')
     return redirect(url_for('crm_lead_detalhe', id=lead_id))
+
+
+# ─── RFB — IMPORTAÇÃO EM MASSA ────────────────────────────────────────────────
+
+def _rfb_set_progress(conn, msg, count=None):
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO config (chave,valor) VALUES ('rfb_status',%s)"
+            " ON CONFLICT (chave) DO UPDATE SET valor=%s", (msg, msg))
+        if count is not None:
+            cur.execute(
+                "INSERT INTO config (chave,valor) VALUES ('rfb_count',%s)"
+                " ON CONFLICT (chave) DO UPDATE SET valor=%s", (str(count), str(count)))
+
+
+def _rfb_import_worker(municipio_alvo, responsavel_id):
+    db_url = DATABASE_URL
+    if db_url.startswith('postgres://'):
+        db_url = db_url.replace('postgres://', 'postgresql://', 1)
+    conn = psycopg2.connect(db_url, cursor_factory=psycopg2.extras.RealDictCursor)
+    conn.autocommit = True
+
+    def progress(msg, count=None):
+        _rfb_set_progress(conn, msg, count)
+
+    try:
+        progress('Baixando tabela de municípios (Municipios.zip)…')
+        r = _http.get(RFB_BASE + 'Municipios.zip', timeout=90,
+                      headers={'User-Agent': 'Mozilla/5.0'})
+        r.raise_for_status()
+        mun_code = None
+        with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+            with z.open(z.namelist()[0]) as f:
+                for row in csv.reader(io.TextIOWrapper(f, encoding='latin-1'), delimiter=';'):
+                    if len(row) >= 2 and _norm_municipio(row[1].strip()) == _norm_municipio(municipio_alvo):
+                        mun_code = row[0].strip()
+                        break
+        if not mun_code:
+            progress(f'❌ Município "{municipio_alvo}" não encontrado na tabela RFB.')
+            return
+
+        progress(f'Município encontrado (código RFB {mun_code}). Baixando CNAEs…')
+        cnae_desc_map = {}
+        r = _http.get(RFB_BASE + 'Cnaes.zip', timeout=90,
+                      headers={'User-Agent': 'Mozilla/5.0'})
+        r.raise_for_status()
+        with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+            with z.open(z.namelist()[0]) as f:
+                for row in csv.reader(io.TextIOWrapper(f, encoding='latin-1'), delimiter=';'):
+                    if len(row) >= 2:
+                        cnae_desc_map[row[0].strip()] = row[1].strip().title()
+
+        progress(f'CNAEs carregados ({len(cnae_desc_map)}). Varrendo estabelecimentos…')
+        estab = {}
+        for i in range(10):
+            url = f'{RFB_BASE}Estabelecimentos{i}.zip'
+            progress(f'Estabelecimentos {i+1}/10 — baixando…')
+            tmp_path = None
+            try:
+                tmp = tempfile.NamedTemporaryFile(suffix='.zip', delete=False)
+                tmp_path = tmp.name
+                r = _http.get(url, stream=True, timeout=600,
+                              headers={'User-Agent': 'Mozilla/5.0'})
+                if r.status_code == 404:
+                    tmp.close(); os.unlink(tmp_path); tmp_path = None; continue
+                r.raise_for_status()
+                for chunk in r.iter_content(chunk_size=131072):
+                    tmp.write(chunk)
+                tmp.close()
+                with zipfile.ZipFile(tmp_path) as z:
+                    with z.open(z.namelist()[0]) as f:
+                        for row in csv.reader(io.TextIOWrapper(f, encoding='latin-1'), delimiter=';'):
+                            if len(row) < 22:
+                                continue
+                            if row[5].strip() == '02' and row[20].strip() == mun_code:
+                                cb = row[0].strip()
+                                tel = (row[21].strip() + row[22].strip()).strip() or None
+                                estab[cb] = {
+                                    'cnpj': cb + row[1].strip() + row[2].strip(),
+                                    'nome_fantasia': row[4].strip().title(),
+                                    'cnae': row[11].strip(),
+                                    'endereco': ' '.join(
+                                        x for x in [row[13].strip(), row[14].strip(), row[15].strip()] if x
+                                    ).title(),
+                                    'bairro': row[17].strip().title(),
+                                    'telefone': tel,
+                                    'email': row[27].strip().lower() or None,
+                                }
+            except Exception as e:
+                progress(f'Erro no arquivo Estabelecimentos{i}: {str(e)[:120]}')
+            finally:
+                if tmp_path and os.path.exists(tmp_path):
+                    try:
+                        os.unlink(tmp_path)
+                    except Exception:
+                        pass
+
+        total_estab = len(estab)
+        if total_estab == 0:
+            progress('❌ Nenhuma empresa ativa encontrada para esse município.')
+            return
+
+        progress(f'{total_estab} empresas ativas. Buscando razões sociais…')
+        cnpj_basicos = set(estab.keys())
+        for i in range(10):
+            url = f'{RFB_BASE}Empresas{i}.zip'
+            progress(f'Empresas {i+1}/10 — baixando…')
+            tmp_path = None
+            try:
+                tmp = tempfile.NamedTemporaryFile(suffix='.zip', delete=False)
+                tmp_path = tmp.name
+                r = _http.get(url, stream=True, timeout=600,
+                              headers={'User-Agent': 'Mozilla/5.0'})
+                if r.status_code == 404:
+                    tmp.close(); os.unlink(tmp_path); tmp_path = None; continue
+                r.raise_for_status()
+                for chunk in r.iter_content(chunk_size=131072):
+                    tmp.write(chunk)
+                tmp.close()
+                with zipfile.ZipFile(tmp_path) as z:
+                    with z.open(z.namelist()[0]) as f:
+                        for row in csv.reader(io.TextIOWrapper(f, encoding='latin-1'), delimiter=';'):
+                            if len(row) >= 6 and row[0].strip() in cnpj_basicos:
+                                porte_map = {'01': 'ME', '02': 'ME', '03': 'EPP', '05': 'Grande'}
+                                estab[row[0].strip()]['razao_social'] = row[1].strip().title()
+                                estab[row[0].strip()]['porte'] = porte_map.get(row[5].strip(), '')
+            except Exception as e:
+                progress(f'Erro no arquivo Empresas{i}: {str(e)[:120]}')
+            finally:
+                if tmp_path and os.path.exists(tmp_path):
+                    try:
+                        os.unlink(tmp_path)
+                    except Exception:
+                        pass
+
+        progress(f'Importando {total_estab} empresas para o banco de dados…')
+        city_title = municipio_alvo.strip().title()
+        inserted = skipped = 0
+        with conn.cursor() as cur:
+            for cb, e in estab.items():
+                cnpj = e.get('cnpj', '')
+                if len(cnpj) != 14:
+                    continue
+                cur.execute("SELECT id FROM prospecto WHERE cnpj=%s", (cnpj,))
+                if cur.fetchone():
+                    skipped += 1
+                    continue
+                nome = e.get('razao_social') or e.get('nome_fantasia') or 'Sem Nome'
+                cnae_cod = e.get('cnae', '')
+                cur.execute(
+                    """INSERT INTO prospecto
+                       (empresa_nome, cnpj, cnae_codigo, cnae_descricao, porte,
+                        cidade, bairro, endereco, telefone, email, status, responsavel_id)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'novo',%s)""",
+                    (nome, cnpj, cnae_cod, cnae_desc_map.get(cnae_cod, ''),
+                     e.get('porte', ''), city_title, e.get('bairro', ''),
+                     e.get('endereco', ''), e.get('telefone'), e.get('email'),
+                     responsavel_id))
+                inserted += 1
+                if inserted % 500 == 0:
+                    progress(f'Importando… {inserted}/{total_estab}', inserted)
+
+        progress(f'✅ Concluído! {inserted} importadas · {skipped} já existentes — {city_title}.', inserted)
+    except Exception as e:
+        progress(f'❌ Erro crítico: {str(e)[:300]}')
+    finally:
+        conn.close()
+
+
+@app.route('/admin/rfb-import', methods=['GET', 'POST'])
+@admin_required
+def admin_rfb_import():
+    if request.method == 'POST':
+        municipio = request.form.get('municipio', 'VITORIA DA CONQUISTA').strip().upper()
+        _run("INSERT INTO config (chave,valor) VALUES ('rfb_status','Iniciando importação…')"
+             " ON CONFLICT (chave) DO UPDATE SET valor='Iniciando importação…'")
+        _run("INSERT INTO config (chave,valor) VALUES ('rfb_count','0')"
+             " ON CONFLICT (chave) DO UPDATE SET valor='0'")
+        t = threading.Thread(target=_rfb_import_worker,
+                             args=(municipio, int(current_user.id)), daemon=True)
+        t.start()
+        flash('Importação iniciada em segundo plano. Esta página se atualiza automaticamente.', 'info')
+        return redirect(url_for('admin_rfb_import'))
+
+    status_row = _q("SELECT valor FROM config WHERE chave='rfb_status'", one=True)
+    count_row = _q("SELECT valor FROM config WHERE chave='rfb_count'", one=True)
+    status_msg = status_row['valor'] if status_row else None
+    rfb_count = int(count_row['valor']) if count_row and count_row['valor'] else 0
+    concluido = status_msg and ('✅' in status_msg or '❌' in status_msg)
+    return render_template('admin/rfb_import.html',
+                           status_msg=status_msg, rfb_count=rfb_count,
+                           concluido=concluido)
 
 
 init_db()
