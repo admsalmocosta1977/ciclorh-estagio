@@ -598,29 +598,26 @@ function bioBuscar(pagina) {
       info.innerHTML = '<span style="color:#991B1B"><i class="bi bi-exclamation-triangle-fill"></i> ' + d.erro + '</span>';
       return;
     }
-    var todosDaApi = d.results || [];
-    var total = d.count || 0;
-
-    // Filtro local por município (a API não filtra por cidade, fazemos aqui)
-    var filtroMun = document.getElementById('bioMunicipio').value.trim();
-    function _normStr(s) {
-      return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().trim();
-    }
-    if (filtroMun) {
-      var munNorm = _normStr(filtroMun);
-      _bioLista = todosDaApi.filter(function(e){ return _normStr(e.municipio).indexOf(munNorm) !== -1; });
-    } else {
-      _bioLista = todosDaApi;
-    }
-
+    _bioLista = d.results || [];
     var novas = _bioLista.filter(function(e){ return !e.ja_na_base; });
-    var munInfo = filtroMun ? ' · <span style="color:#1565C0"><i class="bi bi-funnel-fill"></i> ' + _bioLista.length + ' em <strong>' + filtroMun + '</strong></span>' : '';
-    info.innerHTML =
-      '<strong>' + total + '</strong> no estado · página ' + _bioPaginaAtual + munInfo
-      + (novas.length < _bioLista.length ? ' · <span style="color:var(--ink-3)">' + (_bioLista.length - novas.length) + ' já na base</span>' : '');
+    var filtroMun = document.getElementById('bioMunicipio').value.trim();
+
+    if (filtroMun) {
+      // Modo cidade: backend varreu páginas e já filtrou
+      var pags = d.paginas_varridas ? ' · ' + d.paginas_varridas + ' pág. varridas' : '';
+      info.innerHTML =
+        '<i class="bi bi-funnel-fill" style="color:#1565C0"></i> '
+        + '<strong>' + _bioLista.length + '</strong> empresa' + (_bioLista.length !== 1 ? 's' : '') + ' em <strong>' + filtroMun + '</strong>'
+        + pags
+        + (novas.length < _bioLista.length ? ' · <span style="color:var(--ink-3)">' + (_bioLista.length - novas.length) + ' já na base</span>' : '');
+    } else {
+      info.innerHTML =
+        '<strong>' + (d.count || 0) + '</strong> no estado · página ' + _bioPaginaAtual
+        + (novas.length < _bioLista.length ? ' · <span style="color:var(--ink-3)">' + (_bioLista.length - novas.length) + ' já na base</span>' : '');
+    }
 
     if (!_bioLista.length) {
-      res.innerHTML = '<div style="text-align:center;padding:32px;color:var(--ink-4);font-size:.82rem">Nenhuma empresa de <strong>' + (filtroMun||'?') + '</strong> nesta página. Tente avançar a página ou refinar pelo nome.</div>';
+      res.innerHTML = '<div style="text-align:center;padding:32px;color:var(--ink-4);font-size:.82rem">Nenhuma empresa encontrada' + (filtroMun ? ' em <strong>' + filtroMun + '</strong>' : '') + '.</div>';
       return;
     }
 

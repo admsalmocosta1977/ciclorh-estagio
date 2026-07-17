@@ -4014,63 +4014,117 @@ def crm_prospeccao_excluir(id):
 def crm_brasilio_buscar():
     cfg   = _get_config()
     token = cfg.get('brasilio_token', '').strip() or os.environ.get('BRASILIO_TOKEN', '').strip()
-    def _norm_municipio(s):
-        s = re.sub(r'[\s\-/]+[A-Za-z]{2}$', '', s.strip().upper())
+
+    def _norm_mun(s):
+        s = re.sub(r'[\s\-/]+[A-Za-z]{2}$', '', (s or '').strip().upper())
         s = unicodedata.normalize('NFD', s)
         return ''.join(c for c in s if unicodedata.category(c) != 'Mn').strip()
-    params = {}
+
     uf     = request.args.get('uf', '').strip().upper()
-    cidade = _norm_municipio(request.args.get('municipio', ''))
+    cidade = _norm_mun(request.args.get('municipio', ''))
     cnae   = request.args.get('cnae', '').strip()
     porte  = request.args.get('porte', '').strip()
     nome   = request.args.get('nome', '').strip()
-    page   = request.args.get('page', '1').strip()
-    if uf:     params['uf']          = uf
-    if cidade: params['municipio']   = cidade
-    if cnae:   params['cnae_fiscal'] = cnae
-    if porte:  params['porte']       = porte
-    if nome:   params['search']      = nome
-    params['page'] = page
+
+    # Parâmetros enviados à API (sem municipio — faremos filtro interno)
+    params_api = {}
+    if uf:    params_api['uf']          = uf
+    if cnae:  params_api['cnae_fiscal'] = cnae
+    if porte: params_api['porte']       = porte
+    if nome:  params_api['search']      = nome
+
     headers = {
         'Accept': 'application/json',
         'User-Agent': 'CicloRH-CRM/1.0 (contact: adm.salmocosta@gmail.com)',
     }
     if token:
         headers['Authorization'] = f'Token {token}'
+
+    def _processar(emp):
+        cnpj_d = re.sub(r'\D', '', emp.get('cnpj') or '')
+        ja = bool(_q("SELECT id FROM prospecto WHERE cnpj=%s", (cnpj_d,), one=True))
+        return {
+            'cnpj':           cnpj_d,
+            'razao_social':   (emp.get('razao_social') or '').title(),
+            'nome_fantasia':  (emp.get('nome_fantasia') or '').title(),
+            'cnae_codigo':    emp.get('cnae_fiscal') or '',
+            'cnae_descricao': emp.get('cnae_fiscal_descricao') or '',
+            'porte':          emp.get('porte') or '',
+            'municipio':      (emp.get('municipio') or '').title(),
+            'uf':             emp.get('uf') or '',
+            'bairro':         (emp.get('bairro') or '').title(),
+            'email':          (emp.get('email') or '').lower(),
+            'telefone':       re.sub(r'\D', '', (emp.get('telefone1') or '')),
+            'ja_na_base':     ja,
+        }
+
+    # Se há filtro de cidade: varre páginas até coletar 50 resultados ou esgotar
+    META      = 50   # resultados desejados
+    MAX_PAG   = 20   # limite de páginas varridas para não travar
+    API_URL   = 'https://brasil.io/api/v1/dataset/socios-brasil/empresas/data/'
+
+    if cidade:
+        resultados = []
+        paginas_varridas = 0
+        proxima = None
+        total_api = 0
+        api_page = 1
+
+        while len(resultados) < META and paginas_varridas < MAX_PAG:
+            p = dict(params_api)
+            p['page'] = api_page
+            try:
+                r = _http.get(API_URL, headers=headers, params=p, timeout=30)
+            except Exception as e:
+                if not resultados:
+                    return jsonify({'erro': f'Falha na conexão com Brasil.IO: {e}'}), 502
+                break
+            if r.status_code in (401, 403):
+                if not token:
+                    return jsonify({'erro': 'O Brasil.IO requer autenticação. Configure o token em Administração → Configurações.'}), 401
+                return jsonify({'erro': 'Token inválido ou expirado. Verifique em Administração → Configurações.'}), 401
+            if r.status_code == 429:
+                return jsonify({'erro': 'Limite de requisições atingido (429). Aguarde um minuto.'}), 429
+            if r.status_code != 200:
+                if not resultados:
+                    return jsonify({'erro': f'Brasil.IO retornou HTTP {r.status_code}.'}), 502
+                break
+            data = r.json()
+            if paginas_varridas == 0:
+                total_api = data.get('count', 0)
+            paginas_varridas += 1
+            for emp in data.get('results', []):
+                if _norm_mun(emp.get('municipio') or '') == cidade:
+                    resultados.append(_processar(emp))
+            if not data.get('next'):
+                break
+            api_page += 1
+
+        return jsonify({
+            'count':           len(resultados),
+            'total_estado':    total_api,
+            'paginas_varridas': paginas_varridas,
+            'results':         resultados,
+        })
+
+    # Sem filtro de cidade: retorna 1 página normal
+    page = request.args.get('page', '1').strip()
+    params_api['page'] = page
     try:
-        r = _http.get(
-            'https://brasil.io/api/v1/dataset/socios-brasil/empresas/data/',
-            headers=headers, params=params, timeout=45)
+        r = _http.get(API_URL, headers=headers, params=params_api, timeout=45)
         if r.status_code in (401, 403):
             if not token:
-                return jsonify({'erro': 'O Brasil.IO requer autenticação. Crie uma conta gratuita em brasil.io, gere um token e configure em Administração → Configurações.'}), 401
+                return jsonify({'erro': 'O Brasil.IO requer autenticação. Configure o token em Administração → Configurações.'}), 401
             return jsonify({'erro': 'Token inválido ou expirado. Verifique em Administração → Configurações.'}), 401
         if r.status_code == 429:
-            return jsonify({'erro': 'Limite de requisições atingido (429). Aguarde um minuto ou configure um token em Administração → Configurações.'}), 429
+            return jsonify({'erro': 'Limite de requisições atingido (429). Aguarde um minuto.'}), 429
         if r.status_code != 200:
             return jsonify({'erro': f'Brasil.IO retornou HTTP {r.status_code}.'}), 502
         data = r.json()
     except Exception as e:
         return jsonify({'erro': f'Falha na conexão com Brasil.IO: {e}'}), 502
-    # Marca quais CNPJs já estão na base
-    resultados = []
-    for emp in data.get('results', []):
-        cnpj_d = re.sub(r'\D', '', emp.get('cnpj') or '')
-        ja = bool(_q("SELECT id FROM prospecto WHERE cnpj=%s", (cnpj_d,), one=True))
-        resultados.append({
-            'cnpj':             cnpj_d,
-            'razao_social':     (emp.get('razao_social') or '').title(),
-            'nome_fantasia':    (emp.get('nome_fantasia') or '').title(),
-            'cnae_codigo':      emp.get('cnae_fiscal') or '',
-            'cnae_descricao':   emp.get('cnae_fiscal_descricao') or '',
-            'porte':            emp.get('porte') or '',
-            'municipio':        (emp.get('municipio') or '').title(),
-            'uf':               emp.get('uf') or '',
-            'bairro':           (emp.get('bairro') or '').title(),
-            'email':            (emp.get('email') or '').lower(),
-            'telefone':         re.sub(r'\D', '', (emp.get('telefone1') or '')),
-            'ja_na_base':       ja,
-        })
+
+    resultados = [_processar(emp) for emp in data.get('results', [])]
     return jsonify({'count': data.get('count', 0), 'next': data.get('next'),
                     'previous': data.get('previous'), 'results': resultados})
 
