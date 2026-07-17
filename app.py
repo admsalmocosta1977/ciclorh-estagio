@@ -4032,7 +4032,7 @@ def crm_brasilio_buscar():
         headers['Authorization'] = f'Token {token}'
     try:
         r = _http.get(
-            'https://brasil.io/api/dataset/socios-brasil/empresas/data/',
+            'https://brasil.io/api/v1/dataset/socios-brasil/empresas/data/',
             headers=headers, params=params, timeout=20)
         if r.status_code == 401:
             return jsonify({'erro': 'Token inválido ou expirado. Verifique em Administração → Configurações.'}), 401
