@@ -3751,6 +3751,48 @@ def _lookup_cnpj(cnpj_raw):
     return emp, None
 
 
+@app.route('/crm/prospeccao/importar-csv', methods=['POST'])
+@crm_required
+def crm_prospeccao_importar_csv():
+    arq = request.files.get('csv_file')
+    if not arq or not arq.filename.lower().endswith('.csv'):
+        flash('Selecione um arquivo .csv válido.', 'danger')
+        return redirect(url_for('crm_prospeccao'))
+    try:
+        conteudo = arq.read().decode('utf-8-sig', errors='replace')
+        reader = csv.DictReader(io.StringIO(conteudo))
+        inseridos = ignorados = erros = 0
+        for row in reader:
+            cnpj = re.sub(r'\D', '', row.get('cnpj', ''))
+            if len(cnpj) != 14:
+                erros += 1
+                continue
+            existe = _q("SELECT id FROM prospecto WHERE cnpj=%s", (cnpj,), one=True)
+            if existe:
+                ignorados += 1
+                continue
+            nome = (row.get('empresa_nome') or '').strip() or 'Sem Nome'
+            _run("""INSERT INTO prospecto
+                    (empresa_nome, cnpj, cnae_codigo, cnae_descricao, porte,
+                     cidade, bairro, endereco, telefone, email, status, responsavel_id)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'novo',%s)""",
+                 (nome, cnpj,
+                  (row.get('cnae_codigo') or '').strip(),
+                  (row.get('cnae_descricao') or '').strip(),
+                  (row.get('porte') or '').strip(),
+                  (row.get('cidade') or 'Vitória da Conquista').strip(),
+                  (row.get('bairro') or '').strip(),
+                  (row.get('endereco') or '').strip(),
+                  (row.get('telefone') or '').strip() or None,
+                  (row.get('email') or '').strip().lower() or None,
+                  int(current_user.id)))
+            inseridos += 1
+        flash(f'CSV importado: {inseridos} inseridas · {ignorados} já existentes · {erros} inválidas.', 'success')
+    except Exception as e:
+        flash(f'Erro ao processar CSV: {str(e)[:200]}', 'danger')
+    return redirect(url_for('crm_prospeccao'))
+
+
 @app.route('/crm/prospeccao/lookup-cnpj')
 @crm_required
 def crm_prospeccao_lookup_cnpj():
