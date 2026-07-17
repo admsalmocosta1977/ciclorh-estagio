@@ -111,35 +111,111 @@
 <div class="section-card mb-3" id="rfbPanel">
   <div class="section-header" style="cursor:pointer" onclick="toggleRFB()">
     <i class="bi bi-bank fs-5" style="color:var(--brand)"></i>
-    Buscar empresas na Receita Federal
-    <span style="font-size:.72rem;font-weight:500;color:var(--ink-3);margin-left:6px">— cadastro público CNPJ via Casa dos Dados · sem necessidade de token</span>
+    Consultar e importar dados da Receita Federal
+    <span style="font-size:.72rem;font-weight:500;color:var(--ink-3);margin-left:6px">— enriquecimento via BrasilAPI · gratuito · sem token</span>
     <i class="bi bi-chevron-down ms-auto" id="rfbChev" style="transition:.2s"></i>
   </div>
   <div id="rfbBody" style="display:none">
-    <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
-      <div class="fg">
-        <label>Município</label>
-        <input type="text" id="rfbMun" class="filter-bar select" value="Vitória da Conquista" style="min-width:220px">
+
+    <!-- Abas -->
+    <div style="display:flex;border-bottom:1px solid var(--border);padding:0 18px">
+      <button class="rfb-tab active" id="tab1" onclick="trocarTab(1)" style="padding:10px 16px;font-size:.8rem;font-weight:700;border:none;border-bottom:2px solid var(--brand);background:none;color:var(--brand);cursor:pointer;margin-bottom:-1px">
+        <i class="bi bi-upc-scan me-1"></i>Buscar por CNPJ
+      </button>
+      <button class="rfb-tab" id="tab2" onclick="trocarTab(2)" style="padding:10px 16px;font-size:.8rem;font-weight:700;border:none;border-bottom:2px solid transparent;background:none;color:var(--ink-3);cursor:pointer;margin-bottom:-1px">
+        <i class="bi bi-list-ol me-1"></i>Importar em lote
+      </button>
+      <button class="rfb-tab" id="tab3" onclick="trocarTab(3)" style="padding:10px 16px;font-size:.8rem;font-weight:700;border:none;border-bottom:2px solid transparent;background:none;color:var(--ink-3);cursor:pointer;margin-bottom:-1px">
+        <i class="bi bi-box-arrow-up-right me-1"></i>Buscar no site externo
+      </button>
+    </div>
+
+    <!-- Tab 1: Buscar por CNPJ único -->
+    <div id="rfbTab1" style="padding:16px 18px">
+      <p style="font-size:.8rem;color:var(--ink-3);margin-bottom:12px">
+        Cole ou digite um CNPJ — o sistema busca automaticamente o nome, endereço, CNAE, porte e contato diretamente na Receita Federal.
+      </p>
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div class="fg">
+          <label>CNPJ</label>
+          <input type="text" id="cnpjInput" class="filter-bar select" placeholder="00.000.000/0001-00" style="min-width:220px;font-family:monospace">
+        </div>
+        <div class="fg" style="justify-content:flex-end">
+          <label>&nbsp;</label>
+          <button class="btn-action primary" onclick="buscarCNPJ()" id="cnpjBtn">
+            <i class="bi bi-search"></i>Consultar CNPJ
+          </button>
+        </div>
       </div>
-      <div class="fg">
-        <label>Segmento / CNAE</label>
-        <select id="rfbCnae" class="filter-bar select">
-          <option value="">Todos os segmentos</option>
-          {% for label, code in cnae_grupos %}
-          <option value="{{ code }}">{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="fg" style="justify-content:flex-end">
-        <label>&nbsp;</label>
-        <button class="btn-action primary" onclick="buscarRFB(1)" id="rfbBtn">
-          <i class="bi bi-search"></i>Consultar Receita Federal
+      <div id="cnpjResultado" style="margin-top:14px"></div>
+    </div>
+
+    <!-- Tab 2: Importar em lote -->
+    <div id="rfbTab2" style="padding:16px 18px;display:none">
+      <p style="font-size:.8rem;color:var(--ink-3);margin-bottom:12px">
+        Cole uma lista de CNPJs (um por linha). O sistema consulta cada um na Receita Federal e importa automaticamente. Limite: 50 CNPJs por vez.
+      </p>
+      <textarea id="cnpjLote" class="filter-bar select" rows="6"
+        style="width:100%;font-family:monospace;font-size:.8rem;resize:vertical"
+        placeholder="11.222.333/0001-44&#10;55.666.777/0001-88&#10;99.000.111/0001-22"></textarea>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+        <button class="btn-action primary" onclick="importarLote()" id="loteBtn">
+          <i class="bi bi-cloud-download"></i>Importar CNPJs
         </button>
+        <span id="loteStatus" style="font-size:.78rem;color:var(--ink-3)"></span>
+      </div>
+      <div id="loteResultado" style="margin-top:14px"></div>
+    </div>
+
+    <!-- Tab 3: Links externos -->
+    <div id="rfbTab3" style="padding:16px 18px;display:none">
+      <p style="font-size:.8rem;color:var(--ink-3);margin-bottom:16px">
+        Pesquise por segmento, CNAE e cidade nesses sites, copie os CNPJs encontrados e use a aba <strong>Importar em lote</strong> para trazer para o sistema.
+      </p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+        <a href="https://casadosdados.com.br/solucao/cnpj?municipio=VITORIA+DA+CONQUISTA&estado=BA&situacao_cadastral=Ativa" target="_blank"
+           style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border-md);text-decoration:none;background:var(--canvas);transition:.15s"
+           onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--border-md)'">
+          <i class="bi bi-building-fill-check" style="font-size:1.4rem;color:var(--brand)"></i>
+          <div>
+            <div style="font-size:.84rem;font-weight:700;color:var(--ink)">Casa dos Dados</div>
+            <div style="font-size:.71rem;color:var(--ink-3)">Pesquisa por CNAE, porte e cidade — copie os CNPJs</div>
+          </div>
+          <i class="bi bi-box-arrow-up-right ms-auto" style="color:var(--ink-4);font-size:.8rem"></i>
+        </a>
+        <a href="https://cnpj.ws/cnpj/pesquisa" target="_blank"
+           style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border-md);text-decoration:none;background:var(--canvas);transition:.15s"
+           onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--border-md)'">
+          <i class="bi bi-search" style="font-size:1.4rem;color:#7C3AED"></i>
+          <div>
+            <div style="font-size:.84rem;font-weight:700;color:var(--ink)">CNPJ.ws</div>
+            <div style="font-size:.71rem;color:var(--ink-3)">Busca por nome, atividade e município</div>
+          </div>
+          <i class="bi bi-box-arrow-up-right ms-auto" style="color:var(--ink-4);font-size:.8rem"></i>
+        </a>
+        <a href="https://brasil.io/dataset/socios-brasil/empresas/" target="_blank"
+           style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border-md);text-decoration:none;background:var(--canvas);transition:.15s"
+           onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--border-md)'">
+          <i class="bi bi-database" style="font-size:1.4rem;color:#059669"></i>
+          <div>
+            <div style="font-size:.84rem;font-weight:700;color:var(--ink)">Brasil.io</div>
+            <div style="font-size:.71rem;color:var(--ink-3)">Base completa da RFB — filtro por CNAE e município</div>
+          </div>
+          <i class="bi bi-box-arrow-up-right ms-auto" style="color:var(--ink-4);font-size:.8rem"></i>
+        </a>
+        <a href="https://minhareceita.org" target="_blank"
+           style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border-md);text-decoration:none;background:var(--canvas);transition:.15s"
+           onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--border-md)'">
+          <i class="bi bi-receipt" style="font-size:1.4rem;color:#D97706"></i>
+          <div>
+            <div style="font-size:.84rem;font-weight:700;color:var(--ink)">Minha Receita</div>
+            <div style="font-size:.71rem;color:var(--ink-3)">Dados oficiais da RFB — consulta individual de CNPJ</div>
+          </div>
+          <i class="bi bi-box-arrow-up-right ms-auto" style="color:var(--ink-4);font-size:.8rem"></i>
+        </a>
       </div>
     </div>
 
-    <!-- Resultados RFB -->
-    <div id="rfbResultados" style="padding:0 18px 14px"></div>
   </div>
 </div>
 
@@ -379,10 +455,8 @@
   }
 })();
 
-/* ── Busca Receita Federal (Brasil.io) ── */
+/* ── Painel RFB — tabs e funções ── */
 var _rfbAberta = false;
-var _rfbPaginaAtual = 1;
-var _rfbTotal = 0;
 
 function toggleRFB() {
   var body = document.getElementById('rfbBody');
@@ -392,152 +466,146 @@ function toggleRFB() {
   chev.style.transform = _rfbAberta ? 'rotate(180deg)' : '';
 }
 
-function buscarRFB(pagina) {
-  var mun   = document.getElementById('rfbMun').value.trim();
-  var cnae  = document.getElementById('rfbCnae').value;
-  var btn   = document.getElementById('rfbBtn');
-  var box   = document.getElementById('rfbResultados');
-  if (!mun) { alert('Informe o município.'); return; }
+function trocarTab(n) {
+  [1,2,3].forEach(function(i) {
+    var tab = document.getElementById('tab'+i);
+    var pnl = document.getElementById('rfbTab'+i);
+    var ativo = i === n;
+    pnl.style.display = ativo ? 'block' : 'none';
+    tab.style.borderBottomColor = ativo ? 'var(--brand)' : 'transparent';
+    tab.style.color = ativo ? 'var(--brand)' : 'var(--ink-3)';
+  });
+}
+
+/* ── Card de empresa (reaproveitado por ambas as abas) ── */
+function _cardEmp(emp) {
+  var cnpjFmt = (emp.cnpj||'').replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+  var telFmt  = (emp.ddd_telefone_1||'').replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3');
+  var porteCor= {MEI:'#EEF2FF',ME:'#D1FAE5',EPP:'#FEF3C7',Médio:'#E0F2FE',Grande:'#FCE7F3'}[emp.porte]||'#F1F5F9';
+  var porteTxt= {MEI:'#4338CA',ME:'#065F46',EPP:'#92400E',Médio:'#0369A1',Grande:'#9D174D'}[emp.porte]||'#374151';
+
+  var h = '<div style="background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);'
+        +   'padding:14px 16px;position:relative" id="card_'+emp.cnpj+'">';
+  if (emp.ja_importado) {
+    h += '<span style="position:absolute;top:10px;right:10px;background:#D1FAE5;color:#065F46;border-radius:20px;padding:2px 8px;font-size:.67rem;font-weight:700">✓ Importado</span>';
+  }
+  h += '<div style="font-size:.88rem;font-weight:700;color:var(--ink);padding-right:'+(emp.ja_importado?'80px':'0')+'">'+(emp.razao_social||'')+'</div>';
+  if (emp.nome_fantasia && emp.nome_fantasia !== emp.razao_social)
+    h += '<div style="font-size:.72rem;color:var(--ink-3);margin-top:1px">'+emp.nome_fantasia+'</div>';
+  h += '<div style="font-size:.69rem;color:var(--ink-4);margin-top:4px;font-family:monospace">'+cnpjFmt+'</div>';
+  h += '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px">';
+  if (emp.porte) h += '<span style="background:'+porteCor+';color:'+porteTxt+';border-radius:4px;padding:2px 7px;font-size:.67rem;font-weight:700">'+emp.porte+'</span>';
+  if (emp.cnae_fiscal) h += '<span style="background:var(--canvas);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:.67rem;color:var(--ink-3)">'+emp.cnae_fiscal+(emp.cnae_fiscal_descricao?' — '+emp.cnae_fiscal_descricao.substring(0,40):'')+'</span>';
+  h += '</div>';
+  h += '<div style="margin-top:8px;font-size:.74rem;color:var(--ink-3)">';
+  if (emp.bairro||emp.municipio) h += '<i class="bi bi-geo-alt me-1"></i>'+(emp.bairro?emp.bairro+', ':'')+emp.municipio+(emp.uf?' — '+emp.uf:'');
+  if (telFmt) h += '<br><i class="bi bi-telephone me-1"></i>'+telFmt;
+  if (emp.email) h += '<br><i class="bi bi-envelope me-1"></i>'+emp.email;
+  if (emp.situacao) h += '<br><i class="bi bi-info-circle me-1"></i>'+emp.situacao;
+  h += '</div>';
+  if (!emp.ja_importado) {
+    h += '<button onclick="importarUm('+JSON.stringify(emp).replace(/</g,'\\u003c')+',this)" '
+       +   'style="margin-top:10px;width:100%" class="btn-action success">'
+       +   '<i class="bi bi-plus-circle"></i>Importar para Prospecção</button>';
+  }
+  h += '</div>';
+  return h;
+}
+
+/* ── Tab 1: Busca por CNPJ único ── */
+function buscarCNPJ() {
+  var cnpj = document.getElementById('cnpjInput').value.trim();
+  var btn  = document.getElementById('cnpjBtn');
+  var box  = document.getElementById('cnpjResultado');
+  if (!cnpj) { alert('Digite um CNPJ.'); return; }
 
   btn.disabled = true;
-  btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Consultando…';
-  box.innerHTML = '<div style="text-align:center;padding:24px;color:var(--ink-3);font-size:.84rem"><i class="bi bi-hourglass-split" style="font-size:1.5rem;display:block;margin-bottom:8px;opacity:.4"></i>Consultando Receita Federal via Brasil.io…</div>';
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i>Consultando…';
+  box.innerHTML = '<div style="text-align:center;padding:16px;color:var(--ink-3);font-size:.82rem"><i class="bi bi-hourglass-split" style="font-size:1.4rem;display:block;margin-bottom:6px;opacity:.35"></i>Consultando a Receita Federal…</div>';
 
-  _rfbPaginaAtual = pagina || 1;
-  var url = '/crm/prospeccao/busca-rfb?municipio=' + encodeURIComponent(mun)
-          + '&cnae_codigo=' + encodeURIComponent(cnae)
-          + '&pagina=' + _rfbPaginaAtual;
-
-  fetch(url)
-    .then(function(r) {
-      if (!r.ok) return r.json().then(function(e){ throw e; });
-      return r.json();
-    })
-    .then(function(data) {
-      _rfbTotal = data.count || 0;
-      renderRFB(data, mun, cnae);
-    })
-    .catch(function(e) {
-      box.innerHTML = '<div style="padding:16px 0;color:#991B1B;font-size:.84rem"><i class="bi bi-exclamation-triangle me-2"></i>' + (e.erro || 'Erro ao consultar a API.') + '</div>';
-    })
-    .finally(function() {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-search"></i>Consultar Receita Federal';
-    });
+  fetch('/crm/prospeccao/lookup-cnpj?cnpj=' + encodeURIComponent(cnpj))
+    .then(function(r){ return r.json().then(function(d){ if(!r.ok) throw d; return d; }); })
+    .then(function(emp){ box.innerHTML = _cardEmp(emp); })
+    .catch(function(e){ box.innerHTML = '<div style="padding:12px;color:#991B1B;font-size:.82rem"><i class="bi bi-exclamation-triangle me-1"></i>'+(e.erro||'Erro ao consultar.')+'</div>'; })
+    .finally(function(){ btn.disabled=false; btn.innerHTML='<i class="bi bi-search"></i>Consultar CNPJ'; });
 }
 
-function renderRFB(data, mun, cnae) {
-  var box = document.getElementById('rfbResultados');
-  var resultados = data.results || [];
+document.getElementById('cnpjInput').addEventListener('keydown', function(e){ if(e.key==='Enter') buscarCNPJ(); });
 
-  if (!resultados.length) {
-    box.innerHTML = '<div style="text-align:center;padding:24px;color:var(--ink-3);font-size:.84rem"><i class="bi bi-building-x" style="font-size:1.5rem;display:block;margin-bottom:8px;opacity:.3"></i>Nenhuma empresa ativa encontrada para os critérios informados.</div>';
-    return;
-  }
+/* ── Tab 2: Importar em lote ── */
+function importarLote() {
+  var texto = document.getElementById('cnpjLote').value.trim();
+  var btn   = document.getElementById('loteBtn');
+  var status= document.getElementById('loteStatus');
+  var box   = document.getElementById('loteResultado');
+  if (!texto) { alert('Cole ao menos um CNPJ.'); return; }
 
-  var html = '<div style="padding:12px 0 4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
-           + '<span style="font-size:.76rem;color:var(--ink-3);font-weight:600">'
-           + _rfbTotal.toLocaleString('pt-BR') + ' empresas encontradas — exibindo página ' + _rfbPaginaAtual
-           + '</span></div>';
+  var cnpjs = texto.split(/[\n,;]+/).map(function(c){ return c.trim(); }).filter(Boolean);
+  if (!cnpjs.length) { alert('Nenhum CNPJ válido encontrado.'); return; }
 
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin-top:10px">';
-  resultados.forEach(function(emp) {
-    var cnpjFmt = emp.cnpj ? emp.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : '';
-    var telFmt  = (emp.ddd_telefone_1 || '').replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3');
-    var porteCor = {MEI:'#EEF2FF',ME:'#D1FAE5',EPP:'#FEF3C7',MÉDIO:'#E0F2FE',GRANDE:'#FCE7F3'}[emp.porte] || '#F1F5F9';
-    var porteTxt = {MEI:'#4338CA',ME:'#065F46',EPP:'#92400E',MÉDIO:'#0369A1',GRANDE:'#9D174D'}[emp.porte] || '#374151';
-
-    html += '<div style="background:var(--surface);border-radius:var(--radius);box-shadow:0 1px 3px rgba(0,0,0,.07);'
-          +   'border:1px solid var(--border);padding:13px 15px;position:relative" id="rfb_' + emp.cnpj + '">';
-
-    if (emp.ja_importado) {
-      html += '<span style="position:absolute;top:10px;right:10px;background:#D1FAE5;color:#065F46;'
-            +   'border-radius:20px;padding:2px 8px;font-size:.67rem;font-weight:700">✓ Importado</span>';
-    }
-
-    html += '<div style="font-size:.85rem;font-weight:700;color:var(--ink);padding-right:' + (emp.ja_importado ? '80px' : '0') + '">' + (emp.razao_social || '') + '</div>';
-    if (emp.nome_fantasia && emp.nome_fantasia !== emp.razao_social) {
-      html += '<div style="font-size:.72rem;color:var(--ink-3);margin-top:2px">' + emp.nome_fantasia + '</div>';
-    }
-    html += '<div style="font-size:.7rem;color:var(--ink-4);margin-top:4px;font-family:monospace">' + cnpjFmt + '</div>';
-
-    html += '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px">';
-    if (emp.porte) {
-      html += '<span style="background:' + porteCor + ';color:' + porteTxt + ';border-radius:4px;padding:2px 7px;font-size:.67rem;font-weight:700">' + emp.porte + '</span>';
-    }
-    if (emp.cnae_fiscal_descricao) {
-      html += '<span style="background:var(--canvas);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:.67rem;color:var(--ink-3)">'
-            + emp.cnae_fiscal + ' — ' + (emp.cnae_fiscal_descricao || '').substring(0,45) + '</span>';
-    }
-    html += '</div>';
-
-    html += '<div style="margin-top:8px;font-size:.74rem;color:var(--ink-3)">';
-    if (emp.bairro || emp.municipio) {
-      html += '<i class="bi bi-geo-alt" style="margin-right:4px"></i>'
-            + (emp.bairro ? emp.bairro.replace(/\b\w/g, function(l){return l.toUpperCase();}) + ', ' : '')
-            + (emp.municipio || '') + ' — ' + (emp.uf || '');
-    }
-    if (telFmt) html += '<br><i class="bi bi-telephone" style="margin-right:4px"></i>' + telFmt;
-    if (emp.email) html += '<br><i class="bi bi-envelope" style="margin-right:4px"></i>' + emp.email.toLowerCase();
-    html += '</div>';
-
-    if (!emp.ja_importado) {
-      html += '<button onclick="importarRFB(' + JSON.stringify(emp).replace(/</g,'\\u003c') + ', this)" '
-            +   'style="margin-top:10px;width:100%" class="btn-action success">'
-            +   '<i class="bi bi-plus-circle"></i>Importar para Prospecção</button>';
-    } else {
-      html += '<a href="{{ url_for("crm_prospeccao") }}" style="display:block;margin-top:10px;text-align:center;font-size:.73rem;color:var(--brand)">Ver na lista →</a>';
-    }
-
-    html += '</div>';
-  });
-  html += '</div>';
-
-  /* Paginação */
-  var totalPag = Math.ceil(_rfbTotal / 20);
-  if (totalPag > 1) {
-    html += '<div style="display:flex;justify-content:center;gap:8px;margin-top:14px;flex-wrap:wrap">';
-    if (_rfbPaginaAtual > 1) {
-      html += '<button class="btn-action ghost" onclick="buscarRFB(' + (_rfbPaginaAtual-1) + ')"><i class="bi bi-chevron-left"></i>Anterior</button>';
-    }
-    html += '<span style="display:inline-flex;align-items:center;font-size:.8rem;color:var(--ink-3)">Página ' + _rfbPaginaAtual + ' de ' + totalPag + '</span>';
-    if (data.next) {
-      html += '<button class="btn-action primary" onclick="buscarRFB(' + (_rfbPaginaAtual+1) + ')">Próxima<i class="bi bi-chevron-right ms-1"></i></button>';
-    }
-    html += '</div>';
-  }
-
-  box.innerHTML = html;
-}
-
-function importarRFB(emp, btn) {
   btn.disabled = true;
   btn.innerHTML = '<i class="bi bi-hourglass-split"></i>Importando…';
-  fetch('/crm/prospeccao/importar-rfb', {
+  status.textContent = cnpjs.length + ' CNPJs encontrados…';
+  box.innerHTML = '';
+
+  fetch('/crm/prospeccao/importar-lote', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(emp)
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({cnpjs: cnpjs})
   })
   .then(function(r){ return r.json(); })
-  .then(function(d) {
-    if (d.ok) {
-      var card = document.getElementById('rfb_' + emp.cnpj);
+  .then(function(lista) {
+    var ok = lista.filter(function(r){ return r.ok; }).length;
+    var ja = lista.filter(function(r){ return !r.ok && r.msg==='Já importado'; }).length;
+    var err= lista.filter(function(r){ return !r.ok && r.msg!=='Já importado'; }).length;
+    status.innerHTML = '<span style="color:#065F46;font-weight:700">'+ok+' importados</span>'
+                     + (ja?' · <span style="color:var(--ink-3)">'+ja+' já existiam</span>':'')
+                     + (err?' · <span style="color:#991B1B">'+err+' erros</span>':'');
+    var h = '<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">';
+    lista.forEach(function(r) {
+      var cor = r.ok ? '#065F46' : (r.msg==='Já importado' ? 'var(--ink-3)' : '#991B1B');
+      var ico = r.ok ? 'bi-check-circle-fill' : (r.msg==='Já importado' ? 'bi-dash-circle' : 'bi-x-circle');
+      h += '<div style="display:flex;align-items:center;gap:8px;font-size:.78rem;color:'+cor+'">'
+         +   '<i class="bi '+ico+'"></i>'
+         +   '<span style="font-family:monospace">'+(r.cnpj||'').replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')+'</span>'
+         +   '<span style="color:var(--ink-2)">'+(r.razao_social||'')+'</span>'
+         +   '<span style="margin-left:auto;color:var(--ink-3)">'+(r.msg||'')+'</span>'
+         + '</div>';
+    });
+    box.innerHTML = h + '</div>';
+  })
+  .catch(function(e){ status.textContent = 'Erro: '+(e.message||e); })
+  .finally(function(){ btn.disabled=false; btn.innerHTML='<i class="bi bi-cloud-download"></i>Importar CNPJs'; });
+}
+
+/* ── Importar empresa individual (card) ── */
+function importarUm(emp, btn) {
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i>Importando…';
+  /* Reusa o endpoint de lote com 1 CNPJ */
+  fetch('/crm/prospeccao/importar-lote', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({cnpjs: [emp.cnpj]})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(lista) {
+    var r = lista[0] || {};
+    if (r.ok) {
+      btn.parentElement.innerHTML = '<div style="text-align:center;margin-top:10px;font-size:.74rem;color:#065F46;font-weight:700"><i class="bi bi-check-circle me-1"></i>Importado!</div>';
+      var card = document.getElementById('card_'+emp.cnpj);
       if (card) {
-        btn.parentElement.innerHTML = '<div style="text-align:center;margin-top:10px;font-size:.74rem;color:#065F46;font-weight:700"><i class="bi bi-check-circle me-1"></i>Importado com sucesso!</div>';
         var badge = document.createElement('span');
-        badge.style.cssText = 'position:absolute;top:10px;right:10px;background:#D1FAE5;color:#065F46;border-radius:20px;padding:2px 8px;font-size:.67rem;font-weight:700';
-        badge.textContent = '✓ Importado';
+        badge.style.cssText='position:absolute;top:10px;right:10px;background:#D1FAE5;color:#065F46;border-radius:20px;padding:2px 8px;font-size:.67rem;font-weight:700';
+        badge.textContent='✓ Importado';
         card.appendChild(badge);
       }
     } else {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-exclamation-triangle"></i>' + (d.msg || 'Erro');
+      btn.disabled=false;
+      btn.innerHTML='<i class="bi bi-exclamation-triangle"></i>'+(r.msg||'Erro');
     }
   })
-  .catch(function() {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-exclamation-triangle"></i>Erro';
-  });
+  .catch(function(){ btn.disabled=false; btn.innerHTML='<i class="bi bi-exclamation-triangle"></i>Erro'; });
 }
 </script>
 {% endblock %}

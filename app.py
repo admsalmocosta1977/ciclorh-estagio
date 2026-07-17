@@ -3708,117 +3708,86 @@ def _norm_municipio(s):
     )
 
 
-@app.route('/crm/prospeccao/busca-rfb')
-@crm_required
-def crm_prospeccao_busca_rfb():
-    cnae_codigo = request.args.get('cnae_codigo', '').strip()
-    municipio   = request.args.get('municipio', 'Vitória da Conquista').strip()
-    pagina      = max(1, int(request.args.get('pagina', 1)))
-
-    mun_norm = _norm_municipio(municipio)
-
-    body = {
-        "query": {
-            "termo": [],
-            "atividade_principal": [{"code": cnae_codigo}] if cnae_codigo else [],
-            "natureza_juridica": [],
-            "uf": [],
-            "municipio": [mun_norm],
-            "situacao_cadastral": "ATIVA",
-            "cep": [],
-            "ddd": [],
-        },
-        "range_query": {
-            "data_abertura": {"lte": None, "gte": None},
-            "capital_social": {"lte": None, "gte": None},
-        },
-        "extras": {
-            "somente_mei": False, "excluir_mei": False, "com_email": False,
-            "incluir_atividade_secundaria": False, "com_contato_telefonico": False,
-            "somente_fixo": False, "somente_celular": False,
-            "somente_matriz": False, "somente_filial": False,
-        },
-        "page": pagina,
-    }
-
+def _lookup_cnpj(cnpj_raw):
+    """Consulta dados de um CNPJ na BrasilAPI (gratuita, sem token)."""
+    cnpj_digits = re.sub(r'\D', '', cnpj_raw)
+    if len(cnpj_digits) != 14:
+        return None, 'CNPJ inválido (deve ter 14 dígitos).'
     try:
-        r = _http.post(
-            'https://api.casadosdados.com.br/v2/public/cnpj/pesquisa',
-            json=body,
-            headers={'Content-Type': 'application/json', 'Accept': 'application/json',
-                     'User-Agent': 'Mozilla/5.0'},
-            timeout=20,
-        )
-        if r.status_code == 429:
-            return jsonify({'erro': 'Limite de requisições atingido. Aguarde alguns segundos.'}), 429
+        r = _http.get(f'https://brasilapi.com.br/api/cnpj/v1/{cnpj_digits}',
+                      headers={'Accept': 'application/json'}, timeout=15)
+        if r.status_code == 404:
+            return None, 'CNPJ não encontrado na Receita Federal.'
         if r.status_code != 200:
-            return jsonify({'erro': f'Erro {r.status_code} na API Casa dos Dados.'}), r.status_code
-        data = r.json()
+            return None, f'Erro {r.status_code} na consulta.'
+        d = r.json()
     except _http.exceptions.Timeout:
-        return jsonify({'erro': 'Tempo de resposta esgotado. Tente novamente.'}), 504
+        return None, 'Tempo de resposta esgotado.'
     except Exception as e:
-        return jsonify({'erro': str(e)}), 500
+        return None, str(e)
 
-    raw_list = (data.get('data') or {}).get('cnpj') or []
-    count    = data.get('count', len(raw_list))
-
-    cnpjs_ja = {row['cnpj'] for row in _q("SELECT cnpj FROM prospecto WHERE cnpj IS NOT NULL")} \
-               if raw_list else set()
-
-    results = []
-    for emp in raw_list:
-        cnpj_raw = re.sub(r'\D', '', emp.get('cnpj') or '')
-        ativ     = emp.get('atividade_principal') or []
-        results.append({
-            'cnpj':                cnpj_raw,
-            'razao_social':        emp.get('razao_social') or '',
-            'nome_fantasia':       emp.get('nome_fantasia') or '',
-            'cnae_fiscal':         ativ[0].get('code', '') if ativ else '',
-            'cnae_fiscal_descricao': ativ[0].get('text', '') if ativ else '',
-            'municipio':           emp.get('municipio') or mun_norm,
-            'uf':                  emp.get('uf') or '',
-            'bairro':              emp.get('bairro') or '',
-            'logradouro':          emp.get('logradouro') or '',
-            'numero':              emp.get('numero') or '',
-            'email':               emp.get('email') or '',
-            'ddd_telefone_1':      emp.get('ddd_telefone_1') or '',
-            'porte':               emp.get('porte') or '',
-            'ja_importado':        cnpj_raw in cnpjs_ja,
-        })
-
-    return jsonify({'count': count, 'results': results, 'next': count > pagina * 20})
+    ativ = (d.get('cnae_fiscal_descricao') or '')
+    tel  = (d.get('ddd_telefone_1') or '') + (d.get('telefone_1') or '')
+    emp  = {
+        'cnpj':                cnpj_digits,
+        'razao_social':        d.get('razao_social') or '',
+        'nome_fantasia':       d.get('nome_fantasia') or '',
+        'cnae_fiscal':         str(d.get('cnae_fiscal') or ''),
+        'cnae_fiscal_descricao': ativ,
+        'municipio':           (d.get('municipio') or '').title(),
+        'uf':                  d.get('uf') or '',
+        'bairro':              (d.get('bairro') or '').title(),
+        'logradouro':          (d.get('logradouro') or '').title(),
+        'numero':              d.get('numero') or '',
+        'email':               (d.get('email') or '').lower(),
+        'ddd_telefone_1':      re.sub(r'\D', '', tel)[:11],
+        'porte':               (d.get('porte') or '').title(),
+        'situacao':            d.get('descricao_situacao_cadastral') or '',
+        'ja_importado':        bool(_q("SELECT id FROM prospecto WHERE cnpj=%s", (cnpj_digits,), one=True)),
+    }
+    return emp, None
 
 
-@app.route('/crm/prospeccao/importar-rfb', methods=['POST'])
+@app.route('/crm/prospeccao/lookup-cnpj')
 @crm_required
-def crm_prospeccao_importar_rfb():
-    d    = request.get_json(silent=True) or {}
-    cnpj = re.sub(r'\D', '', d.get('cnpj') or '') or None
-    if cnpj:
-        existe = _q("SELECT id FROM prospecto WHERE cnpj=%s", (cnpj,), one=True)
+def crm_prospeccao_lookup_cnpj():
+    cnpj = request.args.get('cnpj', '').strip()
+    emp, erro = _lookup_cnpj(cnpj)
+    if erro:
+        return jsonify({'erro': erro}), 400
+    return jsonify(emp)
+
+
+@app.route('/crm/prospeccao/importar-lote', methods=['POST'])
+@crm_required
+def crm_prospeccao_importar_lote():
+    cnpjs_raw = (request.get_json(silent=True) or {}).get('cnpjs', [])
+    resultados = []
+    for c in cnpjs_raw[:50]:
+        emp, erro = _lookup_cnpj(c)
+        if erro:
+            resultados.append({'cnpj': c, 'ok': False, 'msg': erro})
+            continue
+        existe = _q("SELECT id FROM prospecto WHERE cnpj=%s", (emp['cnpj'],), one=True)
         if existe:
-            return jsonify({'ok': False, 'msg': 'Já importado', 'id': existe['id']})
+            resultados.append({'cnpj': emp['cnpj'], 'ok': False, 'msg': 'Já importado',
+                               'razao_social': emp['razao_social']})
+            continue
+        endereco = ' '.join(filter(None, [emp.get('logradouro',''), emp.get('numero','')])).strip() or None
+        pid = _ins("""INSERT INTO prospecto
+                      (empresa_nome, cnpj, cnae_codigo, cnae_descricao, porte,
+                       cidade, bairro, endereco, telefone, email, status, responsavel_id)
+                      VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'novo',%s)""",
+                   (emp['razao_social'], emp['cnpj'], emp['cnae_fiscal'],
+                    emp['cnae_fiscal_descricao'], emp['porte'],
+                    emp['municipio'], emp['bairro'], endereco,
+                    emp['ddd_telefone_1'] or None, emp['email'] or None,
+                    current_user.id))
+        resultados.append({'cnpj': emp['cnpj'], 'ok': True, 'id': pid,
+                           'razao_social': emp['razao_social']})
+    return jsonify(resultados)
 
-    def tc(s):
-        return s.title() if s else None
 
-    endereco = ' '.join(filter(None, [d.get('logradouro',''), d.get('numero','')])).strip() or None
-    pid = _ins("""INSERT INTO prospecto
-                  (empresa_nome, cnpj, cnae_codigo, cnae_descricao, porte,
-                   cidade, bairro, endereco, telefone, email, status, responsavel_id)
-                  VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'novo',%s)""",
-               (d.get('razao_social') or '',
-                cnpj,
-                d.get('cnae_fiscal') or None,
-                tc(d.get('cnae_fiscal_descricao')),
-                tc(d.get('porte')),
-                tc(d.get('municipio')),
-                tc(d.get('bairro')),
-                tc(endereco),
-                (d.get('ddd_telefone_1') or '').strip() or None,
-                (d.get('email') or '').lower() or None,
-                current_user.id))
-    return jsonify({'ok': True, 'id': pid})
 
 
 @app.route('/crm/bairros')
