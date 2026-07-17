@@ -125,9 +125,6 @@
       <button class="rfb-tab" id="tab2" onclick="trocarTab(2)" style="padding:10px 16px;font-size:.8rem;font-weight:700;border:none;border-bottom:2px solid transparent;background:none;color:var(--ink-3);cursor:pointer;margin-bottom:-1px">
         <i class="bi bi-list-ol me-1"></i>Importar em lote
       </button>
-      <button class="rfb-tab" id="tab3" onclick="trocarTab(3)" style="padding:10px 16px;font-size:.8rem;font-weight:700;border:none;border-bottom:2px solid transparent;background:none;color:var(--ink-3);cursor:pointer;margin-bottom:-1px">
-        <i class="bi bi-filetype-csv me-1"></i>Importar CSV
-      </button>
     </div>
 
     <!-- Tab 1: Buscar por CNPJ único -->
@@ -165,44 +162,6 @@
         <span id="loteStatus" style="font-size:.78rem;color:var(--ink-3)"></span>
       </div>
       <div id="loteResultado" style="margin-top:14px"></div>
-    </div>
-
-    <!-- Tab 3: Importar CSV -->
-    <div id="rfbTab3" style="padding:16px 18px;display:none">
-      <p style="font-size:.8rem;color:var(--ink-3);margin-bottom:14px">
-        Gere o CSV no seu computador com o script <code>rfb_extrator_local.py</code>
-        e importe aqui. O arquivo deve ter as colunas:
-        <code>empresa_nome, cnpj, cnae_codigo, cnae_descricao, porte, cidade, bairro, endereco, telefone, email</code>.
-      </p>
-      <form method="post" action="{{ url_for('crm_prospeccao_importar_csv') }}" enctype="multipart/form-data">
-        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-          <div class="fg">
-            <label>Arquivo CSV</label>
-            <input type="file" name="csv_file" accept=".csv" required
-                   class="filter-bar select" style="min-width:260px;padding:5px 10px">
-          </div>
-          <div class="fg" style="justify-content:flex-end">
-            <label>&nbsp;</label>
-            <button type="submit" class="btn-action primary">
-              <i class="bi bi-upload"></i>Importar CSV
-            </button>
-          </div>
-        </div>
-      </form>
-      <div style="margin-top:14px;padding:12px 14px;background:rgba(37,99,235,.06);border-radius:var(--radius-sm);border:1px solid rgba(37,99,235,.15)">
-        <div style="font-size:.75rem;font-weight:700;color:var(--brand);margin-bottom:6px">
-          <i class="bi bi-terminal me-1"></i>Como gerar o CSV localmente
-        </div>
-        <div style="font-size:.75rem;color:var(--ink-2);line-height:1.7">
-          1. Copie o arquivo <strong>rfb_extrator_local.py</strong> para sua área de trabalho<br>
-          2. Abra o Prompt de Comando (CMD) e execute:<br>
-          <code style="background:rgba(0,0,0,.06);padding:3px 8px;border-radius:4px;font-size:.73rem">
-            python rfb_extrator_local.py "VITORIA DA CONQUISTA"
-          </code><br>
-          3. Aguarde (~30–60 min) — o arquivo <strong>empresas_VITORIA_DA_CONQUISTA.csv</strong> será gerado<br>
-          4. Volte aqui e importe o CSV gerado
-        </div>
-      </div>
     </div>
 
   </div>
