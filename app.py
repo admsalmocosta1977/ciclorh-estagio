@@ -1,4 +1,4 @@
-import os, io, json, psycopg2, psycopg2.extras, smtplib, calendar, unicodedata
+import os, io, json, re, psycopg2, psycopg2.extras, smtplib, calendar, unicodedata
 import openpyxl
 import requests as _http
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -3714,49 +3714,86 @@ def crm_prospeccao_busca_rfb():
     cnae_codigo = request.args.get('cnae_codigo', '').strip()
     municipio   = request.args.get('municipio', 'Vitória da Conquista').strip()
     pagina      = max(1, int(request.args.get('pagina', 1)))
-    token       = os.environ.get('BRASILIO_TOKEN', '').strip()
 
     mun_norm = _norm_municipio(municipio)
-    params = {'municipio': mun_norm, 'situacao': 'ATIVA', 'page': pagina, 'page_size': 20}
 
-    if cnae_codigo:
-        prefixo = cnae_codigo[:2]
-        try:
-            n = int(prefixo)
-            params['cnae_fiscal__gte'] = n * 100000
-            params['cnae_fiscal__lt']  = (n + 1) * 100000
-        except ValueError:
-            pass
+    body = {
+        "query": {
+            "termo": [],
+            "atividade_principal": [{"code": cnae_codigo}] if cnae_codigo else [],
+            "natureza_juridica": [],
+            "uf": [],
+            "municipio": [mun_norm],
+            "situacao_cadastral": "ATIVA",
+            "cep": [],
+            "ddd": [],
+        },
+        "range_query": {
+            "data_abertura": {"lte": None, "gte": None},
+            "capital_social": {"lte": None, "gte": None},
+        },
+        "extras": {
+            "somente_mei": False, "excluir_mei": False, "com_email": False,
+            "incluir_atividade_secundaria": False, "com_contato_telefonico": False,
+            "somente_fixo": False, "somente_celular": False,
+            "somente_matriz": False, "somente_filial": False,
+        },
+        "page": pagina,
+    }
 
-    headers = {'Authorization': f'Token {token}'} if token else {}
     try:
-        r = _http.get('https://brasil.io/api/dataset/socios-brasil/empresas/data/',
-                      params=params, headers=headers, timeout=20)
-        if r.status_code == 401:
-            return jsonify({'erro': 'Token Brasil.io inválido ou ausente. Configure a variável BRASILIO_TOKEN no Railway.'}), 401
+        r = _http.post(
+            'https://api.casadosdados.com.br/v2/public/cnpj/pesquisa',
+            json=body,
+            headers={'Content-Type': 'application/json', 'Accept': 'application/json',
+                     'User-Agent': 'Mozilla/5.0'},
+            timeout=20,
+        )
         if r.status_code == 429:
-            return jsonify({'erro': 'Limite de requisições atingido. Aguarde alguns segundos e tente novamente.'}), 429
+            return jsonify({'erro': 'Limite de requisições atingido. Aguarde alguns segundos.'}), 429
         if r.status_code != 200:
-            return jsonify({'erro': f'Erro {r.status_code} ao consultar Brasil.io.'}), r.status_code
+            return jsonify({'erro': f'Erro {r.status_code} na API Casa dos Dados.'}), r.status_code
         data = r.json()
     except _http.exceptions.Timeout:
         return jsonify({'erro': 'Tempo de resposta esgotado. Tente novamente.'}), 504
     except Exception as e:
         return jsonify({'erro': str(e)}), 500
 
-    cnpjs_ja = {row['cnpj'] for row in _q("SELECT cnpj FROM prospecto WHERE cnpj IS NOT NULL")} \
-               if data.get('results') else set()
-    for emp in data.get('results', []):
-        emp['ja_importado'] = bool(emp.get('cnpj') and emp['cnpj'] in cnpjs_ja)
+    raw_list = (data.get('data') or {}).get('cnpj') or []
+    count    = data.get('count', len(raw_list))
 
-    return jsonify(data)
+    cnpjs_ja = {row['cnpj'] for row in _q("SELECT cnpj FROM prospecto WHERE cnpj IS NOT NULL")} \
+               if raw_list else set()
+
+    results = []
+    for emp in raw_list:
+        cnpj_raw = re.sub(r'\D', '', emp.get('cnpj') or '')
+        ativ     = emp.get('atividade_principal') or []
+        results.append({
+            'cnpj':                cnpj_raw,
+            'razao_social':        emp.get('razao_social') or '',
+            'nome_fantasia':       emp.get('nome_fantasia') or '',
+            'cnae_fiscal':         ativ[0].get('code', '') if ativ else '',
+            'cnae_fiscal_descricao': ativ[0].get('text', '') if ativ else '',
+            'municipio':           emp.get('municipio') or mun_norm,
+            'uf':                  emp.get('uf') or '',
+            'bairro':              emp.get('bairro') or '',
+            'logradouro':          emp.get('logradouro') or '',
+            'numero':              emp.get('numero') or '',
+            'email':               emp.get('email') or '',
+            'ddd_telefone_1':      emp.get('ddd_telefone_1') or '',
+            'porte':               emp.get('porte') or '',
+            'ja_importado':        cnpj_raw in cnpjs_ja,
+        })
+
+    return jsonify({'count': count, 'results': results, 'next': count > pagina * 20})
 
 
 @app.route('/crm/prospeccao/importar-rfb', methods=['POST'])
 @crm_required
 def crm_prospeccao_importar_rfb():
-    d = request.get_json(silent=True) or {}
-    cnpj = (d.get('cnpj') or '').strip() or None
+    d    = request.get_json(silent=True) or {}
+    cnpj = re.sub(r'\D', '', d.get('cnpj') or '') or None
     if cnpj:
         existe = _q("SELECT id FROM prospecto WHERE cnpj=%s", (cnpj,), one=True)
         if existe:
@@ -3765,18 +3802,20 @@ def crm_prospeccao_importar_rfb():
     def tc(s):
         return s.title() if s else None
 
-    cnae_raw = str(d.get('cnae_fiscal', ''))
     endereco = ' '.join(filter(None, [d.get('logradouro',''), d.get('numero','')])).strip() or None
-    tel = (d.get('ddd_telefone_1') or '').strip() or None
-
     pid = _ins("""INSERT INTO prospecto
                   (empresa_nome, cnpj, cnae_codigo, cnae_descricao, porte,
                    cidade, bairro, endereco, telefone, email, status, responsavel_id)
                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'novo',%s)""",
-               (d.get('razao_social') or d.get('nome_fantasia') or '',
-                cnpj, cnae_raw, tc(d.get('cnae_fiscal_descricao')),
-                tc(d.get('porte')), tc(d.get('municipio')),
-                tc(d.get('bairro')), tc(endereco), tel,
+               (d.get('razao_social') or '',
+                cnpj,
+                d.get('cnae_fiscal') or None,
+                tc(d.get('cnae_fiscal_descricao')),
+                tc(d.get('porte')),
+                tc(d.get('municipio')),
+                tc(d.get('bairro')),
+                tc(endereco),
+                (d.get('ddd_telefone_1') or '').strip() or None,
                 (d.get('email') or '').lower() or None,
                 current_user.id))
     return jsonify({'ok': True, 'id': pid})
