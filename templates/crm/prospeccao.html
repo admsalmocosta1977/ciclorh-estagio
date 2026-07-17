@@ -38,15 +38,15 @@
 .status-pill  { display:inline-flex; padding:2px 9px; border-radius:20px; font-size:.69rem; font-weight:700; }
 
 /* Tabela */
-.bi-table { width:100%; border-collapse:collapse; font-size:.82rem; }
-.bi-table th { font-size:.67rem; font-weight:700; text-transform:uppercase; letter-spacing:.6px;
-  color:var(--ink-3); padding:10px 14px; border-bottom:1px solid var(--border); white-space:nowrap; text-align:left; }
-.bi-table td { padding:11px 14px; color:var(--ink-2); border-bottom:1px solid rgba(0,0,0,.04); vertical-align:middle; }
+.bi-table { width:100%; border-collapse:collapse; font-size:.76rem; }
+.bi-table th { font-size:.63rem; font-weight:700; text-transform:uppercase; letter-spacing:.6px;
+  color:var(--ink-3); padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; text-align:left; }
+.bi-table td { padding:7px 10px; color:var(--ink-2); border-bottom:1px solid rgba(0,0,0,.04); vertical-align:middle; }
 .bi-table tbody tr:last-child td { border-bottom:none; }
 .bi-table tbody tr:hover td { background:#F8FAFC; }
 
-.btn-action { display:inline-flex; align-items:center; gap:4px; padding:4px 10px;
-  border-radius:var(--radius-sm); font-size:.73rem; font-weight:600; border:1px solid;
+.btn-action { display:inline-flex; align-items:center; gap:3px; padding:3px 8px;
+  border-radius:var(--radius-sm); font-size:.68rem; font-weight:600; border:1px solid;
   cursor:pointer; white-space:nowrap; text-decoration:none; font-family:var(--font); transition:.15s; }
 .btn-action.primary { background:var(--brand-soft); border-color:rgba(37,99,235,.25); color:var(--brand); }
 .btn-action.primary:hover { background:var(--brand); color:#fff; border-color:var(--brand); }
@@ -315,15 +315,15 @@
       {% for p in prospectos %}
       <tr>
         <td>
-          <strong style="font-weight:600">{{ p.empresa_nome }}</strong>
-          {% if p.cnpj %}<br><span style="font-size:.71rem;color:var(--ink-4)">{{ p.cnpj }}</span>{% endif %}
+          <strong style="font-weight:600;font-size:.77rem">{{ p.empresa_nome }}</strong>
+          {% if p.cnpj %}<br><span style="font-size:.65rem;color:var(--ink-4);font-family:monospace">{{ p.cnpj }}</span>{% endif %}
         </td>
         <td>
           {% if p.segmento %}
           <span class="seg-badge" style="background:{{ seg_cor.get(p.segmento,'#9CA3AF') }}">{{ p.segmento }}</span>
           {% endif %}
           {% if p.cnae_codigo %}
-          <br><span style="font-size:.69rem;color:var(--ink-3)">{{ p.cnae_codigo }}{% if p.cnae_descricao %} — {{ p.cnae_descricao[:40] }}{% endif %}</span>
+          <br><span style="font-size:.65rem;color:var(--ink-3)">{{ p.cnae_codigo }}{% if p.cnae_descricao %} — {{ p.cnae_descricao[:35] }}{% endif %}</span>
           {% endif %}
         </td>
         <td>
@@ -333,18 +333,18 @@
         </td>
         <td style="white-space:nowrap">
           {% if p.cidade %}
-          <span style="font-size:.8rem">{{ p.cidade }}</span>
-          {% if p.bairro %}<br><span style="font-size:.71rem;color:var(--ink-3)">{{ p.bairro }}</span>{% endif %}
+          <span style="font-size:.74rem">{{ p.cidade }}</span>
+          {% if p.bairro %}<br><span style="font-size:.65rem;color:var(--ink-3)">{{ p.bairro }}</span>{% endif %}
           {% else %}—{% endif %}
         </td>
         <td>
           {% if p.contato_nome %}
-          <span style="font-size:.8rem;font-weight:500">{{ p.contato_nome }}</span>
-          {% if p.contato_cargo %}<br><span style="font-size:.69rem;color:var(--ink-3)">{{ p.contato_cargo }}</span>{% endif %}
+          <span style="font-size:.74rem;font-weight:500">{{ p.contato_nome }}</span>
+          {% if p.contato_cargo %}<br><span style="font-size:.64rem;color:var(--ink-3)">{{ p.contato_cargo }}</span>{% endif %}
           {% endif %}
           {% if p.telefone %}
           <br><a href="https://wa.me/55{{ p.telefone | replace(' ','') | replace('-','') | replace('(','') | replace(')','') }}"
-               target="_blank" style="font-size:.71rem;color:#059669;text-decoration:none">
+               target="_blank" style="font-size:.65rem;color:#059669;text-decoration:none">
             <i class="bi bi-whatsapp"></i> {{ p.telefone }}
           </a>
           {% endif %}
