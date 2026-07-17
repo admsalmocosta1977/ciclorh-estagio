@@ -4012,9 +4012,6 @@ def crm_prospeccao_excluir(id):
 @app.route('/crm/prospeccao/brasilio-buscar')
 @crm_required
 def crm_brasilio_buscar():
-    cfg   = _get_config()
-    token = cfg.get('brasilio_token', '').strip() or os.environ.get('BRASILIO_TOKEN', '').strip()
-
     def _norm_mun(s):
         s = re.sub(r'[\s\-/]+[A-Za-z]{2}$', '', (s or '').strip().upper())
         s = unicodedata.normalize('NFD', s)
@@ -4025,120 +4022,70 @@ def crm_brasilio_buscar():
     cnae   = request.args.get('cnae', '').strip()
     porte  = request.args.get('porte', '').strip()
     nome   = request.args.get('nome', '').strip()
+    page   = int(request.args.get('page', '1') or 1)
 
-    # Parâmetros base enviados à API
-    params_api = {}
-    if uf:   params_api['uf']          = uf
-    if cnae: params_api['cnae_fiscal'] = cnae
-    if porte: params_api['porte']      = porte
-
-    # Quando há cidade: usa a cidade como termo de busca para orientar a API,
-    # depois filtramos internamente pelo campo municipio (correspondência exata).
-    # Quando não há cidade: usa o nome normalmente.
-    if cidade:
-        # Combina cidade + nome no search para resultados mais próximos do alvo
-        termos = ' '.join(filter(None, [nome, cidade]))
-        params_api['search'] = termos
-    elif nome:
-        params_api['search'] = nome
-
+    # Casa dos Dados — API pública gratuita, sem token
+    CDD_URL = 'https://api.casadosdados.com.br/v2/public/cnpj/search'
     headers = {
+        'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'User-Agent': 'CicloRH-CRM/1.0 (contact: adm.salmocosta@gmail.com)',
+        'User-Agent': 'CicloRH-CRM/1.0',
     }
-    if token:
-        headers['Authorization'] = f'Token {token}'
+
+    def _payload(pagina=1):
+        q = {'situacao_cadastral': 'ATIVA'}
+        if uf:     q['uf']                  = [uf]
+        if cidade: q['municipio']            = [cidade]
+        if cnae:   q['atividade_principal']  = [cnae]
+        if nome:   q['termo']                = [nome]
+        p = {'query': q, 'page': pagina}
+        if porte and porte != 'DEMAIS':
+            p['extras'] = {'somente_mei': porte == 'MEI'}
+        return p
 
     def _processar(emp):
         cnpj_d = re.sub(r'\D', '', emp.get('cnpj') or '')
         ja = bool(_q("SELECT id FROM prospecto WHERE cnpj=%s", (cnpj_d,), one=True))
+        cnae_info = (emp.get('atividade_principal') or [{}])
+        cnae_obj  = cnae_info[0] if isinstance(cnae_info, list) and cnae_info else {}
+        ende = emp.get('estabelecimento') or emp
         return {
             'cnpj':           cnpj_d,
             'razao_social':   (emp.get('razao_social') or '').title(),
             'nome_fantasia':  (emp.get('nome_fantasia') or '').title(),
-            'cnae_codigo':    emp.get('cnae_fiscal') or '',
-            'cnae_descricao': emp.get('cnae_fiscal_descricao') or '',
-            'porte':          emp.get('porte') or '',
-            'municipio':      (emp.get('municipio') or '').title(),
-            'uf':             emp.get('uf') or '',
-            'bairro':         (emp.get('bairro') or '').title(),
+            'cnae_codigo':    cnae_obj.get('code') or cnae_obj.get('codigo') or '',
+            'cnae_descricao': cnae_obj.get('text') or cnae_obj.get('descricao') or '',
+            'porte':          emp.get('porte', {}).get('descricao') if isinstance(emp.get('porte'), dict) else (emp.get('porte') or ''),
+            'municipio':      (ende.get('municipio') or emp.get('municipio') or '').title(),
+            'uf':             ende.get('uf') or emp.get('uf') or '',
+            'bairro':         (ende.get('bairro') or '').title(),
             'email':          (emp.get('email') or '').lower(),
-            'telefone':       re.sub(r'\D', '', (emp.get('telefone1') or '')),
+            'telefone':       re.sub(r'\D', '', (emp.get('telefone') or emp.get('telefone1') or '')),
             'ja_na_base':     ja,
         }
 
-    API_URL = 'https://brasil.io/api/v1/dataset/socios-brasil/empresas/data/'
-
-    def _fetch_page(p):
-        try:
-            r = _http.get(API_URL, headers=headers, params=p, timeout=25)
-            return r
-        except Exception as e:
-            return None
-
-    def _check_status(r):
-        if r is None:
-            return 'timeout'
-        if r.status_code in (401, 403):
-            return 'auth'
+    try:
+        r = _http.post(CDD_URL, json=_payload(page), headers=headers, timeout=20)
         if r.status_code == 429:
-            return 'rate'
-        if r.status_code != 200:
-            return 'error'
-        return 'ok'
+            return jsonify({'erro': 'Limite de requisições atingido. Aguarde um momento e tente novamente.'}), 429
+        if r.status_code not in (200, 201):
+            return jsonify({'erro': f'Casa dos Dados retornou HTTP {r.status_code}.'}), 502
+        data = r.json()
+    except Exception as e:
+        return jsonify({'erro': f'Falha na conexão: {e}'}), 502
 
-    if cidade:
-        # Varre até 5 páginas (search orientado já filtra bastante)
-        resultados = []
-        paginas_varridas = 0
-        api_page = 1
-        MAX_PAG = 5
+    # A resposta pode estar em data['data']['cnpj'] ou data['cnpj']
+    empresas = (data.get('data') or {}).get('cnpj') or data.get('cnpj') or []
+    total    = (data.get('data') or {}).get('count') or data.get('count') or len(empresas)
+    has_next = (data.get('data') or {}).get('next') or data.get('next')
 
-        while len(resultados) < 50 and paginas_varridas < MAX_PAG:
-            p = dict(params_api)
-            p['page'] = api_page
-            r = _fetch_page(p)
-            st = _check_status(r)
-            if st == 'auth':
-                msg = 'O Brasil.IO requer autenticação. Configure o token em Administração → Configurações.' if not token else 'Token inválido ou expirado.'
-                return jsonify({'erro': msg}), 401
-            if st == 'rate':
-                return jsonify({'erro': 'Limite de requisições atingido (429). Aguarde um minuto.'}), 429
-            if st in ('timeout', 'error'):
-                if not resultados:
-                    return jsonify({'erro': 'Falha ou timeout na conexão com Brasil.IO. Tente novamente.'}), 502
-                break
-            data = r.json()
-            paginas_varridas += 1
-            for emp in data.get('results', []):
-                if _norm_mun(emp.get('municipio') or '') == cidade:
-                    resultados.append(_processar(emp))
-            if not data.get('next'):
-                break
-            api_page += 1
-
-        return jsonify({
-            'count':            len(resultados),
-            'paginas_varridas': paginas_varridas,
-            'results':          resultados,
-        })
-
-    # Sem filtro de cidade: 1 página normal com paginação pelo front
-    page = request.args.get('page', '1').strip()
-    params_api['page'] = page
-    r = _fetch_page(params_api)
-    st = _check_status(r)
-    if st == 'auth':
-        msg = 'O Brasil.IO requer autenticação. Configure o token em Administração → Configurações.' if not token else 'Token inválido ou expirado.'
-        return jsonify({'erro': msg}), 401
-    if st == 'rate':
-        return jsonify({'erro': 'Limite de requisições atingido (429). Aguarde um minuto.'}), 429
-    if st in ('timeout', 'error'):
-        return jsonify({'erro': 'Falha ou timeout na conexão com Brasil.IO. Tente novamente.'}), 502
-    data = r.json()
-    resultados = [_processar(emp) for emp in data.get('results', [])]
-    return jsonify({'count': data.get('count', 0), 'next': data.get('next'),
-                    'previous': data.get('previous'), 'results': resultados})
+    resultados = [_processar(e) for e in empresas]
+    return jsonify({
+        'count':   total,
+        'next':    bool(has_next) or (total > page * 20),
+        'previous': page > 1,
+        'results': resultados,
+    })
 
 
 def _enriquecer_free(p):
