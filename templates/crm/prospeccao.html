@@ -125,9 +125,6 @@
       <button class="rfb-tab" id="tab2" onclick="trocarTab(2)" style="padding:10px 16px;font-size:.8rem;font-weight:700;border:none;border-bottom:2px solid transparent;background:none;color:var(--ink-3);cursor:pointer;margin-bottom:-1px">
         <i class="bi bi-list-ol me-1"></i>Importar em lote
       </button>
-      <button class="rfb-tab" id="tab3" onclick="trocarTab(3)" style="padding:10px 16px;font-size:.8rem;font-weight:700;border:none;border-bottom:2px solid transparent;background:none;color:var(--ink-3);cursor:pointer;margin-bottom:-1px">
-        <i class="bi bi-box-arrow-up-right me-1"></i>Buscar no site externo
-      </button>
     </div>
 
     <!-- Tab 1: Buscar por CNPJ único -->
@@ -165,55 +162,6 @@
         <span id="loteStatus" style="font-size:.78rem;color:var(--ink-3)"></span>
       </div>
       <div id="loteResultado" style="margin-top:14px"></div>
-    </div>
-
-    <!-- Tab 3: Links externos -->
-    <div id="rfbTab3" style="padding:16px 18px;display:none">
-      <p style="font-size:.8rem;color:var(--ink-3);margin-bottom:16px">
-        Pesquise por segmento, CNAE e cidade nesses sites, copie os CNPJs encontrados e use a aba <strong>Importar em lote</strong> para trazer para o sistema.
-      </p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
-        <a href="https://casadosdados.com.br/solucao/cnpj?municipio=VITORIA+DA+CONQUISTA&estado=BA&situacao_cadastral=Ativa" target="_blank"
-           style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border-md);text-decoration:none;background:var(--canvas);transition:.15s"
-           onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--border-md)'">
-          <i class="bi bi-building-fill-check" style="font-size:1.4rem;color:var(--brand)"></i>
-          <div>
-            <div style="font-size:.84rem;font-weight:700;color:var(--ink)">Casa dos Dados</div>
-            <div style="font-size:.71rem;color:var(--ink-3)">Pesquisa por CNAE, porte e cidade — copie os CNPJs</div>
-          </div>
-          <i class="bi bi-box-arrow-up-right ms-auto" style="color:var(--ink-4);font-size:.8rem"></i>
-        </a>
-        <a href="https://cnpj.ws/cnpj/pesquisa" target="_blank"
-           style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border-md);text-decoration:none;background:var(--canvas);transition:.15s"
-           onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--border-md)'">
-          <i class="bi bi-search" style="font-size:1.4rem;color:#7C3AED"></i>
-          <div>
-            <div style="font-size:.84rem;font-weight:700;color:var(--ink)">CNPJ.ws</div>
-            <div style="font-size:.71rem;color:var(--ink-3)">Busca por nome, atividade e município</div>
-          </div>
-          <i class="bi bi-box-arrow-up-right ms-auto" style="color:var(--ink-4);font-size:.8rem"></i>
-        </a>
-        <a href="https://brasil.io/dataset/socios-brasil/empresas/" target="_blank"
-           style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border-md);text-decoration:none;background:var(--canvas);transition:.15s"
-           onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--border-md)'">
-          <i class="bi bi-database" style="font-size:1.4rem;color:#059669"></i>
-          <div>
-            <div style="font-size:.84rem;font-weight:700;color:var(--ink)">Brasil.io</div>
-            <div style="font-size:.71rem;color:var(--ink-3)">Base completa da RFB — filtro por CNAE e município</div>
-          </div>
-          <i class="bi bi-box-arrow-up-right ms-auto" style="color:var(--ink-4);font-size:.8rem"></i>
-        </a>
-        <a href="https://minhareceita.org" target="_blank"
-           style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border-md);text-decoration:none;background:var(--canvas);transition:.15s"
-           onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--border-md)'">
-          <i class="bi bi-receipt" style="font-size:1.4rem;color:#D97706"></i>
-          <div>
-            <div style="font-size:.84rem;font-weight:700;color:var(--ink)">Minha Receita</div>
-            <div style="font-size:.71rem;color:var(--ink-3)">Dados oficiais da RFB — consulta individual de CNPJ</div>
-          </div>
-          <i class="bi bi-box-arrow-up-right ms-auto" style="color:var(--ink-4);font-size:.8rem"></i>
-        </a>
-      </div>
     </div>
 
   </div>
