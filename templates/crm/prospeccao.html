@@ -310,76 +310,24 @@
 </div>
 {% endif %}
 
-<!-- Barra de filtros -->
-<form method="get" class="filter-bar" id="filterForm">
-  <div class="fg">
-    <label>Segmento</label>
-    <select name="segmento" onchange="this.form.submit()">
-      <option value="">Todos</option>
-      {% for s in segmentos %}
-      <option value="{{ s }}" {% if filtros.segmento==s %}selected{% endif %}>{{ s }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="fg">
-    <label>CNAE</label>
-    <input type="text" name="cnae" placeholder="código ou descrição…" value="{{ filtros.cnae }}" style="min-width:180px">
-  </div>
-  <div class="fg">
-    <label>Porte</label>
-    <select name="porte" onchange="this.form.submit()">
-      <option value="">Todos</option>
-      {% for p in portes %}
-      <option value="{{ p }}" {% if filtros.porte==p %}selected{% endif %}>{{ p }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="fg">
-    <label>Cidade</label>
-    <select name="cidade" id="cidadeSelect" onchange="this.form.submit()">
-      <option value="">Todas</option>
-      {% if 'Vitória da Conquista' not in cidades %}
-      <option value="Vitória da Conquista" {% if filtros.cidade=='Vitória da Conquista' %}selected{% endif %}>Vitória da Conquista</option>
-      {% endif %}
-      {% for c in cidades %}
-      <option value="{{ c }}" {% if filtros.cidade==c %}selected{% endif %}>{{ c }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="fg" id="bairroBox" style="{{ 'display:none' if not filtros.cidade }}">
-    <label>Bairro</label>
-    <select name="bairro" id="bairroSelect" onchange="this.form.submit()">
-      <option value="">Todos</option>
-      {% for b in bairros_sel %}
-      <option value="{{ b }}" {% if filtros.bairro==b %}selected{% endif %}>{{ b }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="fg">
-    <label>Status</label>
-    <select name="status" onchange="this.form.submit()">
-      <option value="">Todos</option>
-      <option value="novo"       {% if filtros.status=='novo' %}selected{% endif %}>Novo</option>
-      <option value="contatado"  {% if filtros.status=='contatado' %}selected{% endif %}>Contatado</option>
-      <option value="convertido" {% if filtros.status=='convertido' %}selected{% endif %}>Convertido</option>
-      <option value="descartado" {% if filtros.status=='descartado' %}selected{% endif %}>Descartado</option>
-    </select>
-  </div>
-  <div class="fg" style="justify-content:flex-end">
-    <label>&nbsp;</label>
-    <button type="submit" class="btn-action primary">
-      <i class="bi bi-search"></i>Filtrar
-    </button>
-  </div>
-  {% if filtros.segmento or filtros.cnae or filtros.porte or filtros.cidade or filtros.bairro or filtros.status %}
-  <div class="fg" style="justify-content:flex-end">
-    <label>&nbsp;</label>
-    <a href="{{ url_for('crm_prospeccao') }}" class="btn-action ghost">
-      <i class="bi bi-x-circle"></i>Limpar
-    </a>
-  </div>
-  {% endif %}
-</form>
+<!-- Filtro de status -->
+<div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+  {% set status_labels = [('', 'Todos'), ('novo', 'Novos'), ('contatado', 'Contatados'), ('convertido', 'Convertidos'), ('descartado', 'Descartados')] %}
+  {% for val, label in status_labels %}
+  <a href="{{ url_for('crm_prospeccao') }}{% if val %}?status={{ val }}{% endif %}"
+     style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;
+            font-size:.74rem;font-weight:600;text-decoration:none;border:1px solid;transition:.15s;
+            {% if status_ativo == val %}background:var(--brand);color:#fff;border-color:var(--brand)
+            {% else %}background:var(--surface);color:var(--ink-2);border-color:var(--border-md){% endif %}">
+    {{ label }}
+    {% if val and por_status.get(val, 0) %}
+    <span style="font-size:.67rem;opacity:.8">({{ por_status.get(val, 0) }})</span>
+    {% elif not val %}
+    <span style="font-size:.67rem;opacity:.8">({{ prospectos|length if not status_ativo else por_status.values()|sum }})</span>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
 
 <!-- Tabela de resultados -->
 <div class="section-card">
@@ -582,38 +530,6 @@ function loteConverter() {
   }).catch(function(){ btn.disabled=false; btn.innerHTML='<i class="bi bi-arrow-right-circle"></i>Lançar no CRM'; alert('Falha de conexão.'); });
 }
 
-/* ── Subfiltro bairro ── */
-(function () {
-  var cidadeSel = document.getElementById('cidadeSelect');
-  var bairroBox = document.getElementById('bairroBox');
-  var bairroSel = document.getElementById('bairroSelect');
-
-  function atualizarBairros(cidade, bairroAtual) {
-    if (!cidade) { bairroBox.style.display = 'none'; return; }
-    bairroBox.style.display = 'flex';
-    fetch('/crm/bairros?cidade=' + encodeURIComponent(cidade))
-      .then(function(r){ return r.json(); })
-      .then(function(lista) {
-        bairroSel.innerHTML = '<option value="">Todos</option>';
-        lista.forEach(function(b) {
-          var opt = document.createElement('option');
-          opt.value = b; opt.textContent = b;
-          if (b === bairroAtual) opt.selected = true;
-          bairroSel.appendChild(opt);
-        });
-      });
-  }
-
-  cidadeSel.addEventListener('change', function() {
-    bairroSel.innerHTML = '<option value="">Todos</option>';
-    atualizarBairros(this.value, '');
-    document.getElementById('filterForm').submit();
-  });
-
-  if (cidadeSel.value) {
-    atualizarBairros(cidadeSel.value, {{ filtros.bairro | tojson }});
-  }
-})();
 
 /* ── Painel RFB — tabs e funções ── */
 var _rfbAberta = false;

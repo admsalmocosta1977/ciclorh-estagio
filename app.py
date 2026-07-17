@@ -3856,40 +3856,16 @@ def crm_bairros():
 @app.route('/crm/prospeccao')
 @crm_required
 def crm_prospeccao():
-    seg    = request.args.get('segmento', '')
-    cnae   = request.args.get('cnae', '').strip()
-    porte  = request.args.get('porte', '')
-    cidade = request.args.get('cidade', '')
-    bairro = request.args.get('bairro', '')
     status = request.args.get('status', '')
 
     sql = """SELECT p.*, u.nome as resp_nome FROM prospecto p
              LEFT JOIN usuario u ON u.id = p.responsavel_id
              WHERE 1=1"""
     params = []
-    if seg:
-        sql += " AND p.segmento=%s"; params.append(seg)
-    if cnae:
-        sql += " AND (p.cnae_codigo ILIKE %s OR p.cnae_descricao ILIKE %s)"; params += [f'%{cnae}%', f'%{cnae}%']
-    if porte:
-        sql += " AND p.porte=%s"; params.append(porte)
-    if cidade:
-        sql += " AND p.cidade=%s"; params.append(cidade)
-    if bairro:
-        sql += " AND p.bairro=%s"; params.append(bairro)
     if status:
         sql += " AND p.status=%s"; params.append(status)
     sql += " ORDER BY p.updated_at DESC"
     prospectos = _q(sql, params)
-
-    cidades = [r['cidade'] for r in
-               _q("SELECT DISTINCT cidade FROM prospecto WHERE cidade IS NOT NULL AND cidade<>'' ORDER BY cidade")]
-    bairros_sel = []
-    if cidade:
-        bairros_sel = [r['bairro'] for r in
-                       _q("SELECT DISTINCT bairro FROM prospecto WHERE cidade=%s AND bairro IS NOT NULL AND bairro<>'' ORDER BY bairro", (cidade,))]
-        if cidade == 'Vitória da Conquista':
-            bairros_sel = sorted(set(bairros_sel) | set(BAIRROS_VDC))
 
     por_status = {s: 0 for s in STATUS_PROSPECTO}
     por_seg    = {}
@@ -3904,12 +3880,10 @@ def crm_prospeccao():
         portes=PORTES_EMPRESA,
         cnae_grupos=CNAE_GRUPOS,
         status_list=STATUS_PROSPECTO,
-        cidades=cidades,
-        bairros_sel=bairros_sel,
         por_status=por_status,
         por_seg=por_seg,
         seg_cor=SEGMENTO_COR,
-        filtros=dict(segmento=seg, cnae=cnae, porte=porte, cidade=cidade, bairro=bairro, status=status),
+        status_ativo=status,
     )
 
 
