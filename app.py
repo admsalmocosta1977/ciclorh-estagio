@@ -1,7 +1,8 @@
 import os, io, json, re, tempfile
 import psycopg2, psycopg2.extras, smtplib, calendar, unicodedata
 import openpyxl
-import requests as _http
+import requests, requests as _http
+import concurrent.futures
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -4021,70 +4022,86 @@ def crm_brasilio_buscar():
     cidade = _norm_mun(request.args.get('municipio', ''))
     cnae   = request.args.get('cnae', '').strip()
     porte  = request.args.get('porte', '').strip()
-    nome   = request.args.get('nome', '').strip()
+    nome   = request.args.get('nome', '').strip().upper()
     page   = int(request.args.get('page', '1') or 1)
 
-    # Casa dos Dados — API pública gratuita, sem token
-    CDD_URL = 'https://api.casadosdados.com.br/v2/public/cnpj/search'
-    headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': 'CicloRH-CRM/1.0',
-    }
-
-    def _payload(pagina=1):
-        q = {'situacao_cadastral': 'ATIVA'}
-        if uf:     q['uf']                  = [uf]
-        if cidade: q['municipio']            = [cidade]
-        if cnae:   q['atividade_principal']  = [cnae]
-        if nome:   q['termo']                = [nome]
-        p = {'query': q, 'page': pagina}
-        if porte and porte != 'DEMAIS':
-            p['extras'] = {'somente_mei': porte == 'MEI'}
-        return p
-
-    def _processar(emp):
-        cnpj_d = re.sub(r'\D', '', emp.get('cnpj') or '')
-        ja = bool(_q("SELECT id FROM prospecto WHERE cnpj=%s", (cnpj_d,), one=True))
-        cnae_info = (emp.get('atividade_principal') or [{}])
-        cnae_obj  = cnae_info[0] if isinstance(cnae_info, list) and cnae_info else {}
-        ende = emp.get('estabelecimento') or emp
-        return {
-            'cnpj':           cnpj_d,
-            'razao_social':   (emp.get('razao_social') or '').title(),
-            'nome_fantasia':  (emp.get('nome_fantasia') or '').title(),
-            'cnae_codigo':    cnae_obj.get('code') or cnae_obj.get('codigo') or '',
-            'cnae_descricao': cnae_obj.get('text') or cnae_obj.get('descricao') or '',
-            'porte':          emp.get('porte', {}).get('descricao') if isinstance(emp.get('porte'), dict) else (emp.get('porte') or ''),
-            'municipio':      (ende.get('municipio') or emp.get('municipio') or '').title(),
-            'uf':             ende.get('uf') or emp.get('uf') or '',
-            'bairro':         (ende.get('bairro') or '').title(),
-            'email':          (emp.get('email') or '').lower(),
-            'telefone':       re.sub(r'\D', '', (emp.get('telefone') or emp.get('telefone1') or '')),
-            'ja_na_base':     ja,
-        }
+    # Passo 1: Casa dos Dados v5 — filtra por cidade/UF (gratuito, sem token)
+    CDD_URL = 'https://api.casadosdados.com.br/v5/public/cnpj/pesquisa'
+    payload = {'situacao_cadastral': ['ATIVA'], 'limite': 20, 'pagina': page}
+    if uf:     payload['uf']        = [uf]
+    if cidade: payload['municipio'] = [cidade]
+    if cnae:   payload['codigo_atividade_principal'] = [cnae]
 
     try:
-        r = _http.post(CDD_URL, json=_payload(page), headers=headers, timeout=20)
+        r = requests.post(CDD_URL, json=payload,
+                          headers={'Content-Type': 'application/json'}, timeout=15)
         if r.status_code == 429:
-            return jsonify({'erro': 'Limite de requisições atingido. Aguarde um momento e tente novamente.'}), 429
-        if r.status_code not in (200, 201):
+            return jsonify({'erro': 'Limite de requisições atingido. Aguarde um momento.'}), 429
+        if r.status_code != 200:
             return jsonify({'erro': f'Casa dos Dados retornou HTTP {r.status_code}.'}), 502
         data = r.json()
     except Exception as e:
-        return jsonify({'erro': f'Falha na conexão: {e}'}), 502
+        return jsonify({'erro': f'Falha na conexão com Casa dos Dados: {e}'}), 502
 
-    # A resposta pode estar em data['data']['cnpj'] ou data['cnpj']
-    empresas = (data.get('data') or {}).get('cnpj') or data.get('cnpj') or []
-    total    = (data.get('data') or {}).get('count') or data.get('count') or len(empresas)
-    has_next = (data.get('data') or {}).get('next') or data.get('next')
+    itens = data.get('cnpjs', [])
+    total = data.get('total', 0)
 
-    resultados = [_processar(e) for e in empresas]
+    # Filtro por nome (client-side, pois CDD não suporta no v5 público)
+    if nome:
+        itens = [i for i in itens if nome in (i.get('razao_social') or '').upper()
+                                           or nome in (i.get('nome_fantasia') or '').upper()]
+
+    # Passo 2: Enriquece cada CNPJ via BrasilAPI (paralelo, 5 workers)
+    def _enriquecer(item):
+        cnpj_d = re.sub(r'\D', '', item.get('cnpj') or '')
+        emp = {}
+        try:
+            br = requests.get(f'https://brasilapi.com.br/api/cnpj/v1/{cnpj_d}', timeout=8)
+            if br.status_code == 200:
+                emp = br.json()
+        except Exception:
+            pass
+        ja = bool(_q("SELECT id FROM prospecto WHERE cnpj=%s", (cnpj_d,), one=True))
+
+        # Filtra por porte se especificado
+        porte_emp = (emp.get('porte') or '').upper()
+        if porte and porte != 'DEMAIS':
+            if porte == 'MEI'  and 'MEI'  not in porte_emp: return None
+            if porte == 'ME'   and porte_emp not in ('ME', 'MICRO EMPRESA'): return None
+            if porte == 'EPP'  and 'EPP'  not in porte_emp and 'PEQUENA' not in porte_emp: return None
+        if porte == 'DEMAIS' and any(x in porte_emp for x in ('MEI','ME','MICRO','EPP','PEQUENA')): return None
+
+        cnae_cod = str(emp.get('cnae_fiscal') or '')
+        # Filtra por CNAE se especificado e BrasilAPI retornou dados
+        if cnae and emp and cnae.replace('.','').replace('-','') not in cnae_cod.replace('.','').replace('-',''):
+            return None
+
+        return {
+            'cnpj':           cnpj_d,
+            'razao_social':   (emp.get('razao_social') or item.get('razao_social') or '').title(),
+            'nome_fantasia':  (emp.get('nome_fantasia') or item.get('nome_fantasia') or '').title(),
+            'cnae_codigo':    cnae_cod,
+            'cnae_descricao': emp.get('cnae_fiscal_descricao') or '',
+            'porte':          emp.get('porte') or '',
+            'municipio':      (emp.get('municipio') or cidade.title()),
+            'uf':             emp.get('uf') or uf,
+            'bairro':         (emp.get('bairro') or '').title(),
+            'email':          (emp.get('email') or '').lower(),
+            'telefone':       re.sub(r'\D', '', (emp.get('ddd_telefone_1') or '')),
+            'ja_na_base':     ja,
+        }
+
+    resultados = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
+        for res in ex.map(_enriquecer, itens):
+            if res:
+                resultados.append(res)
+
     return jsonify({
-        'count':   total,
-        'next':    bool(has_next) or (total > page * 20),
+        'count':    total,
+        'next':     total > page * 20,
         'previous': page > 1,
-        'results': resultados,
+        'results':  resultados,
     })
 
 
