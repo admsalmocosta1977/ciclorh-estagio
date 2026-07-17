@@ -1,5 +1,6 @@
-import os, io, json, psycopg2, psycopg2.extras, smtplib, calendar
+import os, io, json, psycopg2, psycopg2.extras, smtplib, calendar, unicodedata
 import openpyxl
+import requests as _http
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -3698,6 +3699,88 @@ def relatorio_indicadores_xlsx():
 
 
 # ─── PROSPECÇÃO COMERCIAL ────────────────────────────────────────────────────
+
+def _norm_municipio(s):
+    """Remove acentos e converte para maiúsculas — formato da Receita Federal."""
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', s.upper())
+        if unicodedata.category(c) != 'Mn'
+    )
+
+
+@app.route('/crm/prospeccao/busca-rfb')
+@crm_required
+def crm_prospeccao_busca_rfb():
+    cnae_codigo = request.args.get('cnae_codigo', '').strip()
+    municipio   = request.args.get('municipio', 'Vitória da Conquista').strip()
+    pagina      = max(1, int(request.args.get('pagina', 1)))
+    token       = os.environ.get('BRASILIO_TOKEN', '').strip()
+
+    mun_norm = _norm_municipio(municipio)
+    params = {'municipio': mun_norm, 'situacao': 'ATIVA', 'page': pagina, 'page_size': 20}
+
+    if cnae_codigo:
+        prefixo = cnae_codigo[:2]
+        try:
+            n = int(prefixo)
+            params['cnae_fiscal__gte'] = n * 100000
+            params['cnae_fiscal__lt']  = (n + 1) * 100000
+        except ValueError:
+            pass
+
+    headers = {'Authorization': f'Token {token}'} if token else {}
+    try:
+        r = _http.get('https://brasil.io/api/dataset/socios-brasil/empresas/data/',
+                      params=params, headers=headers, timeout=20)
+        if r.status_code == 401:
+            return jsonify({'erro': 'Token Brasil.io inválido ou ausente. Configure a variável BRASILIO_TOKEN no Railway.'}), 401
+        if r.status_code == 429:
+            return jsonify({'erro': 'Limite de requisições atingido. Aguarde alguns segundos e tente novamente.'}), 429
+        if r.status_code != 200:
+            return jsonify({'erro': f'Erro {r.status_code} ao consultar Brasil.io.'}), r.status_code
+        data = r.json()
+    except _http.exceptions.Timeout:
+        return jsonify({'erro': 'Tempo de resposta esgotado. Tente novamente.'}), 504
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
+    cnpjs_ja = {row['cnpj'] for row in _q("SELECT cnpj FROM prospecto WHERE cnpj IS NOT NULL")} \
+               if data.get('results') else set()
+    for emp in data.get('results', []):
+        emp['ja_importado'] = bool(emp.get('cnpj') and emp['cnpj'] in cnpjs_ja)
+
+    return jsonify(data)
+
+
+@app.route('/crm/prospeccao/importar-rfb', methods=['POST'])
+@crm_required
+def crm_prospeccao_importar_rfb():
+    d = request.get_json(silent=True) or {}
+    cnpj = (d.get('cnpj') or '').strip() or None
+    if cnpj:
+        existe = _q("SELECT id FROM prospecto WHERE cnpj=%s", (cnpj,), one=True)
+        if existe:
+            return jsonify({'ok': False, 'msg': 'Já importado', 'id': existe['id']})
+
+    def tc(s):
+        return s.title() if s else None
+
+    cnae_raw = str(d.get('cnae_fiscal', ''))
+    endereco = ' '.join(filter(None, [d.get('logradouro',''), d.get('numero','')])).strip() or None
+    tel = (d.get('ddd_telefone_1') or '').strip() or None
+
+    pid = _ins("""INSERT INTO prospecto
+                  (empresa_nome, cnpj, cnae_codigo, cnae_descricao, porte,
+                   cidade, bairro, endereco, telefone, email, status, responsavel_id)
+                  VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'novo',%s)""",
+               (d.get('razao_social') or d.get('nome_fantasia') or '',
+                cnpj, cnae_raw, tc(d.get('cnae_fiscal_descricao')),
+                tc(d.get('porte')), tc(d.get('municipio')),
+                tc(d.get('bairro')), tc(endereco), tel,
+                (d.get('email') or '').lower() or None,
+                current_user.id))
+    return jsonify({'ok': True, 'id': pid})
+
 
 @app.route('/crm/bairros')
 @crm_required

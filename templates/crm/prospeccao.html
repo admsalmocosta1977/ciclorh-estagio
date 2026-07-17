@@ -107,6 +107,42 @@
   </div>
 </div>
 
+<!-- ── Painel Receita Federal ── -->
+<div class="section-card mb-3" id="rfbPanel">
+  <div class="section-header" style="cursor:pointer" onclick="toggleRFB()">
+    <i class="bi bi-bank fs-5" style="color:var(--brand)"></i>
+    Buscar empresas na Receita Federal (Brasil.io)
+    <span style="font-size:.72rem;font-weight:500;color:var(--ink-3);margin-left:6px">— consulta ao cadastro público do CNPJ</span>
+    <i class="bi bi-chevron-down ms-auto" id="rfbChev" style="transition:.2s"></i>
+  </div>
+  <div id="rfbBody" style="display:none">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+      <div class="fg">
+        <label>Município</label>
+        <input type="text" id="rfbMun" class="filter-bar select" value="Vitória da Conquista" style="min-width:220px">
+      </div>
+      <div class="fg">
+        <label>Segmento / CNAE</label>
+        <select id="rfbCnae" class="filter-bar select">
+          <option value="">Todos os segmentos</option>
+          {% for label, code in cnae_grupos %}
+          <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fg" style="justify-content:flex-end">
+        <label>&nbsp;</label>
+        <button class="btn-action primary" onclick="buscarRFB(1)" id="rfbBtn">
+          <i class="bi bi-search"></i>Consultar Receita Federal
+        </button>
+      </div>
+    </div>
+
+    <!-- Resultados RFB -->
+    <div id="rfbResultados" style="padding:0 18px 14px"></div>
+  </div>
+</div>
+
 <!-- Segmento resumo (só se houver dados) -->
 {% if por_seg %}
 <div class="section-card mb-3" style="padding:12px 16px">
@@ -310,6 +346,7 @@
 </div>
 
 <script>
+/* ── Subfiltro bairro ── */
 (function () {
   var cidadeSel = document.getElementById('cidadeSelect');
   var bairroBox = document.getElementById('bairroBox');
@@ -341,5 +378,166 @@
     atualizarBairros(cidadeSel.value, {{ filtros.bairro | tojson }});
   }
 })();
+
+/* ── Busca Receita Federal (Brasil.io) ── */
+var _rfbAberta = false;
+var _rfbPaginaAtual = 1;
+var _rfbTotal = 0;
+
+function toggleRFB() {
+  var body = document.getElementById('rfbBody');
+  var chev = document.getElementById('rfbChev');
+  _rfbAberta = !_rfbAberta;
+  body.style.display = _rfbAberta ? 'block' : 'none';
+  chev.style.transform = _rfbAberta ? 'rotate(180deg)' : '';
+}
+
+function buscarRFB(pagina) {
+  var mun   = document.getElementById('rfbMun').value.trim();
+  var cnae  = document.getElementById('rfbCnae').value;
+  var btn   = document.getElementById('rfbBtn');
+  var box   = document.getElementById('rfbResultados');
+  if (!mun) { alert('Informe o município.'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Consultando…';
+  box.innerHTML = '<div style="text-align:center;padding:24px;color:var(--ink-3);font-size:.84rem"><i class="bi bi-hourglass-split" style="font-size:1.5rem;display:block;margin-bottom:8px;opacity:.4"></i>Consultando Receita Federal via Brasil.io…</div>';
+
+  _rfbPaginaAtual = pagina || 1;
+  var url = '/crm/prospeccao/busca-rfb?municipio=' + encodeURIComponent(mun)
+          + '&cnae_codigo=' + encodeURIComponent(cnae)
+          + '&pagina=' + _rfbPaginaAtual;
+
+  fetch(url)
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(e){ throw e; });
+      return r.json();
+    })
+    .then(function(data) {
+      _rfbTotal = data.count || 0;
+      renderRFB(data, mun, cnae);
+    })
+    .catch(function(e) {
+      box.innerHTML = '<div style="padding:16px 0;color:#991B1B;font-size:.84rem"><i class="bi bi-exclamation-triangle me-2"></i>' + (e.erro || 'Erro ao consultar a API.') + '</div>';
+    })
+    .finally(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-search"></i>Consultar Receita Federal';
+    });
+}
+
+function renderRFB(data, mun, cnae) {
+  var box = document.getElementById('rfbResultados');
+  var resultados = data.results || [];
+
+  if (!resultados.length) {
+    box.innerHTML = '<div style="text-align:center;padding:24px;color:var(--ink-3);font-size:.84rem"><i class="bi bi-building-x" style="font-size:1.5rem;display:block;margin-bottom:8px;opacity:.3"></i>Nenhuma empresa ativa encontrada para os critérios informados.</div>';
+    return;
+  }
+
+  var html = '<div style="padding:12px 0 4px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'
+           + '<span style="font-size:.76rem;color:var(--ink-3);font-weight:600">'
+           + _rfbTotal.toLocaleString('pt-BR') + ' empresas encontradas — exibindo página ' + _rfbPaginaAtual
+           + '</span></div>';
+
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin-top:10px">';
+  resultados.forEach(function(emp) {
+    var cnpjFmt = emp.cnpj ? emp.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : '';
+    var telFmt  = (emp.ddd_telefone_1 || '').replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3');
+    var porteCor = {MEI:'#EEF2FF',ME:'#D1FAE5',EPP:'#FEF3C7',MÉDIO:'#E0F2FE',GRANDE:'#FCE7F3'}[emp.porte] || '#F1F5F9';
+    var porteTxt = {MEI:'#4338CA',ME:'#065F46',EPP:'#92400E',MÉDIO:'#0369A1',GRANDE:'#9D174D'}[emp.porte] || '#374151';
+
+    html += '<div style="background:var(--surface);border-radius:var(--radius);box-shadow:0 1px 3px rgba(0,0,0,.07);'
+          +   'border:1px solid var(--border);padding:13px 15px;position:relative" id="rfb_' + emp.cnpj + '">';
+
+    if (emp.ja_importado) {
+      html += '<span style="position:absolute;top:10px;right:10px;background:#D1FAE5;color:#065F46;'
+            +   'border-radius:20px;padding:2px 8px;font-size:.67rem;font-weight:700">✓ Importado</span>';
+    }
+
+    html += '<div style="font-size:.85rem;font-weight:700;color:var(--ink);padding-right:' + (emp.ja_importado ? '80px' : '0') + '">' + (emp.razao_social || '') + '</div>';
+    if (emp.nome_fantasia && emp.nome_fantasia !== emp.razao_social) {
+      html += '<div style="font-size:.72rem;color:var(--ink-3);margin-top:2px">' + emp.nome_fantasia + '</div>';
+    }
+    html += '<div style="font-size:.7rem;color:var(--ink-4);margin-top:4px;font-family:monospace">' + cnpjFmt + '</div>';
+
+    html += '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:5px">';
+    if (emp.porte) {
+      html += '<span style="background:' + porteCor + ';color:' + porteTxt + ';border-radius:4px;padding:2px 7px;font-size:.67rem;font-weight:700">' + emp.porte + '</span>';
+    }
+    if (emp.cnae_fiscal_descricao) {
+      html += '<span style="background:var(--canvas);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:.67rem;color:var(--ink-3)">'
+            + emp.cnae_fiscal + ' — ' + (emp.cnae_fiscal_descricao || '').substring(0,45) + '</span>';
+    }
+    html += '</div>';
+
+    html += '<div style="margin-top:8px;font-size:.74rem;color:var(--ink-3)">';
+    if (emp.bairro || emp.municipio) {
+      html += '<i class="bi bi-geo-alt" style="margin-right:4px"></i>'
+            + (emp.bairro ? emp.bairro.replace(/\b\w/g, function(l){return l.toUpperCase();}) + ', ' : '')
+            + (emp.municipio || '') + ' — ' + (emp.uf || '');
+    }
+    if (telFmt) html += '<br><i class="bi bi-telephone" style="margin-right:4px"></i>' + telFmt;
+    if (emp.email) html += '<br><i class="bi bi-envelope" style="margin-right:4px"></i>' + emp.email.toLowerCase();
+    html += '</div>';
+
+    if (!emp.ja_importado) {
+      html += '<button onclick="importarRFB(' + JSON.stringify(emp).replace(/</g,'\\u003c') + ', this)" '
+            +   'style="margin-top:10px;width:100%" class="btn-action success">'
+            +   '<i class="bi bi-plus-circle"></i>Importar para Prospecção</button>';
+    } else {
+      html += '<a href="{{ url_for("crm_prospeccao") }}" style="display:block;margin-top:10px;text-align:center;font-size:.73rem;color:var(--brand)">Ver na lista →</a>';
+    }
+
+    html += '</div>';
+  });
+  html += '</div>';
+
+  /* Paginação */
+  var totalPag = Math.ceil(_rfbTotal / 20);
+  if (totalPag > 1) {
+    html += '<div style="display:flex;justify-content:center;gap:8px;margin-top:14px;flex-wrap:wrap">';
+    if (_rfbPaginaAtual > 1) {
+      html += '<button class="btn-action ghost" onclick="buscarRFB(' + (_rfbPaginaAtual-1) + ')"><i class="bi bi-chevron-left"></i>Anterior</button>';
+    }
+    html += '<span style="display:inline-flex;align-items:center;font-size:.8rem;color:var(--ink-3)">Página ' + _rfbPaginaAtual + ' de ' + totalPag + '</span>';
+    if (data.next) {
+      html += '<button class="btn-action primary" onclick="buscarRFB(' + (_rfbPaginaAtual+1) + ')">Próxima<i class="bi bi-chevron-right ms-1"></i></button>';
+    }
+    html += '</div>';
+  }
+
+  box.innerHTML = html;
+}
+
+function importarRFB(emp, btn) {
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i>Importando…';
+  fetch('/crm/prospeccao/importar-rfb', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(emp)
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      var card = document.getElementById('rfb_' + emp.cnpj);
+      if (card) {
+        btn.parentElement.innerHTML = '<div style="text-align:center;margin-top:10px;font-size:.74rem;color:#065F46;font-weight:700"><i class="bi bi-check-circle me-1"></i>Importado com sucesso!</div>';
+        var badge = document.createElement('span');
+        badge.style.cssText = 'position:absolute;top:10px;right:10px;background:#D1FAE5;color:#065F46;border-radius:20px;padding:2px 8px;font-size:.67rem;font-weight:700';
+        badge.textContent = '✓ Importado';
+        card.appendChild(badge);
+      }
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-exclamation-triangle"></i>' + (d.msg || 'Erro');
+    }
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-exclamation-triangle"></i>Erro';
+  });
+}
 </script>
 {% endblock %}
