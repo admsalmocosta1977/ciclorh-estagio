@@ -535,7 +535,7 @@ def init_db():
             cur.execute(f"ALTER TABLE prospecto ADD COLUMN IF NOT EXISTS {col} {typ}")
         for chave in ['seg_seguradora', 'seg_apolice', 'seg_coberturas', 'seg_vigencia',
                       'int_nome', 'int_cnpj', 'int_endereco', 'int_cidade', 'int_estado',
-                      'int_representante', 'int_cargo']:
+                      'int_representante', 'int_cargo', 'brasilio_token']:
             cur.execute(
                 "INSERT INTO config (chave, valor) VALUES (%s, '') ON CONFLICT (chave) DO NOTHING",
                 (chave,))
@@ -2266,11 +2266,11 @@ def api_check_vinculo(est_id, emp_id):
 @admin_required
 def admin_config():
     if request.method == 'POST':
-        for chave in ['seg_seguradora', 'seg_apolice', 'seg_coberturas', 'seg_vigencia']:
+        for chave in ['seg_seguradora', 'seg_apolice', 'seg_coberturas', 'seg_vigencia', 'brasilio_token']:
             valor = request.form.get(chave, '').strip()
             _run("INSERT INTO config (chave, valor) VALUES (%s, %s) ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor",
                  (chave, valor))
-        _log('editar', 'config', None, 'Editou configurações de seguro')
+        _log('editar', 'config', None, 'Editou configurações')
         flash('Configurações salvas!', 'success')
         return redirect(url_for('admin_config'))
     cfg = _get_config()
@@ -4007,6 +4007,61 @@ def crm_prospeccao_excluir(id):
     _run("DELETE FROM prospecto WHERE id=%s", (id,))
     flash('Prospecto excluído.', 'success')
     return redirect(url_for('crm_prospeccao'))
+
+
+@app.route('/crm/prospeccao/brasilio-buscar')
+@crm_required
+def crm_brasilio_buscar():
+    cfg   = _get_config()
+    token = cfg.get('brasilio_token', '').strip() or os.environ.get('BRASILIO_TOKEN', '').strip()
+    if not token:
+        return jsonify({'erro': 'Token Brasil.IO não configurado. Acesse Administração → Configurações → Brasil.IO.'}), 503
+    params = {}
+    cidade = request.args.get('municipio', '').strip().upper()
+    cnae   = request.args.get('cnae', '').strip()
+    porte  = request.args.get('porte', '').strip()
+    nome   = request.args.get('nome', '').strip()
+    page   = request.args.get('page', '1').strip()
+    situacao = request.args.get('situacao', 'ATIVA').strip()
+    if cidade:   params['municipio']  = cidade
+    if cnae:     params['cnae_fiscal'] = cnae
+    if porte:    params['porte']      = porte
+    if nome:     params['search']     = nome
+    if situacao: params['situacao']   = situacao
+    params['page'] = page
+    try:
+        r = _http.get(
+            'https://brasil.io/api/dataset/socios-brasil/empresas/data/',
+            headers={'Authorization': f'Token {token}', 'Accept': 'application/json'},
+            params=params, timeout=20)
+        if r.status_code == 401:
+            return jsonify({'erro': 'Token inválido ou expirado. Verifique em Administração → Configurações.'}), 401
+        if r.status_code != 200:
+            return jsonify({'erro': f'Brasil.IO retornou HTTP {r.status_code}.'}), 502
+        data = r.json()
+    except Exception as e:
+        return jsonify({'erro': f'Falha na conexão com Brasil.IO: {e}'}), 502
+    # Marca quais CNPJs já estão na base
+    resultados = []
+    for emp in data.get('results', []):
+        cnpj_d = re.sub(r'\D', '', emp.get('cnpj') or '')
+        ja = bool(_q("SELECT id FROM prospecto WHERE cnpj=%s", (cnpj_d,), one=True))
+        resultados.append({
+            'cnpj':             cnpj_d,
+            'razao_social':     (emp.get('razao_social') or '').title(),
+            'nome_fantasia':    (emp.get('nome_fantasia') or '').title(),
+            'cnae_codigo':      emp.get('cnae_fiscal') or '',
+            'cnae_descricao':   emp.get('cnae_fiscal_descricao') or '',
+            'porte':            emp.get('porte') or '',
+            'municipio':        (emp.get('municipio') or '').title(),
+            'uf':               emp.get('uf') or '',
+            'bairro':           (emp.get('bairro') or '').title(),
+            'email':            (emp.get('email') or '').lower(),
+            'telefone':         re.sub(r'\D', '', (emp.get('telefone1') or '')),
+            'ja_na_base':       ja,
+        })
+    return jsonify({'count': data.get('count', 0), 'next': data.get('next'),
+                    'previous': data.get('previous'), 'results': resultados})
 
 
 def _enriquecer_free(p):

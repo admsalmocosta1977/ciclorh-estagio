@@ -39,6 +39,22 @@
                  placeholder="Ex: 01/01/2026 a 31/12/2026">
         </div>
       </div>
+      <!-- Brasil.IO -->
+      <hr class="my-4">
+      <h6 class="fw-bold mb-3"><i class="bi bi-database-fill-check me-2" style="color:#2196F3"></i>Brasil.IO — Busca de Empresas</h6>
+      <p class="text-muted small mb-3">
+        Token de acesso à API do <strong>Brasil.IO</strong> (espelho gratuito da Receita Federal).
+        Obtenha o seu em <a href="https://brasil.io/conta/tokens/" target="_blank">brasil.io/conta/tokens</a> após criar e ativar sua conta.
+      </p>
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label class="form-label fw-semibold">Token de API</label>
+          <input type="text" name="brasilio_token" class="form-control font-monospace"
+                 value="{{ cfg.get('brasilio_token', '') }}"
+                 placeholder="Cole aqui o token gerado no Brasil.IO">
+        </div>
+      </div>
+
       <div class="mt-4">
         <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar Configurações</button>
       </div>

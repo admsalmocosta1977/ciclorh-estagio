@@ -128,6 +128,9 @@
       <button class="rfb-tab" id="tab3" onclick="trocarTab(3)" style="padding:10px 16px;font-size:.8rem;font-weight:700;border:none;border-bottom:2px solid transparent;background:none;color:var(--ink-3);cursor:pointer;margin-bottom:-1px">
         <i class="bi bi-clipboard2-data me-1"></i>Colar da Web
       </button>
+      <button class="rfb-tab" id="tab4" onclick="trocarTab(4)" style="padding:10px 16px;font-size:.8rem;font-weight:700;border:none;border-bottom:2px solid transparent;background:none;color:var(--ink-3);cursor:pointer;margin-bottom:-1px">
+        <i class="bi bi-database-fill-check me-1" style="color:#2196F3"></i>Brasil.IO
+      </button>
     </div>
 
     <!-- Tab 1: Buscar por CNPJ único -->
@@ -194,6 +197,68 @@
 
       <!-- Prévia e botão importar -->
       <div id="webPreview" style="margin-top:14px"></div>
+    </div>
+
+    <!-- Tab 4: Brasil.IO -->
+    <div id="rfbTab4" style="padding:16px 18px;display:none">
+      <div style="background:rgba(33,150,243,.05);border:1px solid rgba(33,150,243,.2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;font-size:.76rem;color:var(--ink-2);line-height:1.6">
+        <i class="bi bi-database-fill-check" style="color:#2196F3"></i>
+        Busca direta na base de dados do <strong>Brasil.IO</strong> (espelho da Receita Federal).
+        Filtre por cidade, CNAE, porte ou nome e selecione empresas para adicionar à lista de prospecção.
+        O token de acesso é configurado em <a href="/admin/config" style="color:var(--brand)">Administração → Configurações</a>.
+      </div>
+
+      <!-- Filtros -->
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px">
+        <div class="fg">
+          <label>Município</label>
+          <input type="text" id="bioMunicipio" class="filter-bar select" placeholder="VITORIA DA CONQUISTA"
+                 value="VITORIA DA CONQUISTA" style="min-width:200px;text-transform:uppercase">
+        </div>
+        <div class="fg">
+          <label>CNAE (código)</label>
+          <input type="text" id="bioCnae" class="filter-bar select" placeholder="Ex: 6810202" style="width:110px;font-family:monospace">
+        </div>
+        <div class="fg">
+          <label>Porte</label>
+          <select id="bioPorte" class="filter-bar select" style="width:100px">
+            <option value="">Todos</option>
+            <option value="MEI">MEI</option>
+            <option value="ME">ME</option>
+            <option value="EPP">EPP</option>
+            <option value="DEMAIS">Médio/Grande</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Nome / palavra-chave</label>
+          <input type="text" id="bioNome" class="filter-bar select" placeholder="busca livre" style="min-width:160px">
+        </div>
+        <div class="fg">
+          <label>&nbsp;</label>
+          <button class="btn-action primary" id="bioBuscarBtn" onclick="bioBuscar(1)">
+            <i class="bi bi-search"></i>Buscar
+          </button>
+        </div>
+      </div>
+
+      <div id="bioInfo" style="font-size:.76rem;color:var(--ink-3);margin-bottom:8px"></div>
+      <div id="bioActionBar" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 14px;margin-bottom:10px;display:none;align-items:center;gap:12px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.78rem;font-weight:600;color:var(--ink-2);white-space:nowrap">
+          <input type="checkbox" id="bioChkAll" onchange="_bioToggleTodos(this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--brand)">
+          Selecionar todas
+        </label>
+        <button id="bioProspectarBtn" disabled onclick="bioProspectar()"
+          style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:var(--radius-sm);
+                 background:var(--brand);color:#fff;font-size:.8rem;font-weight:700;border:none;cursor:pointer;opacity:.45">
+          <i class="bi bi-plus-circle-fill"></i>Selecione empresas
+        </button>
+        <span id="bioProspectarInfo" style="font-size:.76rem;color:var(--ink-3)"></span>
+      </div>
+
+      <div id="bioResultados"></div>
+
+      <!-- Paginação -->
+      <div id="bioPagina" style="display:flex;gap:8px;margin-top:12px;justify-content:center"></div>
     </div>
 
   </div>
@@ -447,13 +512,185 @@ function toggleRFB() {
 }
 
 function trocarTab(n) {
-  [1,2,3].forEach(function(i) {
+  [1,2,3,4].forEach(function(i) {
     var tab = document.getElementById('tab'+i);
     var pnl = document.getElementById('rfbTab'+i);
     var ativo = i === n;
     pnl.style.display = ativo ? 'block' : 'none';
     tab.style.borderBottomColor = ativo ? 'var(--brand)' : 'transparent';
     tab.style.color = ativo ? 'var(--brand)' : 'var(--ink-3)';
+  });
+}
+
+/* ── Brasil.IO ── */
+var _bioPaginaAtual = 1;
+var _bioLista = [];
+
+function bioBuscar(pagina) {
+  var btn  = document.getElementById('bioBuscarBtn');
+  var info = document.getElementById('bioInfo');
+  var res  = document.getElementById('bioResultados');
+  var bar  = document.getElementById('bioActionBar');
+  var pag  = document.getElementById('bioPagina');
+
+  _bioPaginaAtual = pagina || 1;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i>Buscando…';
+  info.textContent = '';
+  res.innerHTML = '';
+  bar.style.display = 'none';
+  pag.innerHTML = '';
+
+  var params = new URLSearchParams({
+    municipio: document.getElementById('bioMunicipio').value.trim().toUpperCase(),
+    cnae:      document.getElementById('bioCnae').value.trim(),
+    porte:     document.getElementById('bioPorte').value,
+    nome:      document.getElementById('bioNome').value.trim(),
+    page:      _bioPaginaAtual
+  });
+
+  fetch('/crm/prospeccao/brasilio-buscar?' + params)
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-search"></i>Buscar';
+    if (d.erro) {
+      info.innerHTML = '<span style="color:#991B1B"><i class="bi bi-exclamation-triangle-fill"></i> ' + d.erro + '</span>';
+      return;
+    }
+    _bioLista = d.results || [];
+    var total = d.count || 0;
+    var novas = _bioLista.filter(function(e){ return !e.ja_na_base; });
+    info.innerHTML =
+      '<strong>' + total + '</strong> empresa' + (total !== 1 ? 's' : '') + ' encontrada' + (total !== 1 ? 's' : '')
+      + (novas.length < _bioLista.length ? ' · <span style="color:var(--ink-3)">' + (_bioLista.length - novas.length) + ' já na base</span>' : '')
+      + ' · página ' + _bioPaginaAtual;
+
+    if (!_bioLista.length) {
+      res.innerHTML = '<div style="text-align:center;padding:32px;color:var(--ink-4);font-size:.82rem">Nenhuma empresa encontrada com esses filtros.</div>';
+      return;
+    }
+
+    // Action bar
+    if (novas.length > 0) {
+      bar.style.display = 'flex';
+      document.getElementById('bioChkAll').checked = false;
+      document.getElementById('bioChkAll').indeterminate = false;
+    }
+
+    // Renderiza cards
+    var h = '<div style="display:flex;flex-direction:column;gap:5px">';
+    _bioLista.forEach(function(emp) {
+      var cnpjFmt = emp.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+      var telFmt  = (emp.telefone||'').replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3');
+      if (emp.ja_na_base) {
+        h += '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--radius-sm);background:var(--canvas);border:1px solid var(--border);opacity:.6">'
+          + '<i class="bi bi-dash-circle" style="color:var(--ink-3);flex-shrink:0"></i>'
+          + '<span style="font-size:.76rem;font-weight:600;color:var(--ink)">' + (emp.razao_social||'') + '</span>'
+          + '<span style="font-size:.68rem;color:var(--ink-3);font-family:monospace">' + cnpjFmt + '</span>'
+          + '<span style="margin-left:auto;font-size:.65rem;background:#DCFCE7;color:#166534;border-radius:4px;padding:1px 7px;font-weight:700">JÁ NA BASE</span>'
+          + '</div>';
+        return;
+      }
+      h += '<div data-bio-cnpj="' + emp.cnpj + '" style="border-radius:var(--radius-sm);background:rgba(33,150,243,.04);border:1px solid rgba(33,150,243,.18)">'
+        + '<div style="display:flex;align-items:flex-start;gap:8px;padding:9px 12px">'
+        + '<input type="checkbox" class="bio-chk" data-cnpj="' + emp.cnpj + '" onchange="_bioAtualizarBtn()" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:var(--brand)">'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-size:.8rem;font-weight:700;color:var(--ink)">' + (emp.razao_social||'') + '</div>'
+        + (emp.nome_fantasia && emp.nome_fantasia !== emp.razao_social ? '<div style="font-size:.7rem;color:var(--ink-3)">' + emp.nome_fantasia + '</div>' : '')
+        + '<div style="font-size:.67rem;color:var(--ink-3);font-family:monospace;margin-top:1px">' + cnpjFmt
+        + (emp.municipio ? '  ·  ' + emp.municipio + (emp.uf ? '/' + emp.uf : '') : '') + '</div>'
+        + '</div>'
+        + '<div style="display:flex;gap:4px;flex-shrink:0;align-items:flex-start">'
+        + (emp.porte ? '<span style="font-size:.64rem;font-weight:700;padding:2px 7px;border-radius:4px;background:#EEF2FF;color:#4338CA">' + emp.porte + '</span>' : '')
+        + '</div>'
+        + '</div>';
+      var det = [];
+      if (emp.cnae_descricao) det.push('<i class="bi bi-tag-fill"></i> ' + emp.cnae_descricao.substring(0,45));
+      if (telFmt)             det.push('<i class="bi bi-telephone-fill"></i> ' + telFmt);
+      if (emp.email)          det.push('<i class="bi bi-envelope-fill"></i> ' + emp.email);
+      if (emp.bairro)         det.push('<i class="bi bi-geo-alt-fill"></i> ' + emp.bairro);
+      if (det.length)
+        h += '<div style="padding:0 12px 8px 36px;display:flex;flex-wrap:wrap;gap:10px;font-size:.67rem;color:var(--ink-2)">'
+          + det.map(function(d){ return '<span>'+d+'</span>'; }).join('') + '</div>';
+      h += '</div>';
+    });
+    h += '</div>';
+    res.innerHTML = h;
+
+    // Paginação
+    var pg = '';
+    if (d.previous) pg += '<button class="btn-action" onclick="bioBuscar(' + (_bioPaginaAtual-1) + ')"><i class="bi bi-chevron-left"></i>Anterior</button>';
+    if (d.next)     pg += '<button class="btn-action" onclick="bioBuscar(' + (_bioPaginaAtual+1) + ')">Próxima <i class="bi bi-chevron-right"></i></button>';
+    pag.innerHTML = pg;
+    _bioAtualizarBtn();
+  })
+  .catch(function(e) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-search"></i>Buscar';
+    info.innerHTML = '<span style="color:#991B1B"><i class="bi bi-exclamation-triangle-fill"></i> Falha de conexão. Tente novamente.</span>';
+  });
+}
+
+function _bioToggleTodos(checked) {
+  document.querySelectorAll('.bio-chk').forEach(function(c){ c.checked = checked; });
+  _bioAtualizarBtn();
+}
+
+function _bioAtualizarBtn() {
+  var sel = document.querySelectorAll('.bio-chk:checked').length;
+  var total = document.querySelectorAll('.bio-chk').length;
+  var btn = document.getElementById('bioProspectarBtn');
+  var all = document.getElementById('bioChkAll');
+  if (!btn) return;
+  if (sel === 0) {
+    btn.disabled = true; btn.style.opacity = '.45'; btn.style.cursor = 'not-allowed';
+    btn.innerHTML = '<i class="bi bi-plus-circle-fill"></i>Selecione empresas';
+  } else {
+    btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
+    btn.innerHTML = '<i class="bi bi-plus-circle-fill"></i>Adicionar ' + sel + ' à prospecção';
+  }
+  if (all) {
+    all.indeterminate = sel > 0 && sel < total;
+    all.checked = total > 0 && sel === total;
+  }
+}
+
+function bioProspectar() {
+  var checks = Array.from(document.querySelectorAll('.bio-chk:checked'));
+  if (!checks.length) return;
+  var cnpjs = checks.map(function(c){ return c.dataset.cnpj; });
+  var btn = document.getElementById('bioProspectarBtn');
+  btn.disabled = true; btn.style.opacity = '.6';
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i>Adicionando…';
+
+  fetch('/crm/prospeccao/importar-lote', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({cnpjs: cnpjs})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(lista) {
+    var ok = lista.filter(function(r){ return r.ok; }).length;
+    btn.style.opacity = '1';
+    btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>' + ok + ' adicionada' + (ok !== 1 ? 's' : '') + '!';
+    btn.style.background = '#059669';
+    document.getElementById('bioProspectarInfo').innerHTML =
+      '<a href="/crm/prospeccao" style="color:var(--brand);font-weight:600;text-decoration:none"><i class="bi bi-arrow-right-circle"></i> Ver lista de prospecção</a>';
+    lista.forEach(function(r) {
+      if (r.ok) {
+        var card = document.querySelector('[data-bio-cnpj="'+r.cnpj+'"]');
+        if (card) {
+          card.style.opacity = '.5';
+          var chk = card.querySelector('.bio-chk');
+          if (chk) chk.disabled = true;
+        }
+      }
+    });
+  })
+  .catch(function() {
+    btn.disabled = false; btn.style.opacity = '1'; btn.style.background = '';
+    btn.innerHTML = '<i class="bi bi-exclamation-triangle"></i>Erro — tente novamente';
   });
 }
 
