@@ -4014,8 +4014,6 @@ def crm_prospeccao_excluir(id):
 def crm_brasilio_buscar():
     cfg   = _get_config()
     token = cfg.get('brasilio_token', '').strip() or os.environ.get('BRASILIO_TOKEN', '').strip()
-    if not token:
-        return jsonify({'erro': 'Token Brasil.IO não configurado. Acesse Administração → Configurações → Brasil.IO.'}), 503
     params = {}
     cidade = request.args.get('municipio', '').strip().upper()
     cnae   = request.args.get('cnae', '').strip()
@@ -4029,11 +4027,13 @@ def crm_brasilio_buscar():
     if nome:     params['search']     = nome
     if situacao: params['situacao']   = situacao
     params['page'] = page
+    headers = {'Accept': 'application/json'}
+    if token:
+        headers['Authorization'] = f'Token {token}'
     try:
         r = _http.get(
             'https://brasil.io/api/dataset/socios-brasil/empresas/data/',
-            headers={'Authorization': f'Token {token}', 'Accept': 'application/json'},
-            params=params, timeout=20)
+            headers=headers, params=params, timeout=20)
         if r.status_code == 401:
             return jsonify({'erro': 'Token inválido ou expirado. Verifique em Administração → Configurações.'}), 401
         if r.status_code != 200:
