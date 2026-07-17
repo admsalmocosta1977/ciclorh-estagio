@@ -3784,8 +3784,9 @@ def crm_prospeccao_lookup_cnpj():
 @crm_required
 def crm_prospeccao_importar_lote():
     body = request.get_json(silent=True) or {}
-    cnpjs_raw = body.get('cnpjs', [])
+    cnpjs_raw        = body.get('cnpjs', [])
     apenas_consultar = body.get('apenas_consultar', False)
+    prospectar       = body.get('prospectar', False)
     resultados = []
     for c in cnpjs_raw[:50]:
         emp, erro = _lookup_cnpj(c)
@@ -3817,18 +3818,32 @@ def crm_prospeccao_importar_lote():
                                'whatsapp_url': emp['whatsapp_url']})
             continue
         endereco = ' '.join(filter(None, [emp.get('logradouro',''), emp.get('numero','')])).strip() or None
+        status_prospecto = 'convertido' if prospectar else 'novo'
         pid = _ins("""INSERT INTO prospecto
                       (empresa_nome, cnpj, cnae_codigo, cnae_descricao, porte,
                        cidade, bairro, endereco, telefone, email,
                        contato_nome, contato_cargo, status, responsavel_id)
-                      VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'novo',%s)""",
+                      VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                    (emp['razao_social'], emp['cnpj'], emp['cnae_fiscal'],
                     emp['cnae_fiscal_descricao'], emp['porte'],
                     emp['municipio'], emp['bairro'], endereco,
                     emp['ddd_telefone_1'] or None, emp['email'] or None,
                     emp['contato_nome'] or None, emp['contato_cargo'] or None,
-                    current_user.id))
-        resultados.append({'cnpj': emp['cnpj'], 'ok': True, 'id': pid,
+                    status_prospecto, current_user.id))
+        lead_id = None
+        if prospectar:
+            whats = ('55' + emp['ddd_telefone_1']) if emp.get('ddd_telefone_1') else None
+            lead_id = _ins("""INSERT INTO crm_lead
+                              (empresa_nome, empresa_cnpj, cidade, etapa, origem,
+                               responsavel_id, contato_nome, contato_email, contato_whatsapp)
+                              VALUES (%s,%s,%s,'Lead Captado','Colar da Web',%s,%s,%s,%s)""",
+                           (emp['razao_social'], emp['cnpj'], emp['municipio'],
+                            current_user.id,
+                            emp['contato_nome'] or None,
+                            emp['email'] or None,
+                            whats))
+            _run("UPDATE prospecto SET lead_id=%s WHERE id=%s", (lead_id, pid))
+        resultados.append({'cnpj': emp['cnpj'], 'ok': True, 'id': pid, 'lead_id': lead_id,
                            'razao_social': emp['razao_social'],
                            'municipio': emp['municipio']})
     return jsonify(resultados)

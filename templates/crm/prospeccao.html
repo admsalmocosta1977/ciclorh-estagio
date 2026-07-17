@@ -617,29 +617,68 @@ function extrairCNPJs() {
   processarLote(0);
 }
 
+/* dados da última consulta para uso nos callbacks */
+var _webLista = [];
+
+function _atualizarBtnProspectar() {
+  var selecionados = document.querySelectorAll('.web-chk:checked').length;
+  var btn = document.getElementById('webProspectarBtn');
+  if (!btn) return;
+  if (selecionados === 0) {
+    btn.disabled = true;
+    btn.style.opacity = '.45';
+    btn.style.cursor = 'not-allowed';
+    btn.innerHTML = '<i class="bi bi-funnel-fill"></i>Selecione empresas para prospectar';
+  } else {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+    btn.innerHTML = '<i class="bi bi-funnel-fill"></i>Prospectar ' + selecionados + ' selecionada' + (selecionados > 1 ? 's' : '') + ' no Funil';
+  }
+  var chkAll = document.getElementById('webChkAll');
+  if (chkAll) {
+    var total = document.querySelectorAll('.web-chk').length;
+    chkAll.indeterminate = selecionados > 0 && selecionados < total;
+    chkAll.checked = total > 0 && selecionados === total;
+  }
+}
+
+function _toggleTodos(checked) {
+  document.querySelectorAll('.web-chk').forEach(function(c){ c.checked = checked; });
+  _atualizarBtnProspectar();
+}
+
 function renderizarResultados(lista) {
+  _webLista = lista;
   var info = document.getElementById('webInfo');
   var box  = document.getElementById('webPreview');
 
-  var total     = lista.length;
-  var novas     = lista.filter(function(r){ return r.ok || (r.dados && !r.ja_importado); });
-  var jaExist   = lista.filter(function(r){ return r.msg === 'Já importado'; });
-  var comErro   = lista.filter(function(r){ return !r.ok && r.msg !== 'Já importado'; });
+  var total   = lista.length;
+  var novas   = lista.filter(function(r){ return r.ok; });
+  var jaExist = lista.filter(function(r){ return r.msg === 'Já importado'; });
+  var comErro = lista.filter(function(r){ return !r.ok && r.msg !== 'Já importado'; });
 
   info.innerHTML =
-    '<span style="color:#065F46;font-weight:700">' + total + ' CNPJs encontrados</span>'
-    + (novas.length   ? ' · <span style="color:var(--brand)">'    + novas.length   + ' novas</span>' : '')
-    + (jaExist.length ? ' · <span style="color:var(--ink-3)">'    + jaExist.length + ' já existem</span>' : '')
-    + (comErro.length ? ' · <span style="color:#991B1B">'         + comErro.length + ' não encontradas</span>' : '');
+    '<span style="color:#065F46;font-weight:700">' + total + ' CNPJs processados</span>'
+    + (novas.length   ? ' · <span style="color:var(--brand)">'  + novas.length   + ' novas</span>' : '')
+    + (jaExist.length ? ' · <span style="color:var(--ink-3)">'  + jaExist.length + ' já existem</span>' : '')
+    + (comErro.length ? ' · <span style="color:#991B1B">'       + comErro.length + ' não encontradas</span>' : '');
 
-  /* Botão importar todas as novas de uma vez */
-  var cnpjsNovos = lista.filter(function(r){ return r.ok; }).map(function(r){ return r.cnpj; });
   var h = '';
-  if (cnpjsNovos.length > 0) {
-    h += '<div style="margin-bottom:12px">'
-       + '<button class="btn-action success" id="webImportarBtn" onclick="importarTodasWeb('+JSON.stringify(cnpjsNovos)+')">'
-       + '<i class="bi bi-download"></i>Importar todas as ' + cnpjsNovos.length + ' empresas novas'
-       + '</button></div>';
+  if (novas.length > 0) {
+    /* Barra de ação fixa no topo */
+    h += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);'
+       +      'padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+       + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.78rem;font-weight:600;color:var(--ink-2);white-space:nowrap">'
+       + '<input type="checkbox" id="webChkAll" onchange="_toggleTodos(this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--brand)">'
+       + 'Selecionar todas (' + novas.length + ')'
+       + '</label>'
+       + '<button id="webProspectarBtn" disabled onclick="prospectarSelecionadas()"'
+       +   ' style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:var(--radius-sm);'
+       +   'background:var(--brand);color:#fff;font-size:.8rem;font-weight:700;border:none;cursor:pointer;transition:.15s;opacity:.5">'
+       + '<i class="bi bi-funnel-fill"></i>Selecione empresas para prospectar</button>'
+       + '<span id="webFunilInfo" style="font-size:.76rem;color:var(--ink-3)"></span>'
+       + '</div>';
   }
 
   /* Lista de resultados */
@@ -649,9 +688,9 @@ function renderizarResultados(lista) {
       /* empresa encontrada e nova */
       var cnpjFmt = r.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
       var telFmt  = (r.ddd_telefone_1||'').replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3');
-      h += '<div style="border-radius:var(--radius-sm);background:rgba(5,150,105,.04);border:1px solid rgba(5,150,105,.2);overflow:hidden">';
+      h += '<div data-cnpj="' + r.cnpj + '" style="border-radius:var(--radius-sm);background:rgba(5,150,105,.04);border:1px solid rgba(5,150,105,.2);overflow:hidden">';
       h += '<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px">'
-         + '<i class="bi bi-check-circle-fill" style="color:#059669;flex-shrink:0;margin-top:2px"></i>'
+         + '<input type="checkbox" class="web-chk" data-cnpj="' + r.cnpj + '" onchange="_atualizarBtnProspectar()" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:var(--brand)">'
          + '<div style="flex:1;min-width:0">'
          + '<div style="font-size:.82rem;font-weight:700;color:var(--ink)">' + (r.razao_social || '') + '</div>'
          + (r.nome_fantasia && r.nome_fantasia !== r.razao_social ? '<div style="font-size:.7rem;color:var(--ink-3)">' + r.nome_fantasia + '</div>' : '')
@@ -690,33 +729,49 @@ function renderizarResultados(lista) {
   });
   h += '</div>';
   box.innerHTML = h;
+  _atualizarBtnProspectar();
 }
 
-function importarTodasWeb(cnpjs) {
-  var btn = document.getElementById('webImportarBtn');
+function prospectarSelecionadas() {
+  var checks = Array.from(document.querySelectorAll('.web-chk:checked'));
+  if (!checks.length) return;
+  var cnpjs = checks.map(function(c){ return c.dataset.cnpj; });
+
+  var btn = document.getElementById('webProspectarBtn');
   btn.disabled = true;
-  btn.innerHTML = '<i class="bi bi-hourglass-split"></i>Importando…';
+  btn.style.opacity = '.6';
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i>Enviando ' + cnpjs.length + ' para o funil…';
 
   fetch('/crm/prospeccao/importar-lote', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({cnpjs: cnpjs})
+    body: JSON.stringify({cnpjs: cnpjs, prospectar: true})
   })
   .then(function(r){ return r.json(); })
   .then(function(lista) {
     var ok = lista.filter(function(r){ return r.ok; }).length;
-    btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>' + ok + ' empresas importadas com sucesso!';
+    btn.innerHTML = '<i class="bi bi-check-circle-fill"></i>' + ok + ' empresa' + (ok !== 1 ? 's' : '') + ' adicionada' + (ok !== 1 ? 's' : '') + ' ao funil!';
     btn.style.background = '#059669';
-    /* Atualiza badges na lista */
+    btn.style.opacity = '1';
+    document.getElementById('webFunilInfo').innerHTML =
+      '<a href="/crm/funil" style="color:var(--brand);font-weight:600;text-decoration:none"><i class="bi bi-arrow-right-circle"></i> Abrir Funil de Prospecção</a>';
+    /* Marca os cards selecionados como "no funil" */
     lista.forEach(function(r) {
       if (r.ok) {
-        var badge = document.querySelector('[data-cnpj="'+r.cnpj+'"] .web-badge');
-        if (badge) { badge.textContent = 'IMPORTADA'; badge.style.background = '#059669'; }
+        var chk = document.querySelector('.web-chk[data-cnpj="'+r.cnpj+'"]');
+        if (chk) chk.closest('[data-cnpj]').style.opacity = '.5';
+        var card = document.querySelector('[data-cnpj="'+r.cnpj+'"]');
+        if (card) {
+          var badge = card.querySelector('span[style*="NOVA"]') || card.querySelector('.web-badge');
+          if (!badge) badge = Array.from(card.querySelectorAll('span')).find(function(s){ return s.textContent.trim()==='NOVA'; });
+          if (badge) { badge.textContent = 'NO FUNIL'; badge.style.background = '#2563EB'; badge.style.color = '#fff'; }
+        }
       }
     });
   })
-  .catch(function(e) {
+  .catch(function() {
     btn.disabled = false;
+    btn.style.opacity = '1';
     btn.innerHTML = '<i class="bi bi-exclamation-triangle"></i>Erro — tente novamente';
   });
 }
