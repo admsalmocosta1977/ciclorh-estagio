@@ -4051,7 +4051,15 @@ def crm_brasilio_buscar():
         itens = [i for i in itens if nome in (i.get('razao_social') or '').upper()
                                            or nome in (i.get('nome_fantasia') or '').upper()]
 
+    # Verifica quais CNPJs já estão na base (query única no thread principal — g.db não é thread-safe)
+    cnpjs_raw = [re.sub(r'\D', '', item.get('cnpj') or '') for item in itens]
+    ja_na_base_set = set()
+    if cnpjs_raw:
+        rows = _q("SELECT cnpj FROM prospecto WHERE cnpj = ANY(%s)", (cnpjs_raw,))
+        ja_na_base_set = {r['cnpj'] for r in rows}
+
     # Passo 2: Enriquece cada CNPJ via BrasilAPI (paralelo, 5 workers)
+    # _q não pode ser chamado dentro das threads — usa ja_na_base_set calculado acima
     def _enriquecer(item):
         cnpj_d = re.sub(r'\D', '', item.get('cnpj') or '')
         emp = {}
@@ -4061,7 +4069,6 @@ def crm_brasilio_buscar():
                 emp = br.json()
         except Exception:
             pass
-        ja = bool(_q("SELECT id FROM prospecto WHERE cnpj=%s", (cnpj_d,), one=True))
 
         # Filtra por porte se especificado
         porte_emp = (emp.get('porte') or '').upper()
@@ -4088,7 +4095,7 @@ def crm_brasilio_buscar():
             'bairro':         (emp.get('bairro') or '').title(),
             'email':          (emp.get('email') or '').lower(),
             'telefone':       re.sub(r'\D', '', (emp.get('ddd_telefone_1') or '')),
-            'ja_na_base':     ja,
+            'ja_na_base':     cnpj_d in ja_na_base_set,
         }
 
     resultados = []
