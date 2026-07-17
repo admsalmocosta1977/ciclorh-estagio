@@ -22,13 +22,16 @@ textarea.form-control { min-height:80px; resize:vertical; }
   cursor:pointer; transition:.15s; background:var(--canvas); }
 .porte-pill input:checked + label { background:var(--brand); border-color:var(--brand); color:#fff; }
 .porte-pill label:hover { border-color:var(--brand); color:var(--brand); }
+.ia-badge { display:inline-block;font-size:.6rem;font-weight:700;background:#7C3AED;color:#fff;
+  border-radius:3px;padding:1px 5px;vertical-align:middle;margin-left:5px;letter-spacing:.3px; }
+.campo-faltando { border-color:#F59E0B !important; background:rgba(245,158,11,.06) !important; }
 </style>
 
-<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:{% if ja_concedente %}12{% else %}20{% endif %}px">
   <a href="{{ url_for('crm_prospeccao') }}" style="color:var(--ink-3);font-size:1.1rem;text-decoration:none">
     <i class="bi bi-arrow-left"></i>
   </a>
-  <div>
+  <div style="flex:1">
     <div style="font-size:1.2rem;font-weight:800;color:var(--ink);letter-spacing:-.3px">
       {{ 'Editar Empresa' if p else 'Nova Empresa' }} — Prospecção
     </div>
@@ -36,7 +39,34 @@ textarea.form-control { min-height:80px; resize:vertical; }
       {{ p.empresa_nome if p else 'Cadastre uma empresa para prospecção comercial' }}
     </div>
   </div>
+  {% if p %}
+  <button type="button" id="btnEnriquecer"
+    onclick="enriquecerDados({{ p.id }})"
+    style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius-sm);
+           background:linear-gradient(135deg,#7C3AED,#2563EB);color:#fff;font-size:.78rem;font-weight:700;
+           border:none;cursor:pointer;flex-shrink:0">
+    <i class="bi bi-stars"></i>Enriquecer Dados
+  </button>
+  {% endif %}
 </div>
+
+{% if ja_concedente %}
+<div style="background:#FEF2F2;border:1.5px solid #FCA5A5;border-radius:var(--radius-sm);padding:12px 16px;
+            margin-bottom:16px;display:flex;align-items:flex-start;gap:10px">
+  <i class="bi bi-exclamation-triangle-fill" style="color:#DC2626;font-size:1.1rem;flex-shrink:0;margin-top:1px"></i>
+  <div>
+    <div style="font-size:.82rem;font-weight:700;color:#991B1B">CNPJ já cadastrado como empresa concedente</div>
+    <div style="font-size:.76rem;color:#B91C1C;margin-top:2px">
+      Esta empresa já está na nossa base como <strong>{{ ja_concedente.nome }}</strong>.
+      O lead <strong>não pode ser lançado no funil</strong> enquanto o CNPJ estiver registrado como concedente.
+      Exclua o lead ou corrija o CNPJ antes de prosseguir.
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div id="enrichToast" style="display:none;background:#F5F3FF;border:1px solid #DDD6FE;border-radius:var(--radius-sm);
+     padding:10px 14px;margin-bottom:12px;font-size:.78rem;color:#5B21B6"></div>
 
 <form method="post">
 <div class="form-card">
@@ -158,14 +188,31 @@ textarea.form-control { min-height:80px; resize:vertical; }
     </div>
     <div class="row g-3 mt-0">
       <div class="col-md-4">
-        <label class="form-label">Site</label>
-        <input type="text" name="site" class="form-control"
+        <label class="form-label">Site <span id="lbSite"></span></label>
+        <input type="text" id="fSite" name="site" class="form-control"
                value="{{ p.site if p else '' }}" placeholder="www.empresa.com.br">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">LinkedIn <span id="lbLinkedin"></span></label>
+        <input type="text" id="fLinkedin" name="linkedin" class="form-control"
+               value="{{ p.linkedin if p else '' }}" placeholder="linkedin.com/company/…">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Funcionários <span id="lbFuncionarios"></span></label>
+        <input type="number" id="fFuncionarios" name="num_funcionarios" class="form-control" min="0"
+               value="{{ p.num_funcionarios if p else '' }}" placeholder="Ex: 45">
       </div>
       <div class="col-md-2">
         <label class="form-label">Vagas estimadas</label>
         <input type="number" name="vagas_estimadas" class="form-control" min="0"
                value="{{ p.vagas_estimadas if p else '' }}" placeholder="0">
+      </div>
+    </div>
+    <div class="row g-3 mt-0">
+      <div class="col-md-5">
+        <label class="form-label">Faturamento estimado <span id="lbFaturamento"></span></label>
+        <input type="text" id="fFaturamento" name="faturamento_estimado" class="form-control"
+               value="{{ p.faturamento_estimado if p else '' }}" placeholder="Ex: R$ 1M – R$ 10M">
       </div>
     </div>
   </div>
@@ -205,15 +252,43 @@ textarea.form-control { min-height:80px; resize:vertical; }
     </div>
   </div>
 
+  <!-- Campos faltando -->
+  <div id="missingAlert" style="display:none;padding:10px 22px;background:#FFFBEB;border-top:1px solid #FDE68A">
+    <div style="font-size:.76rem;color:#92400E;font-weight:600">
+      <i class="bi bi-info-circle-fill me-1"></i>Campos ainda vazios:
+      <span id="missingList" style="font-weight:400"></span>
+    </div>
+  </div>
+
   <!-- Rodapé -->
-  <div class="form-section" style="background:var(--canvas);display:flex;justify-content:flex-end;gap:10px">
+  <div class="form-section" style="background:var(--canvas);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    {% if p %}
+    <form method="post" action="{{ url_for('crm_prospeccao_converter', id=p.id) }}"
+          style="margin:0" onsubmit="return confirmarFunil(event)">
+      {% if ja_concedente %}
+      <button type="button" disabled title="CNPJ já cadastrado como concedente"
+        style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:var(--radius-sm);
+               background:var(--canvas);color:#9CA3AF;font-size:.82rem;font-weight:700;
+               border:1.5px solid #E5E7EB;cursor:not-allowed">
+        <i class="bi bi-funnel"></i>Lançar no Funil
+      </button>
+      {% else %}
+      <button type="submit"
+        style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:var(--radius-sm);
+               background:#059669;color:#fff;font-size:.82rem;font-weight:700;border:none;cursor:pointer">
+        <i class="bi bi-funnel-fill"></i>Lançar no Funil
+      </button>
+      {% endif %}
+    </form>
+    {% endif %}
+    <div style="flex:1"></div>
     <a href="{{ url_for('crm_prospeccao') }}"
        style="display:inline-flex;align-items:center;gap:5px;padding:7px 16px;border-radius:var(--radius-sm);
               font-size:.82rem;font-weight:600;border:1px solid var(--border-md);color:var(--ink-3);
               text-decoration:none;background:var(--surface)">
       Cancelar
     </a>
-    <button type="submit" class="btn btn-primary" style="font-size:.82rem">
+    <button type="submit" onclick="verificarCampos()" class="btn btn-primary" style="font-size:.82rem">
       <i class="bi bi-check-lg me-1"></i>{{ 'Salvar alterações' if p else 'Cadastrar empresa' }}
     </button>
   </div>
@@ -223,22 +298,18 @@ textarea.form-control { min-height:80px; resize:vertical; }
 
 <script>
 (function() {
-  var grupoSel = document.getElementById('cnaeGrupo');
-  var descInput = document.getElementById('cnaeDesc');
+  var grupoSel    = document.getElementById('cnaeGrupo');
+  var descInput   = document.getElementById('cnaeDesc');
   var cidadeInput = document.getElementById('cidadeInput');
-  var bairroSel = document.getElementById('bairroSelect');
+  var bairroSel   = document.getElementById('bairroSelect');
 
-  /* CNAE: preenche descrição ao selecionar grupo */
-  grupoSel.addEventListener('change', function() {
+  if (grupoSel) grupoSel.addEventListener('change', function() {
     var opt = this.options[this.selectedIndex];
-    if (opt && opt.dataset.label) {
-      descInput.value = opt.dataset.label.replace(/^\d+ — /, '');
-    }
+    if (opt && opt.dataset.label) descInput.value = opt.dataset.label.replace(/^\d+ — /, '');
   });
 
-  /* Bairro: atualiza ao digitar cidade (com debounce) */
   var timer;
-  cidadeInput.addEventListener('input', function() {
+  if (cidadeInput) cidadeInput.addEventListener('input', function() {
     clearTimeout(timer);
     var cidade = this.value.trim();
     timer = setTimeout(function() {
@@ -258,5 +329,102 @@ textarea.form-control { min-height:80px; resize:vertical; }
     }, 400);
   });
 })();
+
+/* ── Enriquecimento via IA ── */
+function enriquecerDados(id) {
+  var btn = document.getElementById('btnEnriquecer');
+  var toast = document.getElementById('enrichToast');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i>Buscando dados…';
+  toast.style.display = 'none';
+
+  fetch('/crm/prospeccao/' + id + '/enriquecer', {method:'POST',
+    headers:{'Content-Type':'application/json'}})
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (d.erro) { alert('Erro: ' + d.erro); return; }
+
+    var preenchidos = [];
+
+    function preencher(fieldId, labelId, valor, labelTxt) {
+      var el = document.getElementById(fieldId);
+      var lb = document.getElementById(labelId);
+      if (el && valor && !el.value) {
+        el.value = valor;
+        el.style.borderColor = '#7C3AED';
+        if (lb) lb.innerHTML = '<span class="ia-badge">IA</span>';
+        preenchidos.push(labelTxt);
+      }
+    }
+
+    preencher('fSite',         'lbSite',         d.site,                  'Site');
+    preencher('fLinkedin',     'lbLinkedin',      d.linkedin,              'LinkedIn');
+    preencher('fFuncionarios', 'lbFuncionarios',  d.num_funcionarios,      'Funcionários');
+    preencher('fFaturamento',  'lbFaturamento',   d.faturamento_estimado,  'Faturamento');
+
+    var fEmail = document.querySelector('[name=email]');
+    if (fEmail && d.email && !fEmail.value) { fEmail.value = d.email; fEmail.style.borderColor='#7C3AED'; preenchidos.push('E-mail'); }
+
+    if (d.obs_enriquecimento) {
+      var fObs = document.querySelector('[name=obs]');
+      if (fObs && !fObs.value) { fObs.value = d.obs_enriquecimento; fObs.style.borderColor='#7C3AED'; preenchidos.push('Observações'); }
+    }
+
+    if (preenchidos.length) {
+      toast.style.display = 'block';
+      toast.innerHTML = '<i class="bi bi-stars" style="color:#7C3AED"></i> <strong>IA preencheu:</strong> '
+        + preenchidos.join(', ')
+        + ' — revise antes de salvar.';
+    } else {
+      toast.style.display = 'block';
+      toast.innerHTML = '<i class="bi bi-info-circle"></i> Nenhum campo novo encontrado. Os campos já estavam preenchidos ou não foram localizados dados adicionais.';
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-stars"></i>Enriquecer novamente';
+  })
+  .catch(function(e) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-stars"></i>Enriquecer Dados';
+    alert('Falha na comunicação com o servidor.');
+  });
+}
+
+/* ── Campos faltando ── */
+var CAMPOS_IMPORTANTES = [
+  {id:'fSite',         nome:'Site'},
+  {id:'fLinkedin',     nome:'LinkedIn'},
+  {id:'fFuncionarios', nome:'Nº de funcionários'},
+  {id:'fFaturamento',  nome:'Faturamento estimado'},
+];
+
+function verificarCampos() {
+  var faltando = [];
+  CAMPOS_IMPORTANTES.forEach(function(c) {
+    var el = document.getElementById(c.id);
+    if (el && !el.value.trim()) {
+      faltando.push(c.nome);
+      el.classList.add('campo-faltando');
+    } else if (el) {
+      el.classList.remove('campo-faltando');
+    }
+  });
+  var fEmail = document.querySelector('[name=email]');
+  if (fEmail && !fEmail.value.trim()) { faltando.push('E-mail'); fEmail.classList.add('campo-faltando'); }
+  else if (fEmail) fEmail.classList.remove('campo-faltando');
+
+  var alerta = document.getElementById('missingAlert');
+  if (faltando.length) {
+    alerta.style.display = 'block';
+    document.getElementById('missingList').textContent = faltando.join(', ') + '.';
+  } else {
+    alerta.style.display = 'none';
+  }
+  /* Permite salvar mesmo assim */
+}
+
+/* ── Confirmar lançamento no funil ── */
+function confirmarFunil(e) {
+  return confirm('Confirma o lançamento desta empresa no Funil de Vendas?');
+}
 </script>
 {% endblock %}

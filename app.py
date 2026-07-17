@@ -531,6 +531,8 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""")
+        for col, typ in [('num_funcionarios','INTEGER'), ('faturamento_estimado','TEXT'), ('linkedin','TEXT')]:
+            cur.execute(f"ALTER TABLE prospecto ADD COLUMN IF NOT EXISTS {col} {typ}")
         for chave in ['seg_seguradora', 'seg_apolice', 'seg_coberturas', 'seg_vigencia',
                       'int_nome', 'int_cnpj', 'int_endereco', 'int_cidade', 'int_estado',
                       'int_representante', 'int_cargo']:
@@ -3956,7 +3958,8 @@ def crm_prospeccao_editar(id):
         _run("""UPDATE prospecto SET
                 empresa_nome=%s,cnpj=%s,segmento=%s,cnae_codigo=%s,cnae_descricao=%s,
                 porte=%s,cidade=%s,bairro=%s,endereco=%s,telefone=%s,email=%s,
-                contato_nome=%s,contato_cargo=%s,site=%s,vagas_estimadas=%s,obs=%s,
+                contato_nome=%s,contato_cargo=%s,site=%s,vagas_estimadas=%s,
+                num_funcionarios=%s,faturamento_estimado=%s,linkedin=%s,obs=%s,
                 status=%s,responsavel_id=%s,updated_at=CURRENT_TIMESTAMP
                 WHERE id=%s""",
              (request.form['empresa_nome'].strip(),
@@ -3974,6 +3977,9 @@ def crm_prospeccao_editar(id):
               request.form.get('contato_cargo') or None,
               request.form.get('site') or None,
               request.form.get('vagas_estimadas') or None,
+              request.form.get('num_funcionarios') or None,
+              request.form.get('faturamento_estimado') or None,
+              request.form.get('linkedin') or None,
               request.form.get('obs') or None,
               request.form.get('status', 'novo'),
               request.form.get('responsavel_id') or current_user.id,
@@ -3981,11 +3987,18 @@ def crm_prospeccao_editar(id):
         flash('Prospecto atualizado!', 'success')
         return redirect(url_for('crm_prospeccao'))
     bairros_cidade = BAIRROS_VDC if (p['cidade'] or '') == 'Vitória da Conquista' else []
+    cnpj_digits = re.sub(r'\D', '', p['cnpj'] or '')
+    ja_concedente = None
+    if cnpj_digits:
+        ja_concedente = _q(
+            "SELECT id, nome FROM empresa WHERE regexp_replace(cnpj,'\\D','','g') = %s LIMIT 1",
+            (cnpj_digits,), one=True)
     return render_template('crm/prospeccao_form.html',
         p=p, segmentos=SEGMENTOS_PROSPECTO, portes=PORTES_EMPRESA,
         cnae_grupos=CNAE_GRUPOS, status_list=STATUS_PROSPECTO,
         bairros_vdc=bairros_cidade, usuarios_crm=_crm_usuarios(),
-        pode_ver_todos=_crm_pode_ver_todos(), current_user_id=int(current_user.id))
+        pode_ver_todos=_crm_pode_ver_todos(), current_user_id=int(current_user.id),
+        ja_concedente=ja_concedente)
 
 
 @app.route('/crm/prospeccao/<int:id>/excluir', methods=['POST'])
@@ -3996,12 +4009,61 @@ def crm_prospeccao_excluir(id):
     return redirect(url_for('crm_prospeccao'))
 
 
+@app.route('/crm/prospeccao/<int:id>/enriquecer', methods=['POST'])
+@crm_required
+def crm_prospeccao_enriquecer(id):
+    p = _q("SELECT * FROM prospecto WHERE id=%s", (id,), one=True)
+    if not p:
+        abort(404)
+    key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if not key:
+        return jsonify({'erro': 'ANTHROPIC_API_KEY não configurada.'}), 503
+    import anthropic as _ant
+    client = _ant.Anthropic(api_key=key)
+    nome    = p['empresa_nome'] or ''
+    cnpj    = p['cnpj'] or ''
+    cidade  = p['cidade'] or ''
+    atividade = p['cnae_descricao'] or ''
+    porte   = p['porte'] or ''
+    prompt = (
+        f"Você é um analista de inteligência comercial. Pesquise e informe dados sobre a empresa brasileira abaixo.\n"
+        f"Nome: {nome}\nCNPJ: {cnpj}\nCidade: {cidade}\nAtividade: {atividade}\nPorte: {porte}\n\n"
+        f"Retorne SOMENTE um objeto JSON com os campos abaixo (null se não souber):\n"
+        f'{{"site":"URL do site oficial","email":"e-mail de contato público","linkedin":"URL do LinkedIn da empresa",'
+        f'"num_funcionarios":numero_inteiro_estimado,"faturamento_estimado":"faixa ex: R$ 1M – R$ 10M",'
+        f'"obs_enriquecimento":"informações relevantes como fundação, especialidade, presença regional"}}'
+    )
+    try:
+        resp = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=600,
+            messages=[{'role': 'user', 'content': prompt}]
+        )
+        texto = resp.content[0].text.strip()
+        inicio = texto.find('{')
+        fim    = texto.rfind('}') + 1
+        dados  = json.loads(texto[inicio:fim]) if inicio >= 0 else {}
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+    return jsonify(dados)
+
+
 @app.route('/crm/prospeccao/<int:id>/converter', methods=['POST'])
 @crm_required
 def crm_prospeccao_converter(id):
     p = _q("SELECT * FROM prospecto WHERE id=%s", (id,), one=True)
     if not p:
         abort(404)
+    # Bloqueia se CNPJ já existir na base de empresas concedentes
+    cnpj_digits = re.sub(r'\D', '', p['cnpj'] or '')
+    if cnpj_digits:
+        concedente = _q(
+            "SELECT id, nome FROM empresa WHERE regexp_replace(cnpj,'\\D','','g') = %s LIMIT 1",
+            (cnpj_digits,), one=True)
+        if concedente:
+            flash(f'CNPJ já cadastrado como empresa concedente: "{concedente["nome"]}". '
+                  f'Exclua este lead antes de prosseguir.', 'danger')
+            return redirect(url_for('crm_prospeccao_editar', id=id))
     lead_id = _ins("""INSERT INTO crm_lead
         (empresa_nome,empresa_cnpj,cidade,segmento,vagas_estimadas,etapa,
          origem,responsavel_id,contato_nome,contato_email,contato_whatsapp,obs)
@@ -4011,7 +4073,7 @@ def crm_prospeccao_converter(id):
          p['contato_nome'], p['email'], p['telefone'], p['obs']))
     _run("UPDATE prospecto SET status='convertido', lead_id=%s, updated_at=CURRENT_TIMESTAMP WHERE id=%s",
          (lead_id, id))
-    flash(f'"{p["empresa_nome"]}" convertido em lead no CRM!', 'success')
+    flash(f'"{p["empresa_nome"]}" lançado no funil de vendas!', 'success')
     return redirect(url_for('crm_lead_detalhe', id=lead_id))
 
 
