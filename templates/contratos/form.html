@@ -163,14 +163,14 @@
         <div class="col-md-3">
           <label class="form-label fw-semibold">Carga Horária Diária</label>
           <div class="input-group">
-            <input type="number" name="ch_diaria" class="form-control" value="{{ c.ch_diaria if c else 6 }}" min="1" max="8">
+            <input type="number" name="ch_diaria" class="form-control" value="{{ c.ch_diaria if c else 6 }}" min="0.5" max="8" step="0.5">
             <span class="input-group-text">h</span>
           </div>
         </div>
         <div class="col-md-3">
           <label class="form-label fw-semibold">CH Semanal</label>
           <div class="input-group">
-            <input type="number" name="ch_semanal" class="form-control" value="{{ c.ch_semanal if c else 30 }}" min="1" max="40">
+            <input type="number" name="ch_semanal" class="form-control" value="{{ c.ch_semanal if c else 30 }}" min="0.5" max="40" step="0.5">
             <span class="input-group-text">h</span>
           </div>
         </div>
@@ -1027,6 +1027,14 @@ function verificarJornada() {
     if (horasDia > maxDiario) maxDiario = horasDia;
     totalSemanal += horasDia;
   });
+  // Preenche CH automaticamente a partir da grade
+  if (totalSemanal > 0) {
+    const inpD = document.querySelector('[name="ch_diaria"]');
+    const inpS = document.querySelector('[name="ch_semanal"]');
+    inpD.value = parseFloat(maxDiario.toFixed(1));
+    inpS.value = parseFloat(totalSemanal.toFixed(1));
+  }
+
   const overGrid = maxDiario > 6 || totalSemanal > 30;
   if (overGrid) {
     const det = 'Jornada excede o limite legal: ' + maxDiario.toFixed(1) + 'h/dia e ' + totalSemanal.toFixed(1) + 'h/semana (máx: 6h/dia e 30h/sem — art. 10, Lei 11.788/2008)';
