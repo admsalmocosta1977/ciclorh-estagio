@@ -2218,6 +2218,22 @@ def aditivo_editar(id, aditivo_id):
     return jsonify({'ok': True})
 
 
+@app.route('/contratos/<int:id>/aditivo/<int:aditivo_id>/imprimir')
+@login_required
+def aditivo_imprimir(id, aditivo_id):
+    ad = _q("SELECT * FROM aditivo WHERE id=%s AND contrato_id=%s", (aditivo_id, id), one=True)
+    if not ad:
+        abort(404)
+    todos = _q("SELECT id FROM aditivo WHERE contrato_id=%s ORDER BY created_at", (id,))
+    num = next((i + 1 for i, r in enumerate(todos) if r['id'] == aditivo_id), 1)
+    params = {'nova_data_fim': ad['nova_data_fim'] or '', 'aditivo_num': num}
+    cls = json.loads(ad['clausulas'] or '[]')
+    for i, cl in enumerate(cls, 1):
+        params[f'clausula_{i}_titulo'] = cl.get('titulo', '')
+        params[f'clausula_{i}_texto']  = cl.get('texto', '')
+    return redirect(url_for('doc_aditivo', id=id, **params))
+
+
 @app.route('/contratos/<int:id>/aditivo/<int:aditivo_id>/excluir', methods=['POST'])
 @login_required
 def aditivo_excluir(id, aditivo_id):

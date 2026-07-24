@@ -408,6 +408,10 @@
           <td>{{ fmt_date(ad.nova_data_fim) if ad.nova_data_fim else '—' }}</td>
           <td>{{ cls | length }} cláusula(s)</td>
           <td class="text-end">
+            <a href="{{ url_for('aditivo_imprimir', id=c.id, aditivo_id=ad.id) }}"
+               target="_blank" class="btn btn-sm btn-outline-primary py-0 me-1" title="Imprimir Aditivo">
+              <i class="bi bi-printer"></i>
+            </a>
             <button type="button" class="btn btn-sm btn-outline-secondary py-0 me-1 btn-editar-aditivo"
                     data-id="{{ ad.id }}"
                     data-data="{{ ad.nova_data_fim or '' }}"
