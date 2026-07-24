@@ -28,12 +28,27 @@
   @media print { .no-print { display: none !important; } .page { padding: 10mm 14mm 8mm; } }
 </style>
 <link rel="stylesheet" href="{{ url_for('static', filename='ciclorh_doc.css') }}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+function salvarPDF(btn) {
+  var orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = 'Gerando...';
+  html2pdf().set({
+    margin: 0, filename: document.title + '.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).from(document.querySelector('.page')).save().finally(function(){
+    btn.disabled = false; btn.innerHTML = orig;
+  });
+}
+</script>
 </head>
 <body>
 <div class="no-print" style="background:#1a2845;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center">
   <span>Relatório de Estágio — {{ d.est_nome }}</span>
   <div>
-    <button onclick="window.print()" style="background:#fff;color:#1a2845;border:none;padding:6px 16px;border-radius:4px;cursor:pointer;font-weight:bold">Imprimir / Salvar PDF</button>
+    <button onclick="salvarPDF(this)" style="background:#fff;color:#1a2845;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:bold;margin-right:6px">Salvar PDF</button>
+    <button onclick="window.print()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:bold">Imprimir</button>
     <button onclick="window.close()" style="background:transparent;color:#aaa;border:none;padding:6px 12px;cursor:pointer">✕</button>
   </div>
 </div>

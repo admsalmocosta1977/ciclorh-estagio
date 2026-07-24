@@ -373,7 +373,7 @@
       <div class="d-flex gap-2 mt-3">
         <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar Contrato</button>
         <a href="{{ url_for('contratos') }}" class="btn btn-outline-secondary">Cancelar</a>
-        {% if c %}
+        {% if c and c.id %}
         <div class="ms-auto d-flex gap-2">
           <a href="{{ url_for('doc_tce', id=c.id) }}" class="btn btn-outline-primary" target="_blank">TCE</a>
           <a href="{{ url_for('doc_plano', id=c.id) }}" class="btn btn-outline-success" target="_blank">Plano</a>
@@ -469,7 +469,7 @@
   </div>
 </div>
 {% endif %}
-{% if c %}
+{% if c and c.id %}
 <!-- Modal Aditivo -->
 <div class="modal fade" id="modal-aditivo" tabindex="-1">
   <div class="modal-dialog">
@@ -944,7 +944,7 @@ document.querySelector('[name="data_inicio"]').addEventListener('change', checkV
 document.querySelector('[name="data_fim"]').addEventListener('change', checkVinculo);
 if (document.getElementById('sel-estagiario').value && document.getElementById('sel-empresa').value) checkVinculo();
 
-{% if c %}
+{% if c and c.id %}
 // Gerar aditivo
 function gerarAditivo() {
   const data = document.getElementById('aditivo-data').value;
@@ -1100,7 +1100,7 @@ function carregarProfessores(ieId, selecionarId) {
 selIe.addEventListener('change', function() { carregarProfessores(this.value, null); });
 if (selIe.value) carregarProfessores(selIe.value, profAtual);
 
-{% if c %}
+{% if c and c.id %}
 // ── Editar aditivo existente ──────────────────────────────────────────────────
 function _criarLinhaClausulaEdit(titulo, texto) {
   const n = document.querySelectorAll('#edit-clausulas-container .clausula-extra-row').length + 1;
@@ -1530,7 +1530,7 @@ function toggleAiHorario() {
     for (const parte of partes) {
       const p = parte.trim();
       // Formato: [dias] HH:MM a HH:MM  ou [dias] HH:MM - HH:MM
-      const m = p.match(/^(.+?)\s+(\d{1,2}(?::\d{2})?)\s+(?:a|-)\s+(\d{1,2}(?::\d{2})?)$/);
+      const m = p.match(/^(.+?)\s+[-:]?\s*(\d{1,2}(?::\d{2})?)\s+(?:a|-)\s+(\d{1,2}(?::\d{2})?)$/);
       if (m) {
         const dias = parseDias(m[1]);
         const ini = parseHora(m[2]), fim = parseHora(m[3]);

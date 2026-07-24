@@ -540,6 +540,8 @@ def init_db():
             cur.execute(
                 "INSERT INTO config (chave, valor) VALUES (%s, '') ON CONFLICT (chave) DO NOTHING",
                 (chave,))
+        cur.execute("""DO $$ BEGIN ALTER TABLE contrato ALTER COLUMN ch_diaria TYPE REAL USING ch_diaria::REAL; EXCEPTION WHEN OTHERS THEN NULL; END $$;""")
+        cur.execute("""DO $$ BEGIN ALTER TABLE contrato ALTER COLUMN ch_semanal TYPE REAL USING ch_semanal::REAL; EXCEPTION WHEN OTHERS THEN NULL; END $$;""")
         cur.execute("SELECT id FROM usuario WHERE username = 'salmo'")
         if not cur.fetchone():
             cur.execute(
@@ -1797,9 +1799,14 @@ def contrato_novo():
             for e in erros: flash(e, 'danger')
             return render_template('contratos/form.html', c=request.form,
                                    estagiarios=estagiarios, empresas=empresas_list,
-                                   ies=ies_list, areas=areas_list, aditivos=[])
+                                   ies=ies_list, areas=areas_list, aditivos=[],
+                                   relatorios=[], relatorio_pendente=False)
         try:
             ats = '||'.join(request.form.get(f'atividade_{i}', '') for i in range(1, 10))
+            try: ch_d = float(request.form.get('ch_diaria') or 6)
+            except (ValueError, TypeError): ch_d = 6.0
+            try: ch_s = float(request.form.get('ch_semanal') or 30)
+            except (ValueError, TypeError): ch_s = 30.0
             _ins("""INSERT INTO contrato
                     (estagiario_id,empresa_id,ie_id,orientador,
                      supervisor_nome,supervisor_cargo,supervisor_registro,
@@ -1813,7 +1820,7 @@ def contrato_novo():
                   request.form.get('supervisor_registro'),
                   request.form['curso'], request.form.get('tipo_estagio', 'Não Obrigatório'),
                   request.form.get('area_atuacao'),
-                  request.form.get('ch_diaria', 6), request.form.get('ch_semanal', 30),
+                  ch_d, ch_s,
                   request.form['data_inicio'], request.form['data_fim'],
                   request.form.get('numero_contrato'),
                   request.form.get('bolsa') or None,
@@ -1834,7 +1841,8 @@ def contrato_novo():
             flash(f'Erro ao salvar contrato: {ex}', 'danger')
             return render_template('contratos/form.html', c=request.form,
                                    estagiarios=estagiarios, empresas=empresas_list,
-                                   ies=ies_list, areas=areas_list, aditivos=[])
+                                   ies=ies_list, areas=areas_list, aditivos=[],
+                                   relatorios=[], relatorio_pendente=False)
     return render_template('contratos/form.html', c=None,
                            estagiarios=estagiarios, empresas=empresas_list, ies=ies_list,
                            areas=areas_list, aditivos=[])
@@ -1868,6 +1876,10 @@ def contrato_editar(id):
                                    relatorios=relatorios, relatorio_pendente=False)
         try:
             ats = '||'.join(request.form.get(f'atividade_{i}', '') for i in range(1, 10))
+            try: ch_d = float(request.form.get('ch_diaria') or 6)
+            except (ValueError, TypeError): ch_d = 6.0
+            try: ch_s = float(request.form.get('ch_semanal') or 30)
+            except (ValueError, TypeError): ch_s = 30.0
             _run("""UPDATE contrato SET
                     estagiario_id=%s,empresa_id=%s,ie_id=%s,orientador=%s,
                     supervisor_nome=%s,supervisor_cargo=%s,supervisor_registro=%s,
@@ -1881,7 +1893,7 @@ def contrato_editar(id):
                   request.form.get('supervisor_registro'),
                   request.form['curso'], request.form.get('tipo_estagio'),
                   request.form.get('area_atuacao'),
-                  request.form.get('ch_diaria'), request.form.get('ch_semanal'),
+                  ch_d, ch_s,
                   request.form['data_inicio'], request.form['data_fim'],
                   request.form.get('numero_contrato'),
                   request.form.get('bolsa') or None,
