@@ -6,7 +6,7 @@
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: Arial, sans-serif; font-size: 9pt; color: #000; background: #fff; }
-  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm 20mm 13mm; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 13mm 20mm 11mm; }
   h1 { font-size: 11pt; text-align: center; text-transform: uppercase; margin-bottom: 3px; font-weight: bold; }
   .subtitulo { font-size: 8.5pt; text-align: center; color: #333; margin-bottom: 3px; }
   .subtitulo2 { font-size: 8pt; text-align: center; color: #333; margin-bottom: 10px; }
@@ -30,7 +30,7 @@
   @media print {
     body { print-color-adjust: exact; }
     .no-print { display: none !important; }
-    .page { padding: 15mm 20mm 13mm; }
+    .page { padding: 13mm 20mm 11mm; }
   }
 </style>
 <link rel="stylesheet" href="{{ url_for('static', filename='ciclorh_doc.css') }}">
