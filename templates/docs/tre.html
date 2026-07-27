@@ -5,12 +5,12 @@
 <title>TRE – {{ d.est_nome }}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Arial, sans-serif; font-size: 9.5pt; color: #000; background: #fff; }
-  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 14mm 18mm 12mm; }
-  h1 { font-size: 12pt; text-align: center; text-transform: uppercase; margin-bottom: 3px; font-weight: bold; }
-  .subtitulo { font-size: 9pt; text-align: center; color: #333; margin-bottom: 3px; }
-  .subtitulo2 { font-size: 8.5pt; text-align: center; color: #333; margin-bottom: 10px; }
-  .secao { font-size: 9.5pt; font-weight: bold; text-transform: uppercase; margin: 8px 0 4px; border-bottom: 1.5px solid #000; padding-bottom: 2px; letter-spacing: 0.5px; }
+  body { font-family: Arial, sans-serif; font-size: 9pt; color: #000; background: #fff; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 18mm 20mm 16mm; }
+  h1 { font-size: 11pt; text-align: center; text-transform: uppercase; margin-bottom: 3px; font-weight: bold; }
+  .subtitulo { font-size: 8.5pt; text-align: center; color: #333; margin-bottom: 3px; }
+  .subtitulo2 { font-size: 8pt; text-align: center; color: #333; margin-bottom: 10px; }
+  .secao { font-size: 9pt; font-weight: bold; text-transform: uppercase; margin: 8px 0 4px; border-bottom: 1.5px solid #000; padding-bottom: 2px; letter-spacing: 0.5px; }
   table.dados { width: 100%; border-collapse: collapse; margin-bottom: 3px; }
   table.dados td { padding: 2px 4px; vertical-align: top; border-bottom: 1px dotted #ddd; }
   table.dados td.label { font-weight: bold; width: 38%; }
@@ -30,7 +30,7 @@
   @media print {
     body { print-color-adjust: exact; }
     .no-print { display: none !important; }
-    .page { padding: 14mm 18mm 12mm; }
+    .page { padding: 18mm 20mm 16mm; }
   }
 </style>
 <link rel="stylesheet" href="{{ url_for('static', filename='ciclorh_doc.css') }}">

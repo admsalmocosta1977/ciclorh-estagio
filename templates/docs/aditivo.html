@@ -5,10 +5,10 @@
 <title>Termo Aditivo – {{ d.est_nome }}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Arial, sans-serif; font-size: 10pt; color: #000; background: #fff; }
-  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 16mm 20mm 12mm; }
-  h1 { font-size: 12pt; text-align: center; text-transform: uppercase; margin-bottom: 4px; font-weight: bold; }
-  .subtitulo { font-size: 9.5pt; text-align: center; font-weight: bold; font-style: italic; margin-bottom: 16px; }
+  body { font-family: Arial, sans-serif; font-size: 9pt; color: #000; background: #fff; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 22mm 16mm; }
+  h1 { font-size: 11pt; text-align: center; text-transform: uppercase; margin-bottom: 4px; font-weight: bold; }
+  .subtitulo { font-size: 9pt; text-align: center; font-weight: bold; font-style: italic; margin-bottom: 16px; }
   p { margin-bottom: 8px; line-height: 1.55; text-align: justify; }
   .clausula-titulo { font-weight: bold; margin-top: 14px; margin-bottom: 4px; }
   .assinaturas { display: flex; justify-content: space-between; gap: 16px; margin-top: 30px; }
@@ -22,7 +22,7 @@
   @media print {
     body { print-color-adjust: exact; }
     .no-print { display: none !important; }
-    .page { padding: 15mm 20mm 12mm; }
+    .page { padding: 20mm 22mm 16mm; }
   }
 </style>
 <link rel="stylesheet" href="{{ url_for('static', filename='ciclorh_doc.css') }}">
