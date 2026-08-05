@@ -17,6 +17,10 @@
   .assinatura-area { margin-top: 50px; text-align: center; }
   .assinatura-linha { display: inline-block; width: 280px; border-top: 1px solid #000; padding-top: 4px; text-align: center; }
   .rodape { font-size: 8pt; color: #555; text-align: center; margin-top: 30px; border-top: 1px solid #ccc; padding-top: 6px; position: absolute; bottom: 15mm; left: 20mm; right: 20mm; }
+  p, table, tr, .assinatura-area {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
   @media print { .no-print { display: none !important; } .page { padding: 17mm 22mm 13mm; } }
 </style>
 <link rel="stylesheet" href="{{ url_for('static', filename='ciclorh_doc.css') }}">
@@ -28,7 +32,8 @@ function salvarPDF(btn) {
     margin: 0, filename: document.title + '.pdf',
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: 'avoid-all' }
   }).from(document.querySelector('.page')).save().finally(function(){
     btn.disabled = false; btn.innerHTML = orig;
   });
