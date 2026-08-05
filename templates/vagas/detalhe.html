@@ -195,10 +195,34 @@
                 <i class="bi bi-file-person"></i>
               </a>
               {% if status_key == 'inscrito' %}
-              <form method="post" action="{{ url_for('candidatura_status', id=c.id) }}">
-                <input type="hidden" name="status" value="em_entrevista">
-                <button class="btn btn-xs btn-outline-primary" style="font-size:.75rem;padding:2px 8px">Entrevista</button>
-              </form>
+              <button class="btn btn-xs btn-outline-primary btn-agendar-entrevista"
+                      style="font-size:.75rem;padding:2px 8px"
+                      data-cand-id="{{ c.id }}"
+                      data-cand-nome="{{ c.cand_nome }}"
+                      data-data="" data-hora="" data-local="">
+                <i class="bi bi-calendar-event me-1"></i>Entrevista
+              </button>
+              {% endif %}
+              {% if status_key == 'em_entrevista' %}
+              <button class="btn btn-xs btn-outline-primary btn-agendar-entrevista"
+                      style="font-size:.75rem;padding:2px 8px"
+                      data-cand-id="{{ c.id }}"
+                      data-cand-nome="{{ c.cand_nome }}"
+                      data-data="{{ c.data_entrevista.strftime('%Y-%m-%d') if c.data_entrevista else '' }}"
+                      data-hora="{{ c.hora_entrevista.strftime('%H:%M') if c.hora_entrevista else '' }}"
+                      data-local="{{ c.local_entrevista or '' }}"
+                      title="{{ ('Agendada: ' ~ fmt_date(c.data_entrevista) ~ (' às ' ~ c.hora_entrevista.strftime('%H:%M') if c.hora_entrevista else '')) if c.data_entrevista else 'Agendar entrevista' }}">
+                <i class="bi bi-calendar2-check me-1"></i>{% if c.data_entrevista %}{{ fmt_date(c.data_entrevista) }}{% if c.hora_entrevista %} {{ c.hora_entrevista.strftime('%H:%M') }}{% endif %}{% else %}Agendar{% endif %}
+              </button>
+              {% if c.whatsapp and c.data_entrevista %}
+              {% set tel = c.whatsapp | replace(' ','') | replace('-','') | replace('(','') | replace(')','') %}
+              {% set msg_wa = 'Olá, ' ~ c.cand_nome.split()[0] ~ '! Sua entrevista para vaga de estágio de ' ~ vaga.titulo ~ ' na empresa ' ~ (vaga.emp_nome or '') ~ ' está agendada para ' ~ fmt_date(c.data_entrevista) ~ ((' às ' ~ c.hora_entrevista.strftime('%H:%M') ~ 'h') if c.hora_entrevista else '') ~ ((' — Local: ' ~ c.local_entrevista) if c.local_entrevista else '') ~ '. Confirme sua presença respondendo esta mensagem. Att, Ciclo RH' %}
+              <a href="https://wa.me/55{{ tel }}?text={{ msg_wa | urlencode }}" target="_blank"
+                 class="btn btn-xs btn-success" style="font-size:.75rem;padding:2px 8px"
+                 title="Enviar convite de entrevista via WhatsApp">
+                <i class="bi bi-whatsapp"></i>
+              </a>
+              {% endif %}
               {% endif %}
               {% if status_key in ['inscrito','em_entrevista'] %}
               <form method="post" action="{{ url_for('candidatura_status', id=c.id) }}">
@@ -252,6 +276,43 @@
     </div>
   </div>
 
+</div>
+
+<!-- ── Modal Agendar Entrevista ── -->
+<div class="modal fade" id="modalAgendarEntrevista" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-calendar-event text-primary me-2"></i>Agendar Entrevista</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="" id="form-agendar-entrevista">
+        <div class="modal-body">
+          <p class="text-muted small mb-3">Candidato: <strong id="mae-cand-nome">—</strong></p>
+          <input type="hidden" name="status" value="em_entrevista">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Data da entrevista <span class="text-danger">*</span></label>
+            <input type="date" name="data_entrevista" id="mae-data" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Horário</label>
+            <input type="time" name="hora_entrevista" id="mae-hora" class="form-control">
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Local / endereço</label>
+            <input type="text" name="local_entrevista" id="mae-local" class="form-control"
+                   placeholder="Ex.: Rua das Acácias, 100 — Sala 5">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-calendar-check me-1"></i>Salvar agendamento
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <!-- ── Modal WhatsApp ── -->
@@ -489,6 +550,31 @@
 
   // Estado inicial
   if (btnEnc) btnEnc.disabled = !sel.value;
+})();
+
+// ── Modal Agendar Entrevista ──────────────────────────────────────────────────
+(function() {
+  const modalEl  = document.getElementById('modalAgendarEntrevista');
+  const formAg   = document.getElementById('form-agendar-entrevista');
+  if (!modalEl) return;
+  const modalBS  = new bootstrap.Modal(modalEl);
+
+  document.querySelectorAll('.btn-agendar-entrevista').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const candId   = this.dataset.candId;
+      const candNome = this.dataset.candNome || '—';
+      const data     = this.dataset.data  || '';
+      const hora     = this.dataset.hora  || '';
+      const local    = this.dataset.local || '';
+
+      document.getElementById('mae-cand-nome').textContent = candNome;
+      document.getElementById('mae-data').value  = data;
+      document.getElementById('mae-hora').value  = hora;
+      document.getElementById('mae-local').value = local;
+      formAg.action = '/candidatura/' + candId + '/status';
+      modalBS.show();
+    });
+  });
 })();
 </script>
 {% endblock %}

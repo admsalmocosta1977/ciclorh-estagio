@@ -423,6 +423,9 @@ def init_db():
         cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS bairro TEXT;")
         cur.execute("ALTER TABLE candidato ADD COLUMN IF NOT EXISTS endereco TEXT;")
         cur.execute("ALTER TABLE candidato ADD COLUMN IF NOT EXISTS bairro TEXT;")
+        cur.execute("ALTER TABLE candidatura ADD COLUMN IF NOT EXISTS data_entrevista DATE;")
+        cur.execute("ALTER TABLE candidatura ADD COLUMN IF NOT EXISTS hora_entrevista TIME;")
+        cur.execute("ALTER TABLE candidatura ADD COLUMN IF NOT EXISTS local_entrevista TEXT;")
         cur.execute("ALTER TABLE ie ADD COLUMN IF NOT EXISTS data_vencimento_convenio DATE;")
         cur.execute("""
         CREATE TABLE IF NOT EXISTS relacionamento_contato (
@@ -3514,7 +3517,15 @@ def candidatura_status(id):
             flash('Falta registrada. Na próxima falta sem justificativa o candidato será excluído automaticamente.', 'warning')
         return redirect(url_for('vaga_detalhe', id=c['vaga_id']))
 
-    _run("UPDATE candidatura SET status=%s, updated_at=NOW() WHERE id=%s", (novo, id))
+    if novo == 'em_entrevista':
+        data_e = request.form.get('data_entrevista') or None
+        hora_e = request.form.get('hora_entrevista') or None
+        local_e = request.form.get('local_entrevista') or None
+        _run("""UPDATE candidatura SET status=%s, data_entrevista=%s, hora_entrevista=%s,
+                local_entrevista=%s, updated_at=NOW() WHERE id=%s""",
+             (novo, data_e, hora_e, local_e, id))
+    else:
+        _run("UPDATE candidatura SET status=%s, updated_at=NOW() WHERE id=%s", (novo, id))
     _run("UPDATE vaga SET updated_at=NOW() WHERE id=%s", (c['vaga_id'],))
     if novo == 'aprovado':
         vaga = _q("SELECT empresa_id FROM vaga WHERE id=%s", (c['vaga_id'],), one=True)
