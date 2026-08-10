@@ -1209,7 +1209,7 @@ def estagiarios():
 @app.route('/estagiarios/novo', methods=['GET', 'POST'])
 @login_required
 def estagiario_novo():
-    ies = _q("SELECT id, nome, sigla FROM ie ORDER BY nome")
+    ies = _q("SELECT id, nome, sigla FROM ie ORDER BY COALESCE(NULLIF(TRIM(sigla),''), nome)")
     if request.method == 'POST':
         try:
             _ins("""INSERT INTO estagiario
@@ -1242,7 +1242,7 @@ def estagiario_editar(id):
     e = _q("SELECT * FROM estagiario WHERE id = %s", (id,), one=True)
     if not e:
         abort(404)
-    ies = _q("SELECT id, nome, sigla FROM ie ORDER BY nome")
+    ies = _q("SELECT id, nome, sigla FROM ie ORDER BY COALESCE(NULLIF(TRIM(sigla),''), nome)")
     if request.method == 'POST':
         _run("""UPDATE estagiario SET
                 nome=%s,cpf=%s,rg=%s,data_nascimento=%s,telefone=%s,email=%s,
