@@ -1117,7 +1117,21 @@ def dashboard():
 
     # ── Vagas ─────────────────────────────────────────────────────────────────
     vagas_abertas = _q("SELECT COUNT(*) n FROM vaga WHERE status IN ('aberta','em_selecao')", one=True)['n']
-    vagas_candidatos = _q("SELECT COUNT(*) n FROM candidatura WHERE status='aprovado'", one=True)['n']
+    vagas_candidatos = _q("""
+        SELECT COUNT(*) n FROM candidatura cu
+        JOIN vaga v ON v.id = cu.vaga_id
+        LEFT JOIN candidato ca ON ca.id = cu.candidato_id
+        WHERE cu.status = 'aprovado'
+          AND NOT EXISTS (
+              SELECT 1 FROM contrato co
+              JOIN estagiario e ON e.id = co.estagiario_id
+              WHERE NULLIF(TRIM(COALESCE(e.cpf,'')), '') IS NOT NULL
+                AND NULLIF(TRIM(COALESCE(ca.cpf,'')), '') IS NOT NULL
+                AND e.cpf = ca.cpf
+                AND co.empresa_id = v.empresa_id
+                AND (co.data_encerramento IS NULL OR co.data_encerramento = '')
+                AND co.data_fim >= TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD')
+          )""", one=True)['n']
     total_candidatos = _q("SELECT COUNT(*) n FROM candidato", one=True)['n']
 
     # ── Alertas ───────────────────────────────────────────────────────────────
