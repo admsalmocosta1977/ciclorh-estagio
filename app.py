@@ -3542,7 +3542,8 @@ def candidatura_status(id):
             else:
                 ja_existe = _q("SELECT id FROM estagiario WHERE cpf=%s", (cand['cpf'],), one=True)
                 if ja_existe:
-                    msg_est = f' (Estagiário já cadastrado — <a href="{url_for(\"estagiario_editar\", id=ja_existe[\"id\"])}" class="alert-link">ver cadastro →</a>)'
+                    link_est = url_for('estagiario_editar', id=ja_existe['id'])
+                    msg_est = ' (Estagiário já cadastrado — <a href="' + link_est + '" class="alert-link">ver cadastro →</a>)'
                 else:
                     dt_nasc = cand['data_nascimento'].strftime('%Y-%m-%d') if cand.get('data_nascimento') else None
                     novo_id = _ins("""INSERT INTO estagiario
@@ -3551,8 +3552,9 @@ def candidatura_status(id):
                         (cand['nome'], cand['cpf'], cand.get('email'), cand.get('whatsapp'),
                          dt_nasc, cand.get('cidade'), cand.get('estado'),
                          cand.get('semestre'), cand.get('ie_id'), cand.get('obs')))
-                    _log('criar', 'estagiario', novo_id, f'Criado automaticamente ao aprovar candidato: {cand["nome"]}')
-                    msg_est = f' Estagiário cadastrado automaticamente! <a href="{url_for(\"estagiario_editar\", id=novo_id)}" class="alert-link">Completar cadastro →</a>'
+                    _log('criar', 'estagiario', novo_id, 'Criado automaticamente ao aprovar candidato: ' + cand['nome'])
+                    link_est = url_for('estagiario_editar', id=novo_id)
+                    msg_est = ' Estagiário cadastrado automaticamente! <a href="' + link_est + '" class="alert-link">Completar cadastro →</a>'
 
         flash(f'Candidato aprovado!{msg_est} <a href="{link}" class="alert-link ms-2">Criar contrato →</a>', 'success')
     else:
