@@ -105,14 +105,26 @@
             <select name="candidato_id" id="sel-candidato" class="form-select form-select-sm" required>
               <option value="">Selecionar candidato…</option>
               {% for c in disponiveis %}
-              <option value="{{ c.id }}" data-nome="{{ c.nome }}" data-whatsapp="{{ c.whatsapp or '' }}">
-                {{ c.nome }}{% if c.curso %} — {{ c.curso }}{% endif %}
+              <option value="{{ c.id }}" data-nome="{{ c.nome }}" data-whatsapp="{{ c.whatsapp or '' }}"
+                      data-tce="{{ c.tce_ativo_empresa or '' }}">
+                {{ c.nome }}{% if c.curso %} — {{ c.curso }}{% endif %}{% if c.tce_ativo_empresa %} ⚠️{% endif %}
               </option>
               {% endfor %}
             </select>
             <button type="button" class="btn btn-sm btn-primary flex-shrink-0" id="btn-encaminhar">
               <i class="bi bi-plus"></i>
             </button>
+          </div>
+          <!-- Aviso: TCE ativo em outra empresa -->
+          <div id="aviso-tce" class="d-none alert alert-danger py-2 mb-2" style="font-size:.84rem">
+            <i class="bi bi-shield-exclamation me-1"></i>
+            <strong id="aviso-tce-nome"></strong> possui <strong>Termo de Compromisso ativo</strong> com outra empresa: <span id="aviso-tce-empresa" class="fw-semibold"></span>.
+            <div class="d-flex gap-2 mt-2">
+              <button type="button" class="btn btn-danger btn-sm fw-semibold" id="btn-confirmar-tce">
+                <i class="bi bi-check-lg me-1"></i>Encaminhar mesmo assim
+              </button>
+              <button type="button" id="btn-cancelar-tce" class="btn btn-outline-secondary btn-sm">Cancelar</button>
+            </div>
           </div>
           <!-- Aviso de histórico na empresa -->
           <div id="aviso-historico" class="d-none alert alert-warning py-2 mb-0" style="font-size:.84rem">
@@ -170,6 +182,7 @@
             <i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>{{ label }} ({{ grupo|length }})
           </h6>
           {% for c in grupo %}
+          {% if status_key == 'aprovado' and c.contrato_ativo_id %}{% else %}
           <div class="cand-row">
             <div>
               <div class="cand-nome">
@@ -264,6 +277,7 @@
               </form>
             </div>
           </div>
+          {% endif %}
           {% endfor %}
           {% endif %}
         {% endfor %}
@@ -369,9 +383,12 @@
 (function() {
   const sel            = document.getElementById('sel-candidato');
   const aviso          = document.getElementById('aviso-historico');
+  const avisoTce       = document.getElementById('aviso-tce');
   const btnEnc         = document.getElementById('btn-encaminhar');
   const btnCancelAviso = document.getElementById('btn-cancelar-aviso');
   const btnConfAviso   = document.getElementById('btn-confirmar-aviso');
+  const btnConfTce     = document.getElementById('btn-confirmar-tce');
+  const btnCancelTce   = document.getElementById('btn-cancelar-tce');
   const form           = document.getElementById('form-encaminhar');
   if (!sel) return;
 
@@ -443,27 +460,13 @@
     }
   }
 
-  // Ao selecionar candidato: checa histórico e abre modal (ou mostra aviso)
-  sel.addEventListener('change', function() {
+  function checarHistoricoEAbrir() {
     aviso.classList.add('d-none');
-    if (btnEnc) btnEnc.disabled = !this.value;
-    if (!this.value) return;
-
-    if (!empresaId) {
-      // Sem empresa vinculada: abre modal diretamente
-      abrirModal();
-      return;
-    }
-
-    fetch(`/api/candidato/${this.value}/historico-empresa/${empresaId}`)
+    if (!empresaId) { abrirModal(); return; }
+    fetch(`/api/candidato/${sel.value}/historico-empresa/${empresaId}`)
       .then(r => r.json())
       .then(data => {
-        if (!data.historico || !data.historico.length) {
-          // Sem histórico de rejeição: abre modal direto
-          abrirModal();
-          return;
-        }
-        // Com histórico: mostra aviso amarelo primeiro
+        if (!data.historico || !data.historico.length) { abrirModal(); return; }
         const nome = sel.options[sel.selectedIndex].dataset.nome || '';
         document.getElementById('aviso-nome').textContent = nome;
         const ul = document.getElementById('aviso-lista');
@@ -476,6 +479,28 @@
         aviso.classList.remove('d-none');
         if (btnEnc) btnEnc.disabled = true;
       });
+  }
+
+  // Ao selecionar candidato: checa TCE ativo primeiro, depois histórico
+  sel.addEventListener('change', function() {
+    aviso.classList.add('d-none');
+    avisoTce.classList.add('d-none');
+    if (btnEnc) btnEnc.disabled = !this.value;
+    if (!this.value) return;
+
+    const opt = sel.options[sel.selectedIndex];
+    const tce = opt ? (opt.dataset.tce || '') : '';
+
+    if (tce) {
+      // TCE ativo em outra empresa — mostra aviso vermelho
+      document.getElementById('aviso-tce-nome').textContent = opt.dataset.nome || '';
+      document.getElementById('aviso-tce-empresa').textContent = tce;
+      avisoTce.classList.remove('d-none');
+      if (btnEnc) btnEnc.disabled = true;
+      return;
+    }
+
+    checarHistoricoEAbrir();
   });
 
   // Botão "+" — abre modal somente se candidato selecionado
@@ -497,6 +522,24 @@
   if (btnCancelAviso) {
     btnCancelAviso.addEventListener('click', function() {
       aviso.classList.add('d-none');
+      sel.value = '';
+      if (btnEnc) btnEnc.disabled = false;
+    });
+  }
+
+  // TCE ativo: "Encaminhar mesmo assim" → prossegue para checagem de histórico
+  if (btnConfTce) {
+    btnConfTce.addEventListener('click', function() {
+      avisoTce.classList.add('d-none');
+      if (btnEnc) btnEnc.disabled = false;
+      checarHistoricoEAbrir();
+    });
+  }
+
+  // TCE ativo: "Cancelar" → limpa seleção
+  if (btnCancelTce) {
+    btnCancelTce.addEventListener('click', function() {
+      avisoTce.classList.add('d-none');
       sel.value = '';
       if (btnEnc) btnEnc.disabled = false;
     });
@@ -536,6 +579,7 @@
   function limparModal() {
     sel.value = '';
     aviso.classList.add('d-none');
+    avisoTce.classList.add('d-none');
     if (btnEnc) btnEnc.disabled = false;
   }
   document.getElementById('btn-cancelar-modal').addEventListener('click', limparModal);

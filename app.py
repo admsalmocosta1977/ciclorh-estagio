@@ -3148,24 +3148,43 @@ def vaga_detalhe(id):
     if not vaga:
         abort(404)
     candidaturas = _q("""SELECT c.*, ca.nome as cand_nome, ca.curso, ca.whatsapp,
-                                ca.disponibilidade, ca.id as cand_id
+                                ca.disponibilidade, ca.id as cand_id, ca.cpf as cand_cpf,
+                                (SELECT co.id FROM contrato co
+                                 JOIN estagiario e ON e.id = co.estagiario_id
+                                 WHERE NULLIF(TRIM(COALESCE(e.cpf,'')), '') IS NOT NULL
+                                   AND e.cpf = ca.cpf
+                                   AND co.empresa_id = v.empresa_id
+                                   AND (co.data_encerramento IS NULL OR co.data_encerramento = '')
+                                   AND co.data_fim >= TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD')
+                                 LIMIT 1) AS contrato_ativo_id
                           FROM candidatura c
                           JOIN candidato ca ON ca.id = c.candidato_id
+                          JOIN vaga v ON v.id = c.vaga_id
                           WHERE c.vaga_id = %s ORDER BY c.created_at""", (id,))
-    # candidatos disponíveis: sem candidatura ativa em QUALQUER vaga
-    # e sem candidatura ativa (inscrito/em_entrevista/aprovado) NESTA vaga
-    # (permite re-encaminhar candidatos com status terminal nesta vaga)
-    disponiveis = _q("""SELECT id, nome, curso, whatsapp FROM candidato
-                        WHERE id NOT IN (
+    # candidatos disponíveis — inclui aviso de TCE ativo em outra empresa
+    empresa_id_vaga = vaga['empresa_id'] or 0
+    disponiveis = _q("""SELECT ca.id, ca.nome, ca.curso, ca.whatsapp,
+                               (SELECT emp.nome || ' (até ' || co.data_fim || ')'
+                                FROM contrato co
+                                JOIN estagiario e ON e.id = co.estagiario_id
+                                JOIN empresa emp ON emp.id = co.empresa_id
+                                WHERE NULLIF(TRIM(COALESCE(e.cpf,'')), '') IS NOT NULL
+                                  AND e.cpf = ca.cpf
+                                  AND co.empresa_id != %s
+                                  AND (co.data_encerramento IS NULL OR co.data_encerramento = '')
+                                  AND co.data_fim >= TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD')
+                                LIMIT 1) AS tce_ativo_empresa
+                        FROM candidato ca
+                        WHERE ca.id NOT IN (
                             SELECT candidato_id FROM candidatura
                             WHERE status IN ('inscrito','em_entrevista')
                         )
-                        AND id NOT IN (
+                        AND ca.id NOT IN (
                             SELECT candidato_id FROM candidatura
                             WHERE vaga_id = %s
                             AND status IN ('inscrito','em_entrevista','aprovado')
                         )
-                        ORDER BY nome""", (id,))
+                        ORDER BY ca.nome""", (empresa_id_vaga, id))
     return render_template('vagas/detalhe.html', vaga=vaga, candidaturas=candidaturas,
                            disponiveis=disponiveis,
                            status_cor=STATUS_CANDIDATURA_COR,
