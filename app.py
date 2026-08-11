@@ -3532,7 +3532,29 @@ def candidatura_status(id):
         link = url_for('contrato_novo')
         if vaga and vaga['empresa_id']:
             link += f'?empresa_id={vaga["empresa_id"]}'
-        flash(f'Candidato aprovado! <a href="{link}" class="alert-link">Criar contrato →</a>', 'success')
+
+        # Copia candidato → estagiário automaticamente
+        cand = _q("SELECT * FROM candidato WHERE id=%s", (c['candidato_id'],), one=True)
+        msg_est = ''
+        if cand:
+            if not cand.get('cpf'):
+                msg_est = ' <span class="text-warning">(Candidato sem CPF — cadastre manualmente em Estagiários)</span>'
+            else:
+                ja_existe = _q("SELECT id FROM estagiario WHERE cpf=%s", (cand['cpf'],), one=True)
+                if ja_existe:
+                    msg_est = f' (Estagiário já cadastrado — <a href="{url_for(\"estagiario_editar\", id=ja_existe[\"id\"])}" class="alert-link">ver cadastro →</a>)'
+                else:
+                    dt_nasc = cand['data_nascimento'].strftime('%Y-%m-%d') if cand.get('data_nascimento') else None
+                    novo_id = _ins("""INSERT INTO estagiario
+                        (nome, cpf, email, telefone, data_nascimento, cidade, estado, semestre, ie_id, obs)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                        (cand['nome'], cand['cpf'], cand.get('email'), cand.get('whatsapp'),
+                         dt_nasc, cand.get('cidade'), cand.get('estado'),
+                         cand.get('semestre'), cand.get('ie_id'), cand.get('obs')))
+                    _log('criar', 'estagiario', novo_id, f'Criado automaticamente ao aprovar candidato: {cand["nome"]}')
+                    msg_est = f' Estagiário cadastrado automaticamente! <a href="{url_for(\"estagiario_editar\", id=novo_id)}" class="alert-link">Completar cadastro →</a>'
+
+        flash(f'Candidato aprovado!{msg_est} <a href="{link}" class="alert-link ms-2">Criar contrato →</a>', 'success')
     else:
         flash('Status atualizado.', 'info')
     return redirect(url_for('vaga_detalhe', id=c['vaga_id']))
