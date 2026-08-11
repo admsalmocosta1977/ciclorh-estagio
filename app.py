@@ -3321,13 +3321,35 @@ def vaga_editar(id):
 @app.route('/vagas/<int:id>/excluir', methods=['POST'])
 @login_required
 def vaga_excluir(id):
-    v = _q("SELECT titulo FROM vaga WHERE id=%s", (id,), one=True)
+    v = _q("SELECT titulo, status FROM vaga WHERE id=%s", (id,), one=True)
     if not v:
         abort(404)
+    if v['status'] == 'preenchida' and not current_user.is_admin:
+        flash('Somente administradores podem excluir vagas preenchidas.', 'danger')
+        return redirect(url_for('vaga_detalhe', id=id))
     _run("DELETE FROM vaga WHERE id=%s", (id,))
     _log('excluir', 'vaga', id, f'Excluiu vaga: {v["titulo"]}')
     flash(f'Vaga "{v["titulo"]}" excluída.', 'warning')
     return redirect(url_for('vagas_lista'))
+
+
+@app.route('/vagas/<int:id>/duplicar', methods=['POST'])
+@login_required
+def vaga_duplicar(id):
+    v = _q("SELECT * FROM vaga WHERE id=%s", (id,), one=True)
+    if not v:
+        abort(404)
+    novo_id = _ins("""INSERT INTO vaga (empresa_id, area_id, titulo, descricao, requisitos,
+                       curso_desejado, nivel, carga_horaria, bolsa, beneficios,
+                       vagas_total, responsavel_id, status)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'aberta')""",
+                   (v['empresa_id'], v['area_id'], v['titulo'], v.get('descricao'),
+                    v.get('requisitos'), v.get('curso_desejado'), v.get('nivel'),
+                    v.get('carga_horaria'), v.get('bolsa'), v.get('beneficios'),
+                    v.get('vagas_total') or 1, v.get('responsavel_id')))
+    _log('criar', 'vaga', novo_id, f'Vaga criada por duplicação da vaga #{id}: {v["titulo"]}')
+    flash('Nova vaga criada com base na vaga preenchida. Revise os dados antes de publicar.', 'success')
+    return redirect(url_for('vaga_editar', id=novo_id))
 
 
 @app.route('/vagas/<int:id>/status', methods=['POST'])
@@ -3547,7 +3569,7 @@ def candidatura_status(id):
         _run("UPDATE candidatura SET status=%s, updated_at=NOW() WHERE id=%s", (novo, id))
     _run("UPDATE vaga SET updated_at=NOW() WHERE id=%s", (c['vaga_id'],))
     if novo == 'aprovado':
-        vaga = _q("SELECT empresa_id, vagas FROM vaga WHERE id=%s", (c['vaga_id'],), one=True)
+        vaga = _q("SELECT empresa_id, vagas_total FROM vaga WHERE id=%s", (c['vaga_id'],), one=True)
         link = url_for('contrato_novo')
         if vaga and vaga['empresa_id']:
             link += f'?empresa_id={vaga["empresa_id"]}'
@@ -3576,7 +3598,7 @@ def candidatura_status(id):
                     msg_est = ' Estagiário cadastrado automaticamente! <a href="' + link_est + '" class="alert-link">Completar cadastro →</a>'
 
         # Verifica se todas as vagas foram preenchidas → marca vaga como preenchida
-        total_vagas = int(vaga['vagas'] or 1) if vaga else 1
+        total_vagas = int(vaga['vagas_total'] or 1) if vaga else 1
         aprovados_agora = _q(
             "SELECT COUNT(*) n FROM candidatura WHERE vaga_id=%s AND status='aprovado'",
             (c['vaga_id'],), one=True)['n']
