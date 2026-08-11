@@ -3547,7 +3547,7 @@ def candidatura_status(id):
         _run("UPDATE candidatura SET status=%s, updated_at=NOW() WHERE id=%s", (novo, id))
     _run("UPDATE vaga SET updated_at=NOW() WHERE id=%s", (c['vaga_id'],))
     if novo == 'aprovado':
-        vaga = _q("SELECT empresa_id FROM vaga WHERE id=%s", (c['vaga_id'],), one=True)
+        vaga = _q("SELECT empresa_id, vagas FROM vaga WHERE id=%s", (c['vaga_id'],), one=True)
         link = url_for('contrato_novo')
         if vaga and vaga['empresa_id']:
             link += f'?empresa_id={vaga["empresa_id"]}'
@@ -3575,7 +3575,20 @@ def candidatura_status(id):
                     link_est = url_for('estagiario_editar', id=novo_id)
                     msg_est = ' Estagiário cadastrado automaticamente! <a href="' + link_est + '" class="alert-link">Completar cadastro →</a>'
 
-        flash(f'Candidato aprovado!{msg_est} <a href="{link}" class="alert-link ms-2">Criar contrato →</a>', 'success')
+        # Verifica se todas as vagas foram preenchidas → marca vaga como preenchida
+        total_vagas = int(vaga['vagas'] or 1) if vaga else 1
+        aprovados_agora = _q(
+            "SELECT COUNT(*) n FROM candidatura WHERE vaga_id=%s AND status='aprovado'",
+            (c['vaga_id'],), one=True)['n']
+        if aprovados_agora >= total_vagas:
+            _run("UPDATE vaga SET status='preenchida', updated_at=NOW() WHERE id=%s", (c['vaga_id'],))
+            _log('editar', 'vaga', c['vaga_id'], 'Vaga preenchida automaticamente após atingir o número de aprovados')
+            msg_vaga = ' <strong>Vaga preenchida automaticamente!</strong>'
+        else:
+            faltam = total_vagas - aprovados_agora
+            msg_vaga = f' ({aprovados_agora}/{total_vagas} vagas preenchidas — faltam {faltam})'
+
+        flash(f'Candidato aprovado!{msg_est}{msg_vaga} <a href="{link}" class="alert-link ms-2">Criar contrato →</a>', 'success')
     else:
         flash('Status atualizado.', 'info')
     return redirect(url_for('vaga_detalhe', id=c['vaga_id']))

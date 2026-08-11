@@ -78,10 +78,6 @@
             <button class="btn btn-sm btn-primary">Em seleção</button>
           </form>
           {% endif %}
-          <form method="post" action="{{ url_for('vaga_status', id=vaga.id) }}">
-            <input type="hidden" name="status" value="preenchida">
-            <button class="btn btn-sm btn-secondary">Marcar preenchida</button>
-          </form>
           <form method="post" action="{{ url_for('vaga_status', id=vaga.id) }}"
                 onsubmit="return confirm('Cancelar esta vaga?')">
             <input type="hidden" name="status" value="cancelada">
