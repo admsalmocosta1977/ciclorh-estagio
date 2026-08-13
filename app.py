@@ -421,6 +421,7 @@ def init_db():
         )""")
         cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS nps INTEGER;")
         cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS bairro TEXT;")
+        cur.execute("ALTER TABLE empresa ADD COLUMN IF NOT EXISTS valor_intermediacao NUMERIC(10,2);")
         cur.execute("ALTER TABLE candidato ADD COLUMN IF NOT EXISTS endereco TEXT;")
         cur.execute("ALTER TABLE candidato ADD COLUMN IF NOT EXISTS bairro TEXT;")
         cur.execute("ALTER TABLE candidatura ADD COLUMN IF NOT EXISTS data_entrevista DATE;")
@@ -1330,8 +1331,8 @@ def empresa_nova():
         emp_id = _ins("""INSERT INTO empresa
                 (nome,nome_fantasia,cnpj,endereco,bairro,cidade,estado,telefone,email,ramo,
                  representante,cargo_representante,cpf_representante,
-                 bolsa_padrao,aux_transporte_padrao)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                 bolsa_padrao,aux_transporte_padrao,valor_intermediacao)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
              (request.form['nome'], request.form.get('nome_fantasia') or None,
               request.form.get('cnpj'),
               request.form.get('endereco'), request.form.get('bairro') or None,
@@ -1341,7 +1342,8 @@ def empresa_nova():
               request.form.get('ramo'), request.form.get('representante'),
               request.form.get('cargo_representante'), request.form.get('cpf_representante'),
               request.form.get('bolsa_padrao') or None,
-              request.form.get('aux_transporte_padrao') or None))
+              request.form.get('aux_transporte_padrao') or None,
+              request.form.get('valor_intermediacao') or None))
         for i, nome_sup in enumerate(request.form.getlist('sup_nome[]')):
             if nome_sup.strip():
                 cargos = request.form.getlist('sup_cargo[]')
@@ -1366,7 +1368,7 @@ def empresa_editar(id):
         _run("""UPDATE empresa SET
                 nome=%s,nome_fantasia=%s,cnpj=%s,endereco=%s,bairro=%s,cidade=%s,estado=%s,telefone=%s,email=%s,ramo=%s,
                 representante=%s,cargo_representante=%s,cpf_representante=%s,
-                bolsa_padrao=%s,aux_transporte_padrao=%s WHERE id=%s""",
+                bolsa_padrao=%s,aux_transporte_padrao=%s,valor_intermediacao=%s WHERE id=%s""",
              (request.form['nome'], request.form.get('nome_fantasia') or None,
               request.form.get('cnpj'),
               request.form.get('endereco'), request.form.get('bairro') or None,
@@ -1376,7 +1378,8 @@ def empresa_editar(id):
               request.form.get('ramo'), request.form.get('representante'),
               request.form.get('cargo_representante'), request.form.get('cpf_representante'),
               request.form.get('bolsa_padrao') or None,
-              request.form.get('aux_transporte_padrao') or None, id))
+              request.form.get('aux_transporte_padrao') or None,
+              request.form.get('valor_intermediacao') or None, id))
         _run("DELETE FROM empresa_supervisor WHERE empresa_id = %s", (id,))
         for i, nome_sup in enumerate(request.form.getlist('sup_nome[]')):
             if nome_sup.strip():
@@ -1465,7 +1468,7 @@ def empresa_convenio(id):
             pass
     cfg = _get_config()
     return render_template('empresas/convenio.html', emp=emp, prazo=prazo,
-                           data_fim=data_fim, cfg=cfg, hoje=date.today())
+                           data_fim=data_fim, cfg=cfg, agente=AGENTE, hoje=date.today())
 
 
 @app.route('/api/ie_professores/<int:ie_id>')

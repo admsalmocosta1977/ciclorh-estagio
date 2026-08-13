@@ -138,12 +138,14 @@
   </div>
 
   <!-- ══ VARIÁVEIS ══ -->
-  {% set int_nome  = cfg.int_nome if cfg.int_nome else 'CICLO RH GESTÃO DE ESTÁGIOS LTDA' %}
-  {% set int_cnpj  = cfg.int_cnpj if cfg.int_cnpj else '__.___.___/____-__' %}
-  {% set int_end   = cfg.int_endereco if cfg.int_endereco else '___________________________' %}
-  {% set int_cid   = (cfg.int_cidade + '/' + cfg.int_estado) if cfg.int_cidade else '________________________' %}
-  {% set int_rep   = cfg.int_representante if cfg.int_representante else '____________________________' %}
-  {% set int_cargo = cfg.int_cargo if cfg.int_cargo else '____________________________' %}
+  {% set int_nome  = agente.nome %}
+  {% set int_cnpj  = agente.cnpj %}
+  {% set int_end   = agente.endereco %}
+  {% set int_cid   = agente.cidade %}
+  {% set int_rep   = agente.representante %}
+  {% set int_cargo = agente.cargo %}
+  {% set int_cpf   = agente.cpf %}
+  {% set int_email = agente.email %}
 
   {% set emp_rep   = emp.representante if emp.representante else '____________________________' %}
   {% set emp_cnpj  = emp.cnpj if emp.cnpj else '__.___.___/____-__' %}
@@ -255,13 +257,26 @@
       o nível de ensino e as condições negociadas entre as partes.
     </p>
     <p>
-      A INTEGRADORA poderá cobrar da EMPRESA CONCEDENTE <strong>taxa de intermediação</strong>
-      pelos serviços prestados, cujos valores e condições serão estabelecidos em instrumento
-      comercial apartado, não interferindo nos direitos do estagiário previstos em lei.
+      Pela prestação dos serviços de intermediação, formalização e acompanhamento dos
+      estágios, a <strong>CICLO RH</strong> cobrará da <strong>EMPRESA CONCEDENTE</strong>
+      o valor de
+      {% if emp.valor_intermediacao %}
+        <strong>R$ {{ '%.2f'|format(emp.valor_intermediacao|float)|replace('.',',') }}</strong>
+      {% else %}
+        <strong>R$ ___________,___</strong>
+      {% endif %}
+      por estagiário ativo por mês, cobrado mediante <strong>boleto bancário</strong>,
+      com vencimento mensal, não interferindo nos direitos do estagiário previstos em lei.
+    </p>
+    <p>
+      O valor de intermediação será <strong>reajustado anualmente</strong>, no mês de
+      aniversário deste convênio, pelo índice oficial determinado pelo Governo Federal
+      (INPC — Índice Nacional de Preços ao Consumidor, ou outro índice que venha a
+      substituí-lo por determinação legal), acumulado nos doze meses anteriores ao reajuste.
     </p>
     <p>
       Fica vedado à EMPRESA CONCEDENTE efetuar qualquer desconto na bolsa do estagiário
-      a título de ressarcimento de despesas com a intermediação da INTEGRADORA.
+      a título de ressarcimento de despesas com a intermediação da CICLO RH.
     </p>
   </div>
 
@@ -329,7 +344,7 @@
     <div class="clausula-titulo">Cláusula Oitava — Do Foro</div>
     <p>
       As partes elegem o foro da Comarca de
-      <strong>{{ cfg.int_cidade if cfg.int_cidade else (emp.cidade if emp.cidade else '____________________') }}</strong>
+      <strong>Vitória da Conquista – Bahia</strong>
       para dirimir quaisquer dúvidas ou litígios decorrentes do presente convênio,
       renunciando a qualquer outro, por mais privilegiado que seja.
     </p>
@@ -344,8 +359,7 @@
   <!-- ══ ASSINATURAS ══ -->
   <div class="assinaturas">
     <div class="ass-local-data">
-      {{ cfg.int_cidade if cfg.int_cidade else (emp.cidade if emp.cidade else '____________________') }},
-      ______ de ________________________ de __________.
+      Vitória da Conquista – BA, ______ de ________________________ de __________.
     </div>
 
     <div class="ass-grid">
@@ -381,8 +395,9 @@
   </div>
 
   <div class="doc-footer">
-    Gerado automaticamente pelo sistema Ciclo RH em {{ hoje.strftime('%d/%m/%Y') }}
-    &nbsp;·&nbsp; Lei Federal n.º 11.788/2008
+    {{ agente.nome }} &nbsp;·&nbsp; CNPJ {{ agente.cnpj }} &nbsp;·&nbsp; {{ agente.endereco }}, {{ agente.cidade }}<br>
+    {{ agente.email }} &nbsp;·&nbsp; Representante: {{ agente.representante }} (CPF {{ agente.cpf }})<br>
+    Gerado automaticamente em {{ hoje.strftime('%d/%m/%Y') }} &nbsp;·&nbsp; Lei Federal n.º 11.788/2008
   </div>
 
 </div>
