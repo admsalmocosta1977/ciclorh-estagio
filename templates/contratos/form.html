@@ -100,17 +100,19 @@
           </select>
           <div class="form-text">Professores cadastrados na instituição selecionada.</div>
         </div>
-        <div class="col-md-6" id="div-supervisor" style="display:none">
+        <div class="col-md-6">
           <label class="form-label fw-semibold">Supervisor na Empresa</label>
-          <select class="form-select" id="sel-supervisor">
+          <select class="form-select mb-2" id="sel-supervisor" style="display:none">
             <option value="">— selecione o supervisor —</option>
           </select>
-          <div class="form-text">Supervisores cadastrados na empresa selecionada.</div>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label fw-semibold">Nome do Supervisor <span class="text-muted small">(editável)</span></label>
           <input type="text" name="supervisor_nome" class="form-control" id="sup-nome"
-                 value="{{ c.supervisor_nome if c else '' }}" placeholder="Preenchido ao escolher acima">
+                 value="{{ c.supervisor_nome if c else '' }}" placeholder="Nome completo do supervisor">
+          <div class="form-text d-flex justify-content-between align-items-center mt-1">
+            <span id="hint-sup">Selecione a empresa para carregar os supervisores.</span>
+            <a id="link-cad-sup" class="d-none small fw-semibold" href="#" target="_blank">
+              <i class="bi bi-plus-circle me-1"></i>Cadastrar supervisor na empresa
+            </a>
+          </div>
         </div>
         <div class="col-md-4">
           <label class="form-label fw-semibold">Cargo do Supervisor</label>
@@ -757,48 +759,99 @@ function showAvisoJornada(msg) {
 }
 
 // Carregar supervisores ao selecionar empresa
-const selEmp = document.getElementById('sel-empresa');
-const selSup = document.getElementById('sel-supervisor');
-const divSup = document.getElementById('div-supervisor');
-const supAtual = '{{ c.supervisor_nome if c and c.supervisor_nome else "" }}';
+const selEmp    = document.getElementById('sel-empresa');
+const selSup    = document.getElementById('sel-supervisor');
+const supNome   = document.getElementById('sup-nome');
+const hintSup   = document.getElementById('hint-sup');
+const linkCadSup = document.getElementById('link-cad-sup');
+const supAtual  = '{{ c.supervisor_nome if c and c.supervisor_nome else "" }}';
+
+// Mostra select, esconde texto manual (ou vice-versa)
+function modoSelect(sim) {
+  selSup.style.display  = sim ? '' : 'none';
+  supNome.style.display = sim ? 'none' : '';
+}
 
 function carregarSupervisores(empresaId, supNomeAtual) {
-  if (!empresaId) { divSup.style.display = 'none'; return; }
+  if (!empresaId) {
+    modoSelect(false);
+    hintSup.textContent = 'Selecione a empresa para carregar os supervisores.';
+    linkCadSup.classList.add('d-none');
+    return;
+  }
+
+  // Atualiza link de cadastro de supervisor
+  const empOpt = selEmp.options[selEmp.selectedIndex];
+  const empId  = selEmp.value;
+  linkCadSup.href = '/empresas/' + empId + '/editar';
+  linkCadSup.classList.remove('d-none');
+
   fetch('/api/empresa_supervisores/' + empresaId)
     .then(r => r.json())
     .then(sups => {
+      if (sups.length === 0) {
+        // Sem supervisores cadastrados: modo texto
+        modoSelect(false);
+        hintSup.textContent = 'Nenhum supervisor cadastrado para esta empresa.';
+        return;
+      }
+
+      // Monta select com supervisores + opção manual
       selSup.innerHTML = '<option value="">— selecione o supervisor —</option>';
-      if (sups.length > 0) {
-        sups.forEach(s => {
-          const opt = document.createElement('option');
-          opt.value = s.id;
-          opt.dataset.nome = s.nome;
-          opt.dataset.cargo = s.cargo || '';
-          opt.dataset.registro = s.registro || '';
-          opt.textContent = s.nome + (s.cargo ? ' — ' + s.cargo : '');
-          if (supNomeAtual && s.nome === supNomeAtual) opt.selected = true;
-          selSup.appendChild(opt);
-        });
-        divSup.style.display = '';
-        // Se encontrou match, preenche os campos
-        if (selSup.selectedIndex > 0) {
-          const opt = selSup.options[selSup.selectedIndex];
-          document.getElementById('sup-nome').value = opt.dataset.nome;
-          document.getElementById('sup-cargo').value = opt.dataset.cargo;
-          document.getElementById('sup-reg').value = opt.dataset.registro;
-        }
-      } else {
-        divSup.style.display = 'none';
+      let matched = false;
+      sups.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.dataset.nome      = s.nome;
+        opt.dataset.cargo     = s.cargo || '';
+        opt.dataset.registro  = s.registro || '';
+        opt.textContent = s.nome + (s.cargo ? ' — ' + s.cargo : '');
+        if (supNomeAtual && s.nome === supNomeAtual) { opt.selected = true; matched = true; }
+        selSup.appendChild(opt);
+      });
+      // Opção "Digitar manualmente"
+      const optManual = document.createElement('option');
+      optManual.value = '__manual__';
+      optManual.textContent = '✏️  Digitar nome manualmente...';
+      selSup.appendChild(optManual);
+
+      modoSelect(true);
+      hintSup.textContent = 'Supervisores cadastrados na empresa.';
+
+      // Se encontrou match, preenche campos e mantém texto oculto
+      if (matched) {
+        const opt = selSup.options[selSup.selectedIndex];
+        supNome.value = opt.dataset.nome;
+        document.getElementById('sup-cargo').value = opt.dataset.cargo;
+        document.getElementById('sup-reg').value   = opt.dataset.registro;
+      } else if (supNomeAtual) {
+        // Nome salvo não está na lista → modo manual com valor preservado
+        selSup.value = '__manual__';
+        modoSelect(true);
+        supNome.style.display = '';
+        supNome.value = supNomeAtual;
       }
     });
 }
 
 selSup.addEventListener('change', function() {
-  const opt = this.options[this.selectedIndex];
-  if (opt && opt.value) {
-    document.getElementById('sup-nome').value = opt.dataset.nome || '';
+  if (this.value === '__manual__') {
+    supNome.style.display = '';
+    supNome.value = '';
+    supNome.focus();
+    document.getElementById('sup-cargo').value = '';
+    document.getElementById('sup-reg').value   = '';
+  } else if (this.value) {
+    const opt = this.options[this.selectedIndex];
+    supNome.style.display = 'none';
+    supNome.value = opt.dataset.nome || '';
     document.getElementById('sup-cargo').value = opt.dataset.cargo || '';
-    document.getElementById('sup-reg').value = opt.dataset.registro || '';
+    document.getElementById('sup-reg').value   = opt.dataset.registro || '';
+  } else {
+    supNome.style.display = 'none';
+    supNome.value = '';
+    document.getElementById('sup-cargo').value = '';
+    document.getElementById('sup-reg').value   = '';
   }
 });
 
@@ -806,13 +859,12 @@ selEmp.addEventListener('change', function() {
   const id = this.value;
   carregarSupervisores(id, null);
   checkVinculo();
-  // Sugerir valores padrão da empresa (só preenche se campos estiverem vazios)
   if (id) {
     fetch('/api/empresa/' + id)
       .then(r => r.json())
       .then(d => {
         const inpBolsa = document.getElementById('inp-bolsa');
-        const inpAux = document.getElementById('inp-aux');
+        const inpAux   = document.getElementById('inp-aux');
         if (!inpBolsa.value && d.bolsa_padrao) inpBolsa.value = parseFloat(d.bolsa_padrao).toFixed(2);
         if (!inpAux.value && d.aux_transporte_padrao) inpAux.value = parseFloat(d.aux_transporte_padrao).toFixed(2);
       });
