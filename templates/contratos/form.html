@@ -225,19 +225,22 @@
             </button>
           </div>
           <div class="text-muted" style="font-size:.78rem">
-            <strong>Exemplos:</strong>
-            <span class="badge bg-secondary ms-1" style="cursor:pointer;font-weight:400"
-                  onclick="document.getElementById('inp-ai-horario').value=this.dataset.v"
-                  data-v="Segunda a sexta das 8:00 às 13:00">Seg-Sex 8h-13h</span>
-            <span class="badge bg-secondary ms-1" style="cursor:pointer;font-weight:400"
-                  onclick="document.getElementById('inp-ai-horario').value=this.dataset.v"
-                  data-v="Segunda a sábado das 8:00 às 13:00">Seg-Sáb 8h-13h</span>
-            <span class="badge bg-secondary ms-1" style="cursor:pointer;font-weight:400"
-                  onclick="document.getElementById('inp-ai-horario').value=this.dataset.v"
+            <strong>Exemplos (clique para preencher):</strong>
+            <span class="badge bg-primary ms-1" style="cursor:pointer;font-weight:400"
+                  onclick="document.getElementById('inp-ai-horario').value=this.dataset.v;preencherHorario()"
+                  data-v="Segunda a sexta das 8:00 às 12:00">Seg-Sex 8h-12h</span>
+            <span class="badge bg-primary ms-1" style="cursor:pointer;font-weight:400"
+                  onclick="document.getElementById('inp-ai-horario').value=this.dataset.v;preencherHorario()"
                   data-v="Segunda a sexta das 13:00 às 18:00">Seg-Sex 13h-18h</span>
+            <span class="badge bg-primary ms-1" style="cursor:pointer;font-weight:400"
+                  onclick="document.getElementById('inp-ai-horario').value=this.dataset.v;preencherHorario()"
+                  data-v="Segunda a sábado das 8:00 às 13:00">Seg-Sáb 8h-13h</span>
+            <span class="badge bg-primary ms-1" style="cursor:pointer;font-weight:400"
+                  onclick="document.getElementById('inp-ai-horario').value=this.dataset.v;preencherHorario()"
+                  data-v="Segunda a sexta das 6:00 às 10:00">Seg-Sex 6h-10h</span>
             <span class="badge bg-secondary ms-1" style="cursor:pointer;font-weight:400"
-                  onclick="document.getElementById('inp-ai-horario').value=this.dataset.v"
-                  data-v="Seg, ter, qua das 8:00 às 12:00">Seg,Ter,Qua alternado</span>
+                  onclick="document.getElementById('inp-ai-horario').value=this.dataset.v;preencherHorario()"
+                  data-v="Seg, ter, qua das 8:00 às 12:00">Seg,Ter,Qua 8h-12h</span>
           </div>
           <div id="ai-horario-msg" class="mt-2"></div>
         </div>
@@ -1704,9 +1707,10 @@ function toggleAiHorario() {
       if (elIni) elIni.value = ini;
       if (elFim) elFim.value = fim;
     });
-    verificarJornada();
+    try { verificarJornada(); } catch(e) {}
     const diasNomes = [...new Set(entradas.map(e => e.dia))];
-    msg.innerHTML = `<div class="alert alert-success py-1 mb-0 small"><i class="bi bi-check-circle me-1"></i>Preenchido: ${diasNomes.join(', ')} (${entradas[0].ini}–${entradas[0].fim})</div>`;
+    const turnos = [...new Set(entradas.map(e => turno(e.ini)))].map(t=>({mat:'manhã',ves:'tarde',not:'noite'}[t]));
+    msg.innerHTML = `<div class="alert alert-success py-1 mb-0 small"><i class="bi bi-check-circle me-1"></i>Preenchido: ${diasNomes.join(', ')} — ${entradas[0].ini} às ${entradas[0].fim} (${turnos.join('/')})</div>`;
   };
 
   window.limparHorario = function() {
