@@ -586,12 +586,33 @@
         <div class="alert alert-info py-2 mb-3">
           <small><strong>Próximo relatório:</strong> N.º <span id="rel-proximo-num">—</span> — a partir de <span id="rel-proximo-inicio">—</span></small>
         </div>
-        <div class="mb-3">
-          <label class="form-label fw-semibold">Data Final do Período *</label>
-          <input type="date" id="rel-data-fim" class="form-control">
-          <div class="form-text">Relatórios com mais de 6 meses serão divididos automaticamente (Lei 11.788/2008, art. 9º).</div>
+
+        <!-- Semestres completos disponíveis (auto) -->
+        <div id="rel-semestres-completos" class="d-none mb-3">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <label class="form-label fw-semibold mb-0">Semestres completos disponíveis</label>
+            <span class="badge bg-success fs-small" id="rel-badge-completos"></span>
+          </div>
+          <div id="rel-lista-semestres" class="rounded border p-2 mb-1" style="font-size:.82rem;background:#f8f9fa"></div>
+          <div class="form-text">Períodos com 6 meses encerrados. Para incluir período parcial, informe uma data final abaixo.</div>
         </div>
-        <div id="rel-preview" class="d-none">
+
+        <!-- Aviso quando nenhum semestre completo ainda -->
+        <div id="rel-sem-semestres" class="d-none mb-3">
+          <div class="alert alert-warning py-2 mb-0">
+            <small><i class="bi bi-info-circle me-1"></i>Nenhum semestre completo disponível ainda. Informe uma data final para emitir o período atual.</small>
+          </div>
+        </div>
+
+        <!-- Data final opcional -->
+        <div class="mb-2">
+          <label class="form-label fw-semibold">Data Final <span class="text-muted fw-normal">(opcional)</span></label>
+          <input type="date" id="rel-data-fim" class="form-control">
+          <div class="form-text">Se informada, emite todos os períodos até essa data (incluindo semestre parcial final).</div>
+        </div>
+
+        <!-- Preview quando data personalizada preenchida -->
+        <div id="rel-preview" class="d-none mt-2">
           <div class="alert alert-warning py-2 mb-0">
             <small id="rel-preview-text"></small>
           </div>
@@ -600,7 +621,7 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-primary" id="btn-emitir-relatorio" disabled>
-          <i class="bi bi-check-lg me-1"></i>Confirmar e Emitir
+          <i class="bi bi-check-lg me-1"></i><span id="btn-emitir-label">Confirmar e Emitir</span>
         </button>
       </div>
     </div>
@@ -1248,7 +1269,34 @@ function _isoDate(dt) {
     String(dt.getDate()).padStart(2, '0');
 }
 
+let _relSemestresCompletos = [];
+
+function _calcSemestresCompletos(inicioISO) {
+  // Retorna apenas períodos de 6 meses já encerrados (fim <= hoje)
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const periodos = [];
+  let atual = new Date(inicioISO + 'T00:00:00');
+  while (true) {
+    let chunkFim = _addMeses(atual, 6);
+    chunkFim.setDate(chunkFim.getDate() - 1);
+    if (chunkFim > hoje) break;
+    periodos.push({inicio: new Date(atual), fim: new Date(chunkFim)});
+    atual = new Date(chunkFim);
+    atual.setDate(atual.getDate() + 1);
+  }
+  return periodos;
+}
+
 function abrirModalRelatorio() {
+  // Limpar estado
+  document.getElementById('rel-data-fim').value = '';
+  document.getElementById('rel-preview').classList.add('d-none');
+  document.getElementById('rel-semestres-completos').classList.add('d-none');
+  document.getElementById('rel-sem-semestres').classList.add('d-none');
+  document.getElementById('btn-emitir-relatorio').disabled = true;
+  _relSemestresCompletos = [];
+
   fetch('/contratos/{{ c.id }}/relatorio/proximo')
     .then(r => r.json())
     .then(d => {
@@ -1258,39 +1306,84 @@ function abrirModalRelatorio() {
       document.getElementById('rel-proximo-num').textContent = d.proximo_numero;
       document.getElementById('rel-proximo-inicio').textContent = _fmtDataBR(d.data_inicio);
       document.getElementById('rel-data-fim').min = d.data_inicio;
+
+      _relSemestresCompletos = _calcSemestresCompletos(d.data_inicio);
       _atualizarPreviewRelatorio();
     });
-  document.getElementById('rel-data-fim').value = '';
-  document.getElementById('rel-preview').classList.add('d-none');
-  document.getElementById('btn-emitir-relatorio').disabled = true;
+
   bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-relatorio')).show();
 }
 
 function _atualizarPreviewRelatorio() {
   const fimVal = document.getElementById('rel-data-fim').value;
   const btn = document.getElementById('btn-emitir-relatorio');
+  const btnLabel = document.getElementById('btn-emitir-label');
   const preview = document.getElementById('rel-preview');
   const previewText = document.getElementById('rel-preview-text');
-  if (!fimVal || !_relProximoInicio) { btn.disabled = true; preview.classList.add('d-none'); return; }
-  if (fimVal < _relProximoInicio) {
-    previewText.textContent = 'Data final anterior ao início do próximo período (' + _fmtDataBR(_relProximoInicio) + ').';
+  const semCompletosDiv = document.getElementById('rel-semestres-completos');
+  const semSemDiv = document.getElementById('rel-sem-semestres');
+  const listaSemestres = document.getElementById('rel-lista-semestres');
+  const badgeCompletos = document.getElementById('rel-badge-completos');
+
+  if (fimVal) {
+    // Modo data personalizada
+    semCompletosDiv.classList.add('d-none');
+    semSemDiv.classList.add('d-none');
+
+    if (!_relProximoInicio || fimVal < _relProximoInicio) {
+      previewText.textContent = 'Data final anterior ao início do próximo período (' + _fmtDataBR(_relProximoInicio) + ').';
+      preview.classList.remove('d-none');
+      btn.disabled = true;
+      return;
+    }
+    const periodos = _splitPeriodos6m(_relProximoInicio, fimVal);
+    let num = _relProximoNum;
+    const linhas = periodos.map(p =>
+      '<i class="bi bi-check-circle-fill text-success me-1"></i>N.º ' + num++ + ': ' +
+      _fmtDataBR(_isoDate(p.inicio)) + ' a ' + _fmtDataBR(_isoDate(p.fim))
+    );
+    previewText.innerHTML = 'Serão emitidos <strong>' + periodos.length + '</strong> relatório(s):<br>' + linhas.join('<br>');
     preview.classList.remove('d-none');
-    btn.disabled = true;
-    return;
+    btnLabel.textContent = 'Confirmar e Emitir (' + periodos.length + ')';
+    btn.disabled = false;
+
+  } else {
+    // Modo semestres completos automáticos
+    preview.classList.add('d-none');
+
+    if (_relSemestresCompletos.length > 0) {
+      semCompletosDiv.classList.remove('d-none');
+      semSemDiv.classList.add('d-none');
+      badgeCompletos.textContent = _relSemestresCompletos.length + ' semestre(s)';
+      let num = _relProximoNum;
+      listaSemestres.innerHTML = _relSemestresCompletos.map(p =>
+        '<div class="d-flex align-items-center gap-2 py-1 border-bottom">' +
+        '<i class="bi bi-check-circle-fill text-success"></i>' +
+        '<span>N.º ' + num++ + ': <strong>' + _fmtDataBR(_isoDate(p.inicio)) + '</strong> a <strong>' + _fmtDataBR(_isoDate(p.fim)) + '</strong></span>' +
+        '</div>'
+      ).join('') + '<div class="pt-1 text-muted" style="font-size:.75rem"><i class="bi bi-hourglass-split me-1"></i>Período atual ainda em andamento (não incluído)</div>';
+      btnLabel.textContent = 'Emitir ' + _relSemestresCompletos.length + ' semestre(s) completo(s)';
+      btn.disabled = false;
+    } else {
+      semCompletosDiv.classList.add('d-none');
+      semSemDiv.classList.remove('d-none');
+      btnLabel.textContent = 'Confirmar e Emitir';
+      btn.disabled = true;
+    }
   }
-  const periodos = _splitPeriodos6m(_relProximoInicio, fimVal);
-  let num = _relProximoNum;
-  const linhas = periodos.map(p => 'Relatório N.º ' + num++ + ': ' + _fmtDataBR(_isoDate(p.inicio)) + ' a ' + _fmtDataBR(_isoDate(p.fim)));
-  previewText.innerHTML = 'Serão emitidos <strong>' + periodos.length + '</strong> relatório(s):<br>' + linhas.join('<br>');
-  preview.classList.remove('d-none');
-  btn.disabled = false;
 }
 
 document.getElementById('rel-data-fim').addEventListener('change', _atualizarPreviewRelatorio);
 
 document.getElementById('btn-emitir-relatorio').addEventListener('click', function() {
-  const fimVal = document.getElementById('rel-data-fim').value;
+  let fimVal = document.getElementById('rel-data-fim').value;
+
+  // Sem data personalizada: usar fim do último semestre completo
+  if (!fimVal && _relSemestresCompletos.length > 0) {
+    fimVal = _isoDate(_relSemestresCompletos[_relSemestresCompletos.length - 1].fim);
+  }
   if (!fimVal) return;
+
   this.disabled = true;
   this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Processando…';
   fetch('/contratos/{{ c.id }}/relatorio/registrar', {
@@ -1311,13 +1404,13 @@ document.getElementById('btn-emitir-relatorio').addEventListener('click', functi
     } else {
       alert('Erro: ' + (d.erro || 'Falha desconhecida'));
       this.disabled = false;
-      this.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar e Emitir';
+      this.innerHTML = '<i class="bi bi-check-lg me-1"></i><span id="btn-emitir-label">Confirmar e Emitir</span>';
     }
   })
   .catch(() => {
     alert('Erro ao comunicar com o servidor.');
     this.disabled = false;
-    this.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmar e Emitir';
+    this.innerHTML = '<i class="bi bi-check-lg me-1"></i><span id="btn-emitir-label">Confirmar e Emitir</span>';
   });
 });
 
