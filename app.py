@@ -1043,6 +1043,26 @@ def index():
         ORDER BY ef.data_efetiva DESC
     """, (hoje,))
 
+    # Contratos com relatório pendente (6+ meses desde o último relatório emitido)
+    rel_pendentes = _q(cte + """
+        SELECT c.*, e.nome est_nome, emp.nome emp_nome,
+               COALESCE(emp.nome_fantasia, emp.nome) emp_display, ef.data_efetiva,
+               COALESCE(
+                   (SELECT MAX(rp.data_fim::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
+                   c.data_inicio::date
+               ) AS proximo_rel_inicio
+        FROM contrato c
+        JOIN estagiario e ON e.id = c.estagiario_id
+        JOIN empresa emp ON emp.id = c.empresa_id
+        JOIN ef ON ef.id = c.id
+        WHERE c.data_encerramento IS NULL
+          AND (CURRENT_DATE - COALESCE(
+              (SELECT MAX(rp.data_fim::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
+              c.data_inicio::date
+          )) >= 180
+        ORDER BY proximo_rel_inicio
+    """, ())
+
     # Contratos recentes ativos
     recentes = _q(cte + """
         SELECT c.*, e.nome est_nome, emp.nome emp_nome,
@@ -1059,7 +1079,7 @@ def index():
     total_emp = _q("SELECT COUNT(*) AS n FROM empresa", one=True)['n']
     total_ie = _q("SELECT COUNT(*) AS n FROM ie", one=True)['n']
     return render_template('index.html', total=total, vencendo=vencendo, recentes=recentes,
-                           pendentes=pendentes,
+                           pendentes=pendentes, rel_pendentes=rel_pendentes,
                            total_est=total_est, total_emp=total_emp, total_ie=total_ie)
 
 
@@ -1135,8 +1155,22 @@ def dashboard():
           )""", one=True)['n']
     total_candidatos = _q("SELECT COUNT(*) n FROM candidato", one=True)['n']
 
+    # ── Relatórios pendentes ──────────────────────────────────────────────────
+    rel_pendentes_n = _q(cte + """
+        SELECT COUNT(*) n FROM contrato c JOIN ef ON ef.id=c.id
+        WHERE c.data_encerramento IS NULL
+          AND (CURRENT_DATE - COALESCE(
+              (SELECT MAX(rp.data_fim::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
+              c.data_inicio::date
+          )) >= 180
+    """, (), one=True)['n']
+
     # ── Alertas ───────────────────────────────────────────────────────────────
     alertas = []
+    if rel_pendentes_n:
+        alertas.append({'tipo': 'warning', 'icone': 'bi-file-earmark-text',
+                        'msg': f'{rel_pendentes_n} contrato(s) com relatório semestral pendente.',
+                        'link': url_for('contratos'), 'link_label': 'Ver contratos'})
     if vencidos_sem_tre:
         alertas.append({'tipo': 'danger', 'icone': 'bi-exclamation-triangle',
                         'msg': f'{vencidos_sem_tre} contrato(s) vencido(s) sem TRE emitido.',
@@ -1768,7 +1802,11 @@ def contratos():
                   WHERE contrato_id = c.id AND nova_data_fim IS NOT NULL AND nova_data_fim != ''
                   ORDER BY created_at DESC LIMIT 1),
                  c.data_fim
-             ) as effective_data_fim
+             ) as effective_data_fim,
+             (CURRENT_DATE - COALESCE(
+                 (SELECT MAX(rp.data_fim::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
+                 c.data_inicio::date
+             )) >= 180 AS relatorio_pendente
              FROM contrato c
              JOIN estagiario e ON e.id = c.estagiario_id
              JOIN empresa emp ON emp.id = c.empresa_id
