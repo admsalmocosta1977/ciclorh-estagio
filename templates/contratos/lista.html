@@ -50,7 +50,7 @@
       <tbody>
       {% for c in contratos %}
       {% set st = calcular_status(c.effective_data_fim) %}
-      <tr>
+      <tr {% if c.relatorio_pendente %}style="background:#fffbe6;border-left:3px solid #f59e0b"{% endif %}>
         <td class="fw-semibold align-middle">{{ c.est_nome }}</td>
         <td class="align-middle">{{ c.emp_nome_fantasia or c.emp_nome }}</td>
         <td class="align-middle">
@@ -66,6 +66,11 @@
         </td>
         <td class="align-middle text-nowrap">R$ {{ '%.2f'|format(c.bolsa or 0) }}</td>
         <td class="align-middle">
+          {% if c.relatorio_pendente %}
+          <span class="badge d-block mb-1" style="font-size:.65rem;background:#f59e0b;color:#fff;font-weight:700">
+            <i class="bi bi-exclamation-circle me-1"></i>REL. PENDENTE
+          </span>
+          {% endif %}
           {% if c.data_encerramento %}<span class="badge bg-secondary" style="font-size:.65rem">ENCERRADO</span>
           {% elif 'DIAS' in st %}<span class="badge badge-vencendo" style="font-size:.65rem">{{ st }}</span>
           {% elif st == 'VENCIDO' %}<span class="badge badge-vencido" style="font-size:.65rem">VENCIDO</span>

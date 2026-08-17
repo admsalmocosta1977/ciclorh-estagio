@@ -1055,11 +1055,12 @@ def index():
         JOIN estagiario e ON e.id = c.estagiario_id
         JOIN empresa emp ON emp.id = c.empresa_id
         JOIN ef ON ef.id = c.id
-        WHERE c.data_encerramento IS NULL
-          AND (CURRENT_DATE - COALESCE(
-              (SELECT MAX(NULLIF(rp.data_fim,'')::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
-              NULLIF(c.data_inicio,'')::date
-          )) >= 180
+        WHERE (c.data_encerramento IS NULL OR c.data_encerramento = '')
+          AND COALESCE(
+              (CURRENT_DATE - COALESCE(
+                  (SELECT MAX(NULLIF(rp.data_fim,'')::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
+                  NULLIF(c.data_inicio,'')::date
+              )) >= 180, FALSE)
         ORDER BY proximo_rel_inicio
     """, ())
 
@@ -1158,11 +1159,12 @@ def dashboard():
     # ── Relatórios pendentes ──────────────────────────────────────────────────
     rel_pendentes_n = _q(cte + """
         SELECT COUNT(*) n FROM contrato c JOIN ef ON ef.id=c.id
-        WHERE c.data_encerramento IS NULL
-          AND (CURRENT_DATE - COALESCE(
-              (SELECT MAX(NULLIF(rp.data_fim,'')::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
-              NULLIF(c.data_inicio,'')::date
-          )) >= 180
+        WHERE (c.data_encerramento IS NULL OR c.data_encerramento = '')
+          AND COALESCE(
+              (CURRENT_DATE - COALESCE(
+                  (SELECT MAX(NULLIF(rp.data_fim,'')::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
+                  NULLIF(c.data_inicio,'')::date
+              )) >= 180, FALSE)
     """, (), one=True)['n']
 
     # ── Alertas ───────────────────────────────────────────────────────────────
@@ -1803,10 +1805,13 @@ def contratos():
                   ORDER BY created_at DESC LIMIT 1),
                  c.data_fim
              ) as effective_data_fim,
-             (CURRENT_DATE - COALESCE(
-                 (SELECT MAX(NULLIF(rp.data_fim,'')::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
-                 NULLIF(c.data_inicio,'')::date
-             )) >= 180 AS relatorio_pendente
+             CASE WHEN (c.data_encerramento IS NULL OR c.data_encerramento = '')
+                       AND COALESCE(
+                           (CURRENT_DATE - COALESCE(
+                               (SELECT MAX(NULLIF(rp.data_fim,'')::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
+                               NULLIF(c.data_inicio,'')::date
+                           )) >= 180, FALSE)
+                  THEN TRUE ELSE FALSE END AS relatorio_pendente
              FROM contrato c
              JOIN estagiario e ON e.id = c.estagiario_id
              JOIN empresa emp ON emp.id = c.empresa_id
@@ -1819,7 +1824,7 @@ def contratos():
                        OR unaccent(ie.nome) ILIKE unaccent(%s)
                        OR unaccent(COALESCE(ie.sigla, '')) ILIKE unaccent(%s))"""
         params += [f'%{q}%', f'%{q}%', f'%{q}%', f'%{q}%', f'%{q}%']
-    sql += ' ORDER BY effective_data_fim'
+    sql += ' ORDER BY relatorio_pendente DESC, effective_data_fim'
     rows = _q(sql, params)
     if status:
         filtered = []
