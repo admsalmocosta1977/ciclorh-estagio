@@ -161,6 +161,49 @@
 </div>
 {% endif %}
 
+<!-- ── Relatórios a emitir ── -->
+{% if rel_pendentes %}
+<div class="section-divider"><i class="bi bi-file-earmark-text" style="color:#D97706"></i>Relatórios a emitir</div>
+<div class="alert-panel warning mb-3">
+  <div class="alert-panel-header">
+    <i class="bi bi-exclamation-circle fs-5 flex-shrink-0"></i>
+    Relatórios pendentes de emissão (6 meses completados)
+    <span style="background:#D97706;color:#fff;border-radius:20px;padding:1px 9px;font-size:.72rem;font-weight:800;margin-left:4px">{{ rel_pendentes|length }}</span>
+  </div>
+  <div class="alert-panel-body">
+    <div class="table-responsive">
+      <table class="bi-table">
+        <thead><tr>
+          <th>Estagiário</th>
+          <th>Empresa</th>
+          <th>Período pendente desde</th>
+          <th style="text-align:right;padding-right:20px">Ação</th>
+        </tr></thead>
+        <tbody>
+        {% for r in rel_pendentes %}
+        <tr class="row-warn">
+          <td><strong style="font-weight:600">{{ r.est_nome }}</strong></td>
+          <td style="color:var(--ink-3)">{{ r.emp_display }}</td>
+          <td>
+            <span class="date-badge warning">
+              <i class="bi bi-calendar-event" style="font-size:.7rem"></i>
+              {{ fmt_date(r.proximo_rel_inicio) }}
+            </span>
+          </td>
+          <td style="text-align:right;white-space:nowrap">
+            <a href="{{ url_for('contratos', q=r.est_nome) }}" class="btn-action primary">
+              <i class="bi bi-file-earmark-text"></i>Emitir Relatório
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- ── Contratos vencendo em 30 dias ── -->
 {% if vencendo %}
 <div class="alert-panel warning mb-3">
