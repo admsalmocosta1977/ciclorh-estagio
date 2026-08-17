@@ -371,7 +371,7 @@
       <hr>
       <div class="col-12">
         <label class="form-label fw-semibold">Observações</label>
-        <textarea name="obs" class="form-control" rows="2">{{ c.obs if c else '' }}</textarea>
+        <textarea name="obs" class="form-control" rows="2">{{ (c.obs or '') if c else '' }}</textarea>
       </div>
 
       <hr>
@@ -1275,15 +1275,17 @@ function _isoDate(dt) {
 let _relSemestresCompletos = [];
 
 function _calcSemestresCompletos(inicioISO) {
-  // Retorna apenas períodos de 6 meses já encerrados (fim <= hoje)
+  if (!inicioISO || !/^\d{4}-\d{2}-\d{2}/.test(inicioISO)) return [];
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
   const periodos = [];
   let atual = new Date(inicioISO + 'T00:00:00');
-  while (true) {
+  if (isNaN(atual.getTime())) return [];
+  let guard = 0;
+  while (guard++ < 120) {
     let chunkFim = _addMeses(atual, 6);
     chunkFim.setDate(chunkFim.getDate() - 1);
-    if (chunkFim > hoje) break;
+    if (isNaN(chunkFim.getTime()) || chunkFim > hoje) break;
     periodos.push({inicio: new Date(atual), fim: new Date(chunkFim)});
     atual = new Date(chunkFim);
     atual.setDate(atual.getDate() + 1);
@@ -1303,7 +1305,11 @@ function abrirModalRelatorio() {
   fetch('/contratos/{{ c.id }}/relatorio/proximo')
     .then(r => r.json())
     .then(d => {
-      if (!d.ok) return;
+      if (!d.ok) {
+        document.querySelector('#modal-relatorio .alert-info').innerHTML =
+          '<small class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Erro ao carregar dados do relatório.</small>';
+        return;
+      }
       _relProximoInicio = d.data_inicio;
       _relProximoNum = d.proximo_numero;
       document.getElementById('rel-proximo-num').textContent = d.proximo_numero;
@@ -1312,6 +1318,10 @@ function abrirModalRelatorio() {
 
       _relSemestresCompletos = _calcSemestresCompletos(d.data_inicio);
       _atualizarPreviewRelatorio();
+    })
+    .catch(() => {
+      document.querySelector('#modal-relatorio .alert-info').innerHTML =
+        '<small class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Falha de comunicação com o servidor.</small>';
     });
 
   bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-relatorio')).show();
@@ -1389,6 +1399,7 @@ document.getElementById('btn-emitir-relatorio').addEventListener('click', functi
 
   this.disabled = true;
   this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Processando…';
+  const btnRef = this;
   fetch('/contratos/{{ c.id }}/relatorio/registrar', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -1397,23 +1408,31 @@ document.getElementById('btn-emitir-relatorio').addEventListener('click', functi
   .then(r => r.json())
   .then(d => {
     if (d.ok) {
-      bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-relatorio')).hide();
-      d.periodos.forEach((p, i) => {
-        setTimeout(() => {
-          window.open('/contratos/{{ c.id }}/relatorio?data_inicio=' + p.data_inicio + '&data_fim=' + p.data_fim + '&num=' + p.numero, '_blank');
-        }, i * 400);
-      });
-      setTimeout(() => location.reload(), d.periodos.length * 400 + 600);
+      const body = document.querySelector('#modal-relatorio .modal-body');
+      const footer = document.querySelector('#modal-relatorio .modal-footer');
+      const links = d.periodos.map(p =>
+        '<a href="/contratos/{{ c.id }}/relatorio?data_inicio=' + p.data_inicio + '&data_fim=' + p.data_fim + '&num=' + p.numero +
+        '" target="_blank" class="btn btn-outline-primary btn-sm w-100 mb-1">' +
+        '<i class="bi bi-file-earmark-text me-1"></i>N.º ' + p.numero + ' — ' +
+        _fmtDataBR(p.data_inicio) + ' a ' + _fmtDataBR(p.data_fim) + '</a>'
+      ).join('');
+      body.innerHTML =
+        '<div class="alert alert-success py-2 mb-3"><i class="bi bi-check-circle me-2"></i>' +
+        '<strong>' + d.periodos.length + ' relatório(s) emitido(s) com sucesso!</strong></div>' +
+        '<p class="small text-muted mb-2">Clique para abrir cada relatório:</p>' + links;
+      footer.innerHTML =
+        '<button type="button" class="btn btn-secondary" onclick="location.reload()">' +
+        '<i class="bi bi-arrow-clockwise me-1"></i>Fechar e recarregar página</button>';
     } else {
       alert('Erro: ' + (d.erro || 'Falha desconhecida'));
-      this.disabled = false;
-      this.innerHTML = '<i class="bi bi-check-lg me-1"></i><span id="btn-emitir-label">Confirmar e Emitir</span>';
+      btnRef.disabled = false;
+      btnRef.innerHTML = '<i class="bi bi-check-lg me-1"></i><span id="btn-emitir-label">Confirmar e Emitir</span>';
     }
   })
   .catch(() => {
     alert('Erro ao comunicar com o servidor.');
-    this.disabled = false;
-    this.innerHTML = '<i class="bi bi-check-lg me-1"></i><span id="btn-emitir-label">Confirmar e Emitir</span>';
+    btnRef.disabled = false;
+    btnRef.innerHTML = '<i class="bi bi-check-lg me-1"></i><span id="btn-emitir-label">Confirmar e Emitir</span>';
   });
 });
 
