@@ -1048,8 +1048,8 @@ def index():
         SELECT c.*, e.nome est_nome, emp.nome emp_nome,
                COALESCE(emp.nome_fantasia, emp.nome) emp_display, ef.data_efetiva,
                COALESCE(
-                   (SELECT MAX(rp.data_fim::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
-                   c.data_inicio::date
+                   (SELECT MAX(NULLIF(rp.data_fim,'')::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
+                   NULLIF(c.data_inicio,'')::date
                ) AS proximo_rel_inicio
         FROM contrato c
         JOIN estagiario e ON e.id = c.estagiario_id
@@ -1057,8 +1057,8 @@ def index():
         JOIN ef ON ef.id = c.id
         WHERE c.data_encerramento IS NULL
           AND (CURRENT_DATE - COALESCE(
-              (SELECT MAX(rp.data_fim::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
-              c.data_inicio::date
+              (SELECT MAX(NULLIF(rp.data_fim,'')::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
+              NULLIF(c.data_inicio,'')::date
           )) >= 180
         ORDER BY proximo_rel_inicio
     """, ())
@@ -1160,8 +1160,8 @@ def dashboard():
         SELECT COUNT(*) n FROM contrato c JOIN ef ON ef.id=c.id
         WHERE c.data_encerramento IS NULL
           AND (CURRENT_DATE - COALESCE(
-              (SELECT MAX(rp.data_fim::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
-              c.data_inicio::date
+              (SELECT MAX(NULLIF(rp.data_fim,'')::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
+              NULLIF(c.data_inicio,'')::date
           )) >= 180
     """, (), one=True)['n']
 
@@ -1804,8 +1804,8 @@ def contratos():
                  c.data_fim
              ) as effective_data_fim,
              (CURRENT_DATE - COALESCE(
-                 (SELECT MAX(rp.data_fim::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
-                 c.data_inicio::date
+                 (SELECT MAX(NULLIF(rp.data_fim,'')::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
+                 NULLIF(c.data_inicio,'')::date
              )) >= 180 AS relatorio_pendente
              FROM contrato c
              JOIN estagiario e ON e.id = c.estagiario_id
