@@ -1055,7 +1055,7 @@ function gerarAditivo() {
 }
 
 // Adicionar/remover cláusulas
-document.getElementById('btn-add-clausula').addEventListener('click', function() {
+;(document.getElementById('btn-add-clausula') || {addEventListener:function(){}}).addEventListener('click', function() {
   const container = document.getElementById('clausulas-container');
   const count = container.querySelectorAll('.clausula-extra-row').length + 1;
   const div = document.createElement('div');
@@ -1192,7 +1192,7 @@ function _criarLinhaClausulaEdit(titulo, texto) {
   return div;
 }
 
-document.getElementById('btn-add-clausula-edit').addEventListener('click', function() {
+;(document.getElementById('btn-add-clausula-edit') || {addEventListener:function(){}}).addEventListener('click', function() {
   document.getElementById('edit-clausulas-container').appendChild(_criarLinhaClausulaEdit('', ''));
 });
 
@@ -1231,8 +1231,8 @@ function salvarEdicaoAditivo() {
 }
 
 // ── Relatório ────────────────────────────────────────────────────────────────
-let _relProximoInicio = null;
-let _relProximoNum = 0;
+var _relProximoInicio = null;
+var _relProximoNum = 0;
 
 function _fmtDataBR(iso) {
   const [y, m, d] = iso.split('-');
@@ -1272,7 +1272,7 @@ function _isoDate(dt) {
     String(dt.getDate()).padStart(2, '0');
 }
 
-let _relSemestresCompletos = [];
+var _relSemestresCompletos = [];
 
 function _calcSemestresCompletos(inicioISO) {
   if (!inicioISO || !/^\d{4}-\d{2}-\d{2}/.test(inicioISO)) return [];
