@@ -610,7 +610,7 @@
         <!-- Data final opcional -->
         <div class="mb-2">
           <label class="form-label fw-semibold">Data Final <span class="text-muted fw-normal">(opcional)</span></label>
-          <input type="date" id="rel-data-fim" class="form-control">
+          <input type="date" id="rel-data-fim" class="form-control" onchange="_atualizarPreviewRelatorio()">
           <div class="form-text">Se informada, emite todos os períodos até essa data (incluindo semestre parcial final).</div>
         </div>
 
@@ -623,7 +623,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary" id="btn-emitir-relatorio" disabled>
+        <button type="button" class="btn btn-primary" id="btn-emitir-relatorio" disabled onclick="emitirRelatorio()">
           <i class="bi bi-check-lg me-1"></i><span id="btn-emitir-label">Confirmar e Emitir</span>
         </button>
       </div>
@@ -1388,9 +1388,7 @@ function _atualizarPreviewRelatorio() {
   }
 }
 
-document.getElementById('rel-data-fim').addEventListener('change', _atualizarPreviewRelatorio);
-
-document.getElementById('btn-emitir-relatorio').addEventListener('click', function() {
+function emitirRelatorio() {
   let fimVal = document.getElementById('rel-data-fim').value;
 
   // Sem data personalizada: usar fim do último semestre completo
@@ -1399,9 +1397,9 @@ document.getElementById('btn-emitir-relatorio').addEventListener('click', functi
   }
   if (!fimVal) return;
 
-  this.disabled = true;
-  this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Processando…';
-  const btnRef = this;
+  const btnRef = document.getElementById('btn-emitir-relatorio');
+  btnRef.disabled = true;
+  btnRef.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Processando…';
   fetch('/contratos/{{ c.id }}/relatorio/registrar', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -1436,7 +1434,7 @@ document.getElementById('btn-emitir-relatorio').addEventListener('click', functi
     btnRef.disabled = false;
     btnRef.innerHTML = '<i class="bi bi-check-lg me-1"></i><span id="btn-emitir-label">Confirmar e Emitir</span>';
   });
-});
+}
 
 // ── TRE ──────────────────────────────────────────────────────────────────────
 const _treLastRelFim = {{ ('"' + relatorios[-1].data_fim + '"') | safe if relatorios else 'null' }};
