@@ -1294,6 +1294,7 @@ function _calcSemestresCompletos(inicioISO) {
 }
 
 function abrirModalRelatorio() {
+  try {
   // Limpar estado
   document.getElementById('rel-data-fim').value = '';
   document.getElementById('rel-preview').classList.add('d-none');
@@ -1325,6 +1326,7 @@ function abrirModalRelatorio() {
     });
 
   bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-relatorio')).show();
+  } catch(e) { alert('Erro ao abrir relatório:\n' + e.message); }
 }
 
 function _atualizarPreviewRelatorio() {
