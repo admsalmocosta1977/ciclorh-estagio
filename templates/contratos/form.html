@@ -127,7 +127,7 @@
         <div class="col-md-3">
           <label class="form-label fw-semibold">Tempo de Experiência</label>
           <input type="text" name="supervisor_tempo_experiencia" class="form-control" id="sup-exp"
-                 value="{{ c.supervisor_tempo_experiencia if c else '' }}" placeholder="Ex: 5 anos">
+                 value="{{ (c.supervisor_tempo_experiencia or '') if c else '' }}" placeholder="Ex: 5 anos">
         </div>
         <div class="col-md-4">
           <label class="form-label fw-semibold">Orientador (CICLO RH)</label>
@@ -186,11 +186,11 @@
         </div>
         <div class="col-md-4">
           <label class="form-label fw-semibold">Data de Início *</label>
-          <input type="date" name="data_inicio" class="form-control" value="{{ c.data_inicio if c else '' }}" required>
+          <input type="date" name="data_inicio" class="form-control" value="{{ c.data_inicio if c else '' }}" required onchange="checkVinculo()">
         </div>
         <div class="col-md-4">
           <label class="form-label fw-semibold">Data de Término *</label>
-          <input type="date" name="data_fim" class="form-control" value="{{ c.data_fim if c else '' }}" required>
+          <input type="date" name="data_fim" class="form-control" value="{{ c.data_fim if c else '' }}" required onchange="checkVinculo()">
         </div>
         <div class="col-md-4">
           <label class="form-label fw-semibold">Número do Contrato</label>
@@ -772,6 +772,10 @@ function makeAC(txtId, dropId, hidId, data) {
   });
 }
 
+makeAC('txt-estagiario', 'drop-estagiario', 'sel-estagiario', DATA_EST);
+makeAC('txt-empresa',    'drop-empresa',    'sel-empresa',    DATA_EMP);
+makeAC('txt-ie',         'drop-ie',         'sel-ie',         DATA_IE);
+
 // ── Rastreamento de violações legais ──────────────────────────────────────────
 const violations = {};
 function setViolation(key, isViolation) {
@@ -1025,9 +1029,8 @@ function checkVinculo() {
     }
   }).catch(() => { divWrap.style.display = 'none'; setViolation('vinculo', false); });
 }
-document.getElementById('sel-estagiario').addEventListener('change', checkVinculo);
-document.querySelector('[name="data_inicio"]').addEventListener('change', checkVinculo);
-document.querySelector('[name="data_fim"]').addEventListener('change', checkVinculo);
+// data_inicio, data_fim: handled via onchange attributes
+try { document.getElementById('sel-estagiario').addEventListener('change', checkVinculo); } catch(e) {}
 if (document.getElementById('sel-estagiario').value && document.getElementById('sel-empresa').value) checkVinculo();
 
 {% if c and c.id %}
@@ -1511,10 +1514,6 @@ function confirmarDocSemRelatorio(tipo) {
 {% endif %}
 
 // ── Inicializar autocompletes ─────────────────────────────────────────────────
-makeAC('txt-estagiario', 'drop-estagiario', 'sel-estagiario', DATA_EST);
-makeAC('txt-empresa',    'drop-empresa',    'sel-empresa',    DATA_EMP);
-makeAC('txt-ie',         'drop-ie',         'sel-ie',         DATA_IE);
-
 // ── Validação antes do submit ─────────────────────────────────────────────────
 document.querySelector('form').addEventListener('submit', function(e) {
   const campos = [
