@@ -817,7 +817,6 @@ function carregarSupervisores(empresaId, supNomeAtual) {
   }
 
   // Atualiza link de cadastro de supervisor
-  const empOpt = selEmp.options[selEmp.selectedIndex];
   const empId  = selEmp.value;
   linkCadSup.href = '/empresas/' + empId + '/editar';
   linkCadSup.classList.remove('d-none');
