@@ -88,7 +88,7 @@ function salvarPDF(btn) {
     <tr><td class="label">Endereço:</td><td>{{ d.emp_endereco or '___________________________' }}, {{ d.emp_cidade or 'Vitória da Conquista – BA' }}</td></tr>
     <tr><td class="label">E-mail:</td><td>{{ d.emp_email or '___________________________' }}</td></tr>
     <tr><td class="label">Representante Legal:</td><td>{{ d.emp_representante or '___________________________' }}{% if d.emp_cargo_rep %} — {{ d.emp_cargo_rep }}{% endif %} — CPF: {{ d.emp_cpf_rep or '__________________' }}</td></tr>
-    <tr><td class="label">Supervisor de Estágio:</td><td>{{ d.supervisor_nome or '___________________________' }}{% if d.supervisor_cargo %} — {{ d.supervisor_cargo }}{% endif %}{% if d.supervisor_registro %} — Reg. Prof.: {{ d.supervisor_registro }}{% endif %}</td></tr>
+    <tr><td class="label">Supervisor de Estágio:</td><td>{{ d.supervisor_nome or '___________________________' }}{% if d.supervisor_cargo %} — {{ d.supervisor_cargo }}{% endif %}{% if d.supervisor_registro %} — Reg. Prof.: {{ d.supervisor_registro }}{% endif %}{% if d.supervisor_tempo_experiencia %} — Exp.: {{ d.supervisor_tempo_experiencia }}{% endif %}</td></tr>
   </table>
 
   <p style="margin-top:7px"><strong>INSTITUIÇÃO DE ENSINO (IES / ESCOLA):</strong></p>

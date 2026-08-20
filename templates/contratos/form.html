@@ -119,10 +119,15 @@
           <input type="text" name="supervisor_cargo" class="form-control" id="sup-cargo"
                  value="{{ c.supervisor_cargo if c else '' }}">
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <label class="form-label fw-semibold">Registro Prof. (CREA/CRM etc.)</label>
           <input type="text" name="supervisor_registro" class="form-control" id="sup-reg"
                  value="{{ c.supervisor_registro if c else '' }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Tempo de Experiência</label>
+          <input type="text" name="supervisor_tempo_experiencia" class="form-control" id="sup-exp"
+                 value="{{ c.supervisor_tempo_experiencia if c else '' }}" placeholder="Ex: 5 anos">
         </div>
         <div class="col-md-4">
           <label class="form-label fw-semibold">Orientador (CICLO RH)</label>
@@ -826,9 +831,10 @@ function carregarSupervisores(empresaId, supNomeAtual) {
       sups.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s.id;
-        opt.dataset.nome      = s.nome;
-        opt.dataset.cargo     = s.cargo || '';
-        opt.dataset.registro  = s.registro || '';
+        opt.dataset.nome              = s.nome;
+        opt.dataset.cargo             = s.cargo || '';
+        opt.dataset.registro          = s.registro || '';
+        opt.dataset.tempo_experiencia = s.tempo_experiencia || '';
         opt.textContent = s.nome + (s.cargo ? ' — ' + s.cargo : '');
         if (supNomeAtual && s.nome === supNomeAtual) { opt.selected = true; matched = true; }
         selSup.appendChild(opt);
@@ -848,6 +854,7 @@ function carregarSupervisores(empresaId, supNomeAtual) {
         supNome.value = opt.dataset.nome;
         document.getElementById('sup-cargo').value = opt.dataset.cargo;
         document.getElementById('sup-reg').value   = opt.dataset.registro;
+        document.getElementById('sup-exp').value   = opt.dataset.tempo_experiencia || '';
       } else if (supNomeAtual) {
         // Nome salvo não está na lista → modo manual com valor preservado
         selSup.value = '__manual__';
@@ -865,17 +872,20 @@ selSup.addEventListener('change', function() {
     supNome.focus();
     document.getElementById('sup-cargo').value = '';
     document.getElementById('sup-reg').value   = '';
+    document.getElementById('sup-exp').value   = '';
   } else if (this.value) {
     const opt = this.options[this.selectedIndex];
     supNome.style.display = 'none';
     supNome.value = opt.dataset.nome || '';
     document.getElementById('sup-cargo').value = opt.dataset.cargo || '';
     document.getElementById('sup-reg').value   = opt.dataset.registro || '';
+    document.getElementById('sup-exp').value   = opt.dataset.tempo_experiencia || '';
   } else {
     supNome.style.display = 'none';
     supNome.value = '';
     document.getElementById('sup-cargo').value = '';
     document.getElementById('sup-reg').value   = '';
+    document.getElementById('sup-exp').value   = '';
   }
 });
 

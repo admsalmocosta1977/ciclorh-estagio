@@ -320,6 +320,8 @@ def init_db():
             ordem INTEGER DEFAULT 0
         )""")
         cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS ie_professor_id INTEGER;")
+        cur.execute("ALTER TABLE empresa_supervisor ADD COLUMN IF NOT EXISTS tempo_experiencia TEXT;")
+        cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS supervisor_tempo_experiencia TEXT;")
         cur.execute("""
         CREATE TABLE IF NOT EXISTS empresa_supervisor (
             id SERIAL PRIMARY KEY,
@@ -1384,10 +1386,12 @@ def empresa_nova():
             if nome_sup.strip():
                 cargos = request.form.getlist('sup_cargo[]')
                 regs = request.form.getlist('sup_registro[]')
-                _run("INSERT INTO empresa_supervisor (empresa_id,nome,cargo,registro,ordem) VALUES (%s,%s,%s,%s,%s)",
+                exps = request.form.getlist('sup_tempo_experiencia[]')
+                _run("INSERT INTO empresa_supervisor (empresa_id,nome,cargo,registro,tempo_experiencia,ordem) VALUES (%s,%s,%s,%s,%s,%s)",
                      (emp_id, nome_sup.strip(),
                       cargos[i].strip() if i < len(cargos) else None,
-                      regs[i].strip() if i < len(regs) else None, i))
+                      regs[i].strip() if i < len(regs) else None,
+                      exps[i].strip() if i < len(exps) else None, i))
         _log('criar', 'empresa', emp_id, f'Criou empresa: {request.form["nome"]}')
         flash('Empresa cadastrada!', 'success')
         return redirect(url_for('empresas'))
@@ -1421,10 +1425,12 @@ def empresa_editar(id):
             if nome_sup.strip():
                 cargos = request.form.getlist('sup_cargo[]')
                 regs = request.form.getlist('sup_registro[]')
-                _run("INSERT INTO empresa_supervisor (empresa_id,nome,cargo,registro,ordem) VALUES (%s,%s,%s,%s,%s)",
+                exps = request.form.getlist('sup_tempo_experiencia[]')
+                _run("INSERT INTO empresa_supervisor (empresa_id,nome,cargo,registro,tempo_experiencia,ordem) VALUES (%s,%s,%s,%s,%s,%s)",
                      (id, nome_sup.strip(),
                       cargos[i].strip() if i < len(cargos) else None,
-                      regs[i].strip() if i < len(regs) else None, i))
+                      regs[i].strip() if i < len(regs) else None,
+                      exps[i].strip() if i < len(exps) else None, i))
         _log('editar', 'empresa', id, f'Editou empresa: {request.form["nome"]}')
         flash('Atualizada!', 'success')
         return redirect(url_for('empresas'))
@@ -1524,7 +1530,7 @@ def api_empresa(id):
 @app.route('/api/empresa_supervisores/<int:empresa_id>')
 @login_required
 def api_empresa_supervisores(empresa_id):
-    sups = _q("SELECT id, nome, cargo, registro FROM empresa_supervisor WHERE empresa_id = %s ORDER BY ordem, id", (empresa_id,))
+    sups = _q("SELECT id, nome, cargo, registro, tempo_experiencia FROM empresa_supervisor WHERE empresa_id = %s ORDER BY ordem, id", (empresa_id,))
     return jsonify([dict(s) for s in sups])
 
 
@@ -1872,15 +1878,16 @@ def contrato_novo():
             except (ValueError, TypeError): ch_s = 30.0
             _ins("""INSERT INTO contrato
                     (estagiario_id,empresa_id,ie_id,orientador,
-                     supervisor_nome,supervisor_cargo,supervisor_registro,
+                     supervisor_nome,supervisor_cargo,supervisor_registro,supervisor_tempo_experiencia,
                      curso,tipo_estagio,area_atuacao,ch_diaria,ch_semanal,
                      data_inicio,data_fim,numero_contrato,bolsa,bolsa_tipo,taxa,aux_transporte,
                      atividades,obs,jornada,data_encerramento,ie_professor_id)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                  (request.form['estagiario_id'], request.form['empresa_id'], request.form['ie_id'],
                   request.form.get('orientador', 'Salmo Lima Costa'),
                   request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
                   request.form.get('supervisor_registro'),
+                  request.form.get('supervisor_tempo_experiencia') or None,
                   request.form['curso'], request.form.get('tipo_estagio', 'Não Obrigatório'),
                   request.form.get('area_atuacao'),
                   ch_d, ch_s,
@@ -1945,7 +1952,7 @@ def contrato_editar(id):
             except (ValueError, TypeError): ch_s = 30.0
             _run("""UPDATE contrato SET
                     estagiario_id=%s,empresa_id=%s,ie_id=%s,orientador=%s,
-                    supervisor_nome=%s,supervisor_cargo=%s,supervisor_registro=%s,
+                    supervisor_nome=%s,supervisor_cargo=%s,supervisor_registro=%s,supervisor_tempo_experiencia=%s,
                     curso=%s,tipo_estagio=%s,area_atuacao=%s,ch_diaria=%s,ch_semanal=%s,
                     data_inicio=%s,data_fim=%s,numero_contrato=%s,bolsa=%s,bolsa_tipo=%s,
                     taxa=%s,aux_transporte=%s,atividades=%s,obs=%s,jornada=%s,
@@ -1954,6 +1961,7 @@ def contrato_editar(id):
                   request.form.get('orientador'),
                   request.form.get('supervisor_nome'), request.form.get('supervisor_cargo'),
                   request.form.get('supervisor_registro'),
+                  request.form.get('supervisor_tempo_experiencia') or None,
                   request.form['curso'], request.form.get('tipo_estagio'),
                   request.form.get('area_atuacao'),
                   ch_d, ch_s,
