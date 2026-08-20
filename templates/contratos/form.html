@@ -963,9 +963,8 @@ if (selArea) {
         inputs[i].closest('.atividade-row').style.display = '';
       }
     });
-    visibleAts = selecionadas.length;
-    if (visibleAts >= inputs.length) document.getElementById('btn-add-at').style.display = 'none';
-    else document.getElementById('btn-add-at').style.display = '';
+    var _btn = document.getElementById('btn-add-at');
+    if (_btn) _btn.style.display = selecionadas.length >= inputs.length ? 'none' : '';
     // Garante que a primeira linha aparece sempre
     if (inputs[0]) inputs[0].closest('.atividade-row').style.display = '';
     document.getElementById('painel-sugestao-ats').style.display = 'none';
@@ -1087,14 +1086,13 @@ document.addEventListener('click', function(e) {
 {% endif %}
 
 // Mostrar próxima linha de atividade
-var visibleAts = document.querySelectorAll('.atividade-row:not([style*="none"])').length;
 function adicionarAtividade() {
-  const rows = document.querySelectorAll('.atividade-row');
-  if (visibleAts < rows.length) {
-    rows[visibleAts].style.display = '';
-    visibleAts++;
+  var hidden = document.querySelector('.atividade-row[style*="none"]');
+  if (!hidden) { document.getElementById('btn-add-at').style.display = 'none'; return; }
+  hidden.style.display = '';
+  if (!document.querySelector('.atividade-row[style*="none"]')) {
+    document.getElementById('btn-add-at').style.display = 'none';
   }
-  if (visibleAts >= rows.length) document.getElementById('btn-add-at').style.display = 'none';
 }
 
 // Verificar jornada máxima (art. 10, Lei 11.788/2008)
@@ -1811,7 +1809,9 @@ document.getElementById('btn-aplicar-ia').addEventListener('click', function() {
       idx++;
     }
   });
-  visibleAts = Array.from(document.querySelectorAll('.atividade-row')).filter(r => r.style.display !== 'none').length;
+  var _hasHidden = document.querySelector('.atividade-row[style*="none"]');
+  var _btnAt = document.getElementById('btn-add-at');
+  if (_btnAt) _btnAt.style.display = _hasHidden ? '' : 'none';
   document.getElementById('painel-ia-ats').style.display = 'none';
 });
 </script>
