@@ -725,7 +725,7 @@
   {% endif %}
 
   <div class="sidebar-footer">
-    <img src="{{ url_for('static', filename='logo_ciclorh.png.png') }}" alt="Ciclo RH" class="sb-logo">
+    <img src="{{ url_for('static', filename='Logo_CicloRH.png') }}" alt="Ciclo RH" class="sb-logo">
     <div class="sb-user">
       <strong>{{ current_user.nome or current_user.username }}</strong>
       <span>{{ 'Administrador' if current_user.is_admin else 'Operador' }}</span>
