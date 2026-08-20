@@ -170,14 +170,14 @@
         <div class="col-md-3">
           <label class="form-label fw-semibold">Carga Horária Diária</label>
           <div class="input-group">
-            <input type="number" name="ch_diaria" class="form-control" value="{{ c.ch_diaria if c else 6 }}" min="0.5" max="8" step="0.5">
+            <input type="number" name="ch_diaria" class="form-control" value="{{ c.ch_diaria if c else 6 }}" min="0.5" max="8" step="0.5" oninput="verificarCH()">
             <span class="input-group-text">h</span>
           </div>
         </div>
         <div class="col-md-3">
           <label class="form-label fw-semibold">CH Semanal</label>
           <div class="input-group">
-            <input type="number" name="ch_semanal" class="form-control" value="{{ c.ch_semanal if c else 30 }}" min="0.5" max="40" step="0.5">
+            <input type="number" name="ch_semanal" class="form-control" value="{{ c.ch_semanal if c else 30 }}" min="0.5" max="40" step="0.5" oninput="verificarCH()">
             <span class="input-group-text">h</span>
           </div>
         </div>
@@ -201,7 +201,7 @@
             Data de Encerramento Real
             <span class="badge bg-warning text-dark ms-1" style="font-size:.7rem">Opcional</span>
           </label>
-          <input type="date" name="data_encerramento" class="form-control" value="{{ c.data_encerramento if c else '' }}">
+          <input type="date" name="data_encerramento" class="form-control" value="{{ c.data_encerramento if c else '' }}" onchange="checkVinculo()">
           <div class="form-text">Data real de encerramento. Preencher em <strong>todo</strong> encerramento — no prazo ou antecipado — após emitir o TRE. Controla o limite de 2 anos CPF+CNPJ (Lei 11.788/2008, art. 11).</div>
         </div>
       </div>
@@ -292,16 +292,19 @@
           <label class="form-label fw-semibold d-block">Tipo de Bolsa</label>
           <div class="btn-group" role="group">
             <input type="radio" class="btn-check" name="bolsa_tipo" id="bolsa-mensal" value="mensal"
+                   onchange="atualizarLabelBolsa()"
                    {% if not c or (c.bolsa_tipo or 'mensal') == 'mensal' %}checked{% endif %}>
             <label class="btn btn-outline-primary btn-sm" for="bolsa-mensal">
               <i class="bi bi-calendar-month me-1"></i>Mensal
             </label>
             <input type="radio" class="btn-check" name="bolsa_tipo" id="bolsa-diaria" value="diaria"
+                   onchange="atualizarLabelBolsa()"
                    {% if c and c.bolsa_tipo == 'diaria' %}checked{% endif %}>
             <label class="btn btn-outline-primary btn-sm" for="bolsa-diaria">
               <i class="bi bi-calendar-day me-1"></i>Por dia trabalhado
             </label>
             <input type="radio" class="btn-check" name="bolsa_tipo" id="bolsa-hora" value="hora"
+                   onchange="atualizarLabelBolsa()"
                    {% if c and c.bolsa_tipo == 'hora' %}checked{% endif %}>
             <label class="btn btn-outline-primary btn-sm" for="bolsa-hora">
               <i class="bi bi-clock me-1"></i>Por hora
@@ -356,7 +359,7 @@
         </div>
         {% endfor %}
       </div>
-      <button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="btn-add-at">
+      <button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="btn-add-at" onclick="adicionarAtividade()">
         <i class="bi bi-plus me-1"></i>Adicionar atividade
       </button>
 
@@ -565,7 +568,7 @@
       <div class="modal-body">
         <div class="mb-3">
           <label class="form-label fw-semibold">Data de Encerramento do Estágio *</label>
-          <input type="date" id="tre-data-enc" class="form-control">
+          <input type="date" id="tre-data-enc" class="form-control" onchange="_atualizarInfoTRE()">
         </div>
         <div id="tre-gap-info" class="d-none">
           <div id="tre-gap-alert" class="alert py-2 mb-0">
@@ -575,7 +578,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-warning" id="btn-gerar-tre" disabled>
+        <button type="button" class="btn btn-warning" id="btn-gerar-tre" disabled onclick="gerarTRE()">
           <i class="bi bi-file-earmark-check me-1"></i>Gerar TRE
         </button>
       </div>
@@ -977,9 +980,7 @@ function atualizarLabelBolsa() {
   document.getElementById('hint-bolsa-diaria').style.display = diaria ? '' : 'none';
   document.getElementById('hint-bolsa-hora').style.display = hora ? '' : 'none';
 }
-document.getElementById('bolsa-mensal').addEventListener('change', atualizarLabelBolsa);
-document.getElementById('bolsa-diaria').addEventListener('change', atualizarLabelBolsa);
-document.getElementById('bolsa-hora').addEventListener('change', atualizarLabelBolsa);
+// bolsa radios: handled via onchange attributes
 atualizarLabelBolsa();
 
 // Verificar limite de 2 anos CPF+CNPJ (Lei 11.788/2008, art. 11)
@@ -1086,15 +1087,15 @@ document.addEventListener('click', function(e) {
 {% endif %}
 
 // Mostrar próxima linha de atividade
-let visibleAts = document.querySelectorAll('.atividade-row:not([style*="none"])').length;
-document.getElementById('btn-add-at').addEventListener('click', function() {
+var visibleAts = document.querySelectorAll('.atividade-row:not([style*="none"])').length;
+function adicionarAtividade() {
   const rows = document.querySelectorAll('.atividade-row');
   if (visibleAts < rows.length) {
     rows[visibleAts].style.display = '';
     visibleAts++;
   }
-  if (visibleAts >= rows.length) this.style.display = 'none';
-});
+  if (visibleAts >= rows.length) document.getElementById('btn-add-at').style.display = 'none';
+}
 
 // Verificar jornada máxima (art. 10, Lei 11.788/2008)
 function verificarJornada() {
@@ -1152,9 +1153,7 @@ function verificarCH() {
   }
   setViolation('ch', over);
 }
-document.querySelector('[name="ch_diaria"]').addEventListener('input', verificarCH);
-document.querySelector('[name="ch_semanal"]').addEventListener('input', verificarCH);
-document.querySelector('[name="data_encerramento"]').addEventListener('change', checkVinculo);
+// ch_diaria, ch_semanal, data_encerramento: handled via oninput/onchange attributes
 
 // Carregar professores ao selecionar IE
 const selIe = document.getElementById('sel-ie');
@@ -1493,14 +1492,13 @@ function _atualizarInfoTRE() {
   gapInfo.classList.remove('d-none');
 }
 
-document.getElementById('tre-data-enc').addEventListener('change', _atualizarInfoTRE);
-
-document.getElementById('btn-gerar-tre').addEventListener('click', function() {
+// tre-data-enc: handled via onchange attribute
+function gerarTRE() {
   const enc = document.getElementById('tre-data-enc').value;
   if (!enc) return;
   bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-tre')).hide();
   window.open('/contratos/{{ c.id }}/tre?data_encerramento=' + enc, '_blank');
-});
+}
 
 function abrirModalAditivo() {
   {% if relatorio_pendente %}
