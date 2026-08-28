@@ -700,7 +700,7 @@
 </style>
 <script>
 // ── Autocomplete genérico ─────────────────────────────────────────────────────
-const DATA_EST = [{% for e in estagiarios %}{"id":{{ e.id }},"label":{{ e.nome|tojson }}},{% endfor %}];
+const DATA_EST = [{% for e in estagiarios %}{"id":{{ e.id }},"label":{{ e.nome|tojson }},"ie_id":{{ e.ie_id or 'null' }}},{% endfor %}];
 const DATA_EMP = [{% for emp in empresas %}{"id":{{ emp.id }},"label":{{ emp.display|tojson }}},{% endfor %}];
 const DATA_IE  = [{% for ie in ies %}{"id":{{ ie.id }},"label":{{ ((ie.sigla + ' — ' + ie.nome) if ie.sigla else ie.nome)|tojson }}},{% endfor %}];
 
@@ -775,6 +775,22 @@ function makeAC(txtId, dropId, hidId, data) {
 makeAC('txt-estagiario', 'drop-estagiario', 'sel-estagiario', DATA_EST);
 makeAC('txt-empresa',    'drop-empresa',    'sel-empresa',    DATA_EMP);
 makeAC('txt-ie',         'drop-ie',         'sel-ie',         DATA_IE);
+
+// Ao selecionar estagiário, pré-preenche a IE cadastrada no perfil dele
+document.getElementById('sel-estagiario').addEventListener('change', function() {
+  var estId = this.value;
+  if (!estId) return;
+  var est = DATA_EST.find(function(d) { return String(d.id) === String(estId); });
+  if (!est || !est.ie_id) return;
+  var hidIe = document.getElementById('sel-ie');
+  var txtIe = document.getElementById('txt-ie');
+  if (hidIe.value) return; // não sobrescreve se já preenchido
+  var ie = DATA_IE.find(function(d) { return String(d.id) === String(est.ie_id); });
+  if (!ie) return;
+  hidIe.value = ie.id;
+  txtIe.value = ie.label;
+  txtIe.classList.remove('is-invalid');
+});
 
 // ── Rastreamento de violações legais ──────────────────────────────────────────
 const violations = {};
