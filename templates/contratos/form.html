@@ -841,7 +841,7 @@ function carregarSupervisores(empresaId, supNomeAtual) {
         opt.dataset.cargo             = s.cargo || '';
         opt.dataset.registro          = s.registro || '';
         opt.dataset.tempo_experiencia = s.tempo_experiencia || '';
-        opt.textContent = s.nome + (s.cargo ? ' — ' + s.cargo : '');
+        opt.textContent = s.nome;
         if (supNomeAtual && s.nome === supNomeAtual) { opt.selected = true; matched = true; }
         selSup.appendChild(opt);
       });
