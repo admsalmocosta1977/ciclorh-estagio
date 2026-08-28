@@ -110,5 +110,14 @@
     Seus dados serão utilizados exclusivamente para este processo seletivo.
   </p>
 </div>
+<script>
+document.addEventListener('input', function(e) {
+  if (e.target.type === 'email' || e.target.name === 'email') {
+    var pos = e.target.selectionStart;
+    e.target.value = e.target.value.toLowerCase();
+    try { e.target.setSelectionRange(pos, pos); } catch(x) {}
+  }
+});
+</script>
 </body>
 </html>

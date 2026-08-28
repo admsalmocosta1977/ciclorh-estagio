@@ -762,5 +762,14 @@ function initEstadoCidade(estadoId,cidadeId,estadoAtual,cidadeAtual,defaultEstad
 }
 </script>
 {% block scripts %}{% endblock %}
+<script>
+document.addEventListener('input', function(e) {
+  if (e.target.type === 'email' || e.target.name === 'email' || e.target.name === 'contato_email') {
+    var pos = e.target.selectionStart;
+    e.target.value = e.target.value.toLowerCase();
+    try { e.target.setSelectionRange(pos, pos); } catch(x) {}
+  }
+});
+</script>
 </body>
 </html>

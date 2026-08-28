@@ -221,6 +221,13 @@ function removeExp(row) {
 document.querySelectorAll('.remover-exp').forEach(btn => {
   btn.addEventListener('click', function() { removeExp(this.closest('.exp-row')); });
 });
+document.addEventListener('input', function(e) {
+  if (e.target.type === 'email' || e.target.name === 'email') {
+    var pos = e.target.selectionStart;
+    e.target.value = e.target.value.toLowerCase();
+    try { e.target.setSelectionRange(pos, pos); } catch(x) {}
+  }
+});
 </script>
 </body>
 </html>
