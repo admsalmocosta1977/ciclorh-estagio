@@ -170,18 +170,7 @@
   <!-- ══ CABEÇALHO ══ -->
   <div class="doc-header">
     <div class="doc-logo-row">
-      <div class="doc-logo-icon">
-        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="32" cy="32" r="28" stroke="rgba(255,255,255,0.3)" stroke-width="2.5"/>
-          <path d="M32 12 A20 20 0 1 1 14 38" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
-          <polyline points="10,34 14,38 18,34" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-          <text x="20" y="37" font-family="Arial" font-weight="900" font-size="14" fill="white">RH</text>
-        </svg>
-      </div>
-      <div class="doc-brand">
-        <div class="doc-brand-name">Ciclo RH</div>
-        <div class="doc-brand-sub">PLATAFORMA DE GESTÃO DE ESTÁGIOS</div>
-      </div>
+      <img src="{{ url_for('static', filename='Logo_CicloRH.png') }}" alt="Ciclo RH" style="height:64px; width:auto;">
     </div>
     <div class="doc-title">Termo de Convênio para Realização de Estágios</div>
     <div class="doc-subtitle">
@@ -387,8 +376,8 @@
   <!-- ══ ASSINATURAS ══ -->
   <div class="assinaturas">
     <div class="ass-local-data">
-      {{ agente.cidade }},
-      ______ de ________________________ de __________.
+      {% set meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'] %}
+      {{ agente.cidade }}, {{ hoje.day }} de {{ meses[hoje.month - 1] }} de {{ hoje.year }}.
     </div>
 
     <div class="ass-grid">
