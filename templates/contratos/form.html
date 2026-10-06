@@ -8,7 +8,7 @@
 
 <div class="card">
   <div class="card-body">
-    <form method="post">
+    <form method="post" id="form-contrato">
 
       <h6 class="text-muted mb-3">Partes Envolvidas</h6>
 
@@ -106,7 +106,7 @@
             <option value="">— selecione o supervisor —</option>
           </select>
           <input type="text" name="supervisor_nome" class="form-control" id="sup-nome"
-                 value="{{ c.supervisor_nome if c else '' }}" placeholder="Nome completo do supervisor">
+                 value="{{ (c.supervisor_nome or '') if c else '' }}" placeholder="Nome completo do supervisor">
           <div class="form-text d-flex justify-content-between align-items-center mt-1">
             <span id="hint-sup">Selecione a empresa para carregar os supervisores.</span>
             <a id="link-cad-sup" class="d-none small fw-semibold" href="#" target="_blank">
@@ -117,12 +117,12 @@
         <div class="col-md-4">
           <label class="form-label fw-semibold">Cargo do Supervisor</label>
           <input type="text" name="supervisor_cargo" class="form-control" id="sup-cargo"
-                 value="{{ c.supervisor_cargo if c else '' }}">
+                 value="{{ (c.supervisor_cargo or '') if c else '' }}">
         </div>
         <div class="col-md-3">
           <label class="form-label fw-semibold">Registro Prof. (CREA/CRM etc.)</label>
           <input type="text" name="supervisor_registro" class="form-control" id="sup-reg"
-                 value="{{ c.supervisor_registro if c else '' }}">
+                 value="{{ (c.supervisor_registro or '') if c else '' }}">
         </div>
         <div class="col-md-3">
           <label class="form-label fw-semibold">Tempo de Experiência</label>
@@ -148,9 +148,9 @@
         </div>
         <div class="col-md-4">
           <label class="form-label fw-semibold">Tipo</label>
-          <select name="tipo_estagio" class="form-select">
+          <select name="tipo_estagio" class="form-select" id="tipo-estagio">
+            <option value="Não Obrigatório" {% if not c or c.tipo_estagio != 'Obrigatório' %}selected{% endif %}>Não Obrigatório</option>
             <option value="Obrigatório" {% if c and c.tipo_estagio=='Obrigatório' %}selected{% endif %}>Obrigatório</option>
-            <option value="Não Obrigatório" {% if not c or c.tipo_estagio=='Não Obrigatório' %}selected{% endif %}>Não Obrigatório</option>
           </select>
         </div>
         <div class="col-md-6">
@@ -518,6 +518,29 @@
   </div>
 </div>
 {% endif %}
+
+<!-- Overlay confirmação: Estágio Obrigatório -->
+<div id="overlay-obrigatorio" style="
+  display:none; position:fixed; inset:0; z-index:9999;
+  background:rgba(0,0,0,.45); align-items:center; justify-content:center;">
+  <div style="
+    background:#fff; border-radius:12px; padding:28px 32px; max-width:440px; width:90%;
+    border-top:5px solid #f0ad4e; box-shadow:0 8px 32px rgba(0,0,0,.25); text-align:center;">
+    <div style="font-size:2rem; margin-bottom:8px;">⚠️</div>
+    <h5 style="font-weight:700; margin-bottom:12px; color:#856404;">Atenção</h5>
+    <p style="margin-bottom:20px; color:#333; font-size:.97rem;">
+      Contrato informado como <strong>obrigatório</strong>. Confirma a informação?
+    </p>
+    <div style="display:flex; gap:12px; justify-content:center;">
+      <button type="button" class="btn btn-warning fw-semibold px-4" id="btn-confirma-obrigatorio">
+        Sim, confirmar
+      </button>
+      <button type="button" class="btn btn-outline-secondary px-4" id="btn-cancela-obrigatorio">
+        Não, corrigir
+      </button>
+    </div>
+  </div>
+</div>
 
 {% if c and c.id %}
 <!-- Modal Aditivo -->
@@ -1865,5 +1888,37 @@ document.getElementById('btn-aplicar-ia').addEventListener('click', function() {
   if (_btnAt) _btnAt.style.display = _hasHidden ? '' : 'none';
   document.getElementById('painel-ia-ats').style.display = 'none';
 });
+
+// ── Confirmação: Estágio Obrigatório ─────────────────────────────────────────
+(function() {
+  var overlay = document.getElementById('overlay-obrigatorio');
+  if (!overlay) return;
+  var form = document.getElementById('form-contrato');
+  var tipoSel = document.getElementById('tipo-estagio');
+  var confirmaBtn = document.getElementById('btn-confirma-obrigatorio');
+  var cancelaBtn = document.getElementById('btn-cancela-obrigatorio');
+  var _confirmedSubmit = false;
+
+  form.addEventListener('submit', function(e) {
+    if (tipoSel.value === 'Obrigatório' && !_confirmedSubmit) {
+      e.preventDefault();
+      overlay.style.display = 'flex';
+    }
+  });
+
+  confirmaBtn.addEventListener('click', function() {
+    overlay.style.display = 'none';
+    _confirmedSubmit = true;
+    form.submit();
+    _confirmedSubmit = false;
+  });
+
+  cancelaBtn.addEventListener('click', function() {
+    overlay.style.display = 'none';
+    tipoSel.value = 'Não Obrigatório';
+    tipoSel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    tipoSel.focus();
+  });
+})();
 </script>
 {% endblock %}
