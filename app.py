@@ -206,6 +206,19 @@ def _log(acao, entidade, entidade_id=None, descricao=''):
         pass
 
 
+def _hist_contrato(contrato_id, descricao):
+    try:
+        uid = current_user.id if current_user.is_authenticated else None
+        unome = (current_user.nome or current_user.username) if current_user.is_authenticated else 'Sistema'
+        _run(
+            "INSERT INTO contrato_historico (contrato_id, usuario_id, usuario_nome, descricao)"
+            " VALUES (%s, %s, %s, %s)",
+            (contrato_id, uid, unome, descricao)
+        )
+    except Exception:
+        pass
+
+
 def init_db():
     url = DATABASE_URL
     if url.startswith('postgres://'):
@@ -368,6 +381,15 @@ def init_db():
             data_inicio TEXT NOT NULL,
             data_fim TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS contrato_historico (
+            id SERIAL PRIMARY KEY,
+            contrato_id INTEGER NOT NULL REFERENCES contrato(id) ON DELETE CASCADE,
+            usuario_id INTEGER REFERENCES usuario(id),
+            usuario_nome TEXT,
+            data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            descricao TEXT NOT NULL
         )""")
         cur.execute("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS acesso_crm BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS crm_role TEXT DEFAULT 'vendedor';")
@@ -1876,7 +1898,7 @@ def contrato_novo():
             except (ValueError, TypeError): ch_d = 6.0
             try: ch_s = float(request.form.get('ch_semanal') or 30)
             except (ValueError, TypeError): ch_s = 30.0
-            _ins("""INSERT INTO contrato
+            novo_id = _ins("""INSERT INTO contrato
                     (estagiario_id,empresa_id,ie_id,orientador,
                      supervisor_nome,supervisor_cargo,supervisor_registro,supervisor_tempo_experiencia,
                      curso,tipo_estagio,area_atuacao,ch_diaria,ch_semanal,
@@ -1902,9 +1924,12 @@ def contrato_novo():
                   request.form.get('ie_professor_id') or None))
             _est = _q("SELECT nome FROM estagiario WHERE id=%s", (request.form['estagiario_id'],), one=True)
             _emp = _q("SELECT nome FROM empresa WHERE id=%s", (request.form['empresa_id'],), one=True)
-            _log('criar', 'contrato', None,
+            _log('criar', 'contrato', novo_id,
                  f'Criou contrato: {_est["nome"] if _est else "?"} @ {_emp["nome"] if _emp else "?"}'
                  f' ({request.form["data_inicio"]} a {request.form["data_fim"]})')
+            _hist_contrato(novo_id,
+                f'Contrato criado: {_est["nome"] if _est else "?"} na empresa {_emp["nome"] if _emp else "?"}'
+                f' — Período: {request.form["data_inicio"]} a {request.form["data_fim"]}')
             flash('Contrato criado!', 'success')
             return redirect(url_for('contratos'))
         except Exception as ex:
@@ -1950,6 +1975,56 @@ def contrato_editar(id):
             except (ValueError, TypeError): ch_d = 6.0
             try: ch_s = float(request.form.get('ch_semanal') or 30)
             except (ValueError, TypeError): ch_s = 30.0
+
+            # --- detectar alterações campo a campo ---
+            def _n(v): return str(v).strip() if v is not None else ''
+            def _f(v): return str(round(float(v), 2)) if v is not None else ''
+            mudancas = []
+            _est_ant = _q("SELECT nome FROM estagiario WHERE id=%s", (c['estagiario_id'],), one=True)
+            _est_nov = _q("SELECT nome FROM estagiario WHERE id=%s", (request.form['estagiario_id'],), one=True)
+            if _n(c['estagiario_id']) != _n(request.form['estagiario_id']):
+                mudancas.append(f'Estagiário: "{_est_ant["nome"] if _est_ant else c["estagiario_id"]}" → "{_est_nov["nome"] if _est_nov else request.form["estagiario_id"]}"')
+            _emp_ant = _q("SELECT nome FROM empresa WHERE id=%s", (c['empresa_id'],), one=True)
+            _emp_nov = _q("SELECT nome FROM empresa WHERE id=%s", (request.form['empresa_id'],), one=True)
+            if _n(c['empresa_id']) != _n(request.form['empresa_id']):
+                mudancas.append(f'Empresa: "{_emp_ant["nome"] if _emp_ant else c["empresa_id"]}" → "{_emp_nov["nome"] if _emp_nov else request.form["empresa_id"]}"')
+            _ie_ant = _q("SELECT nome FROM ie WHERE id=%s", (c['ie_id'],), one=True) if c['ie_id'] else None
+            _ie_nov = _q("SELECT nome FROM ie WHERE id=%s", (request.form['ie_id'],), one=True) if request.form.get('ie_id') else None
+            if _n(c['ie_id']) != _n(request.form.get('ie_id')):
+                mudancas.append(f'Instituição de Ensino: "{_ie_ant["nome"] if _ie_ant else ""}" → "{_ie_nov["nome"] if _ie_nov else ""}"')
+            campos_simples = [
+                ('data_inicio', 'Data de Início'), ('data_fim', 'Data de Fim'),
+                ('data_encerramento', 'Data de Encerramento'),
+                ('curso', 'Curso'), ('tipo_estagio', 'Tipo de Estágio'),
+                ('area_atuacao', 'Área de Atuação'),
+                ('numero_contrato', 'Número do Contrato'),
+                ('supervisor_nome', 'Supervisor'), ('supervisor_cargo', 'Cargo do Supervisor'),
+                ('supervisor_registro', 'Registro do Supervisor'),
+                ('supervisor_tempo_experiencia', 'Tempo de Exp. do Supervisor'),
+                ('orientador', 'Orientador'), ('bolsa_tipo', 'Tipo de Bolsa'),
+                ('obs', 'Observações'),
+            ]
+            for campo, label in campos_simples:
+                ant = _n(c.get(campo))
+                nov = _n(request.form.get(campo))
+                if ant != nov:
+                    mudancas.append(f'{label}: "{ant}" → "{nov}"')
+            for campo, label in [('bolsa', 'Bolsa'), ('taxa', 'Taxa'), ('aux_transporte', 'Aux. Transporte')]:
+                ant = _f(c.get(campo))
+                nov = _f(request.form.get(campo) or None)
+                if ant != nov:
+                    mudancas.append(f'{label}: "{ant}" → "{nov}"')
+            for campo, label in [('ch_diaria', 'CH Diária'), ('ch_semanal', 'CH Semanal')]:
+                ant = _f(c.get(campo))
+                if campo == 'ch_diaria': nov = _f(ch_d)
+                else: nov = _f(ch_s)
+                if ant != nov:
+                    mudancas.append(f'{label}: "{ant}" → "{nov}"')
+            ats_ant = _n(c.get('atividades'))
+            if ats_ant != _n(ats):
+                mudancas.append('Atividades: [alteradas]')
+            # --- fim detecção ---
+
             _run("""UPDATE contrato SET
                     estagiario_id=%s,empresa_id=%s,ie_id=%s,orientador=%s,
                     supervisor_nome=%s,supervisor_cargo=%s,supervisor_registro=%s,supervisor_tempo_experiencia=%s,
@@ -1974,10 +2049,14 @@ def contrato_editar(id):
                   ats, request.form.get('obs'), _build_jornada_json(),
                   request.form.get('data_encerramento') or None,
                   request.form.get('ie_professor_id') or None, id))
-            _est2 = _q("SELECT nome FROM estagiario WHERE id=%s", (request.form['estagiario_id'],), one=True)
-            _emp2 = _q("SELECT nome FROM empresa WHERE id=%s", (request.form['empresa_id'],), one=True)
+            _est2 = _est_nov
+            _emp2 = _emp_nov
             _log('editar', 'contrato', id,
                  f'Editou contrato: {_est2["nome"] if _est2 else "?"} @ {_emp2["nome"] if _emp2 else "?"}')
+            if mudancas:
+                _hist_contrato(id, 'Alterações: ' + ' | '.join(mudancas))
+            else:
+                _hist_contrato(id, 'Contrato salvo sem alterações nos campos principais.')
             flash('Contrato atualizado!', 'success')
             return redirect(url_for('contratos'))
         except Exception as ex:
@@ -1995,10 +2074,15 @@ def contrato_editar(id):
         except Exception:
             prox_inicio = date.today()
     relatorio_pendente = (date.today() - prox_inicio).days >= 180
+    historico = _q(
+        "SELECT * FROM contrato_historico WHERE contrato_id=%s ORDER BY data_hora DESC",
+        (id,)
+    ) or []
     return render_template('contratos/form.html', c=c,
                            estagiarios=estagiarios, empresas=empresas_list, ies=ies_list,
                            areas=areas_list, aditivos=aditivos,
-                           relatorios=relatorios, relatorio_pendente=relatorio_pendente)
+                           relatorios=relatorios, relatorio_pendente=relatorio_pendente,
+                           historico=historico)
 
 
 @app.route('/contratos/<int:id>/excluir')
