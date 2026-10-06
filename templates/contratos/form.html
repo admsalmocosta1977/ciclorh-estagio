@@ -384,7 +384,7 @@
 
       <hr>
       <div class="d-flex gap-2 mt-3">
-        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar Contrato</button>
+        <button type="submit" id="btn-salvar-contrato" onclick="return interceptarSalvar()" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Salvar Contrato</button>
         <a href="{{ url_for('contratos') }}" class="btn btn-outline-secondary">Cancelar</a>
         {% if c and c.id %}
         <div class="ms-auto d-flex gap-2">
@@ -1890,35 +1890,36 @@ document.getElementById('btn-aplicar-ia').addEventListener('click', function() {
 });
 
 // ── Confirmação: Estágio Obrigatório ─────────────────────────────────────────
-(function() {
+var _obrigatorioConfirmado = false;
+
+function interceptarSalvar() {
+  var tipoSel = document.getElementById('tipo-estagio');
+  if (tipoSel && tipoSel.value === 'Obrigatório' && !_obrigatorioConfirmado) {
+    var overlay = document.getElementById('overlay-obrigatorio');
+    if (overlay) overlay.style.display = 'flex';
+    return false;
+  }
+  _obrigatorioConfirmado = false;
+  return true;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
   var overlay = document.getElementById('overlay-obrigatorio');
   if (!overlay) return;
-  var form = document.getElementById('form-contrato');
-  var tipoSel = document.getElementById('tipo-estagio');
-  var confirmaBtn = document.getElementById('btn-confirma-obrigatorio');
-  var cancelaBtn = document.getElementById('btn-cancela-obrigatorio');
-  var _confirmedSubmit = false;
 
-  form.addEventListener('submit', function(e) {
-    if (tipoSel.value === 'Obrigatório' && !_confirmedSubmit) {
-      e.preventDefault();
-      overlay.style.display = 'flex';
-    }
+  document.getElementById('btn-confirma-obrigatorio').addEventListener('click', function() {
+    overlay.style.display = 'none';
+    _obrigatorioConfirmado = true;
+    document.getElementById('btn-salvar-contrato').click();
   });
 
-  confirmaBtn.addEventListener('click', function() {
+  document.getElementById('btn-cancela-obrigatorio').addEventListener('click', function() {
     overlay.style.display = 'none';
-    _confirmedSubmit = true;
-    form.submit();
-    _confirmedSubmit = false;
-  });
-
-  cancelaBtn.addEventListener('click', function() {
-    overlay.style.display = 'none';
+    var tipoSel = document.getElementById('tipo-estagio');
     tipoSel.value = 'Não Obrigatório';
     tipoSel.scrollIntoView({ behavior: 'smooth', block: 'center' });
     tipoSel.focus();
   });
-})();
+});
 </script>
 {% endblock %}
