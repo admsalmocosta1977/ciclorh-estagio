@@ -532,10 +532,10 @@
       Contrato informado como <strong>obrigatório</strong>. Confirma a informação?
     </p>
     <div style="display:flex; gap:12px; justify-content:center;">
-      <button type="button" class="btn btn-warning fw-semibold px-4" id="btn-confirma-obrigatorio">
+      <button type="button" class="btn btn-warning fw-semibold px-4" onclick="confirmarObrigatorio()">
         Sim, confirmar
       </button>
-      <button type="button" class="btn btn-outline-secondary px-4" id="btn-cancela-obrigatorio">
+      <button type="button" class="btn btn-outline-secondary px-4" onclick="cancelarObrigatorio()">
         Não, corrigir
       </button>
     </div>
@@ -1903,23 +1903,18 @@ function interceptarSalvar() {
   return true;
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-  var overlay = document.getElementById('overlay-obrigatorio');
-  if (!overlay) return;
+function confirmarObrigatorio() {
+  document.getElementById('overlay-obrigatorio').style.display = 'none';
+  _obrigatorioConfirmado = true;
+  document.getElementById('btn-salvar-contrato').click();
+}
 
-  document.getElementById('btn-confirma-obrigatorio').addEventListener('click', function() {
-    overlay.style.display = 'none';
-    _obrigatorioConfirmado = true;
-    document.getElementById('btn-salvar-contrato').click();
-  });
-
-  document.getElementById('btn-cancela-obrigatorio').addEventListener('click', function() {
-    overlay.style.display = 'none';
-    var tipoSel = document.getElementById('tipo-estagio');
-    tipoSel.value = 'Não Obrigatório';
-    tipoSel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    tipoSel.focus();
-  });
-});
+function cancelarObrigatorio() {
+  document.getElementById('overlay-obrigatorio').style.display = 'none';
+  var tipoSel = document.getElementById('tipo-estagio');
+  tipoSel.value = 'Não Obrigatório';
+  tipoSel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  tipoSel.focus();
+}
 </script>
 {% endblock %}
