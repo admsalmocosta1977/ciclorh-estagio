@@ -69,7 +69,7 @@
             <option value="superior" {% if not e or e.tipo_ensino in ('superior', None, '') %}selected{% endif %}>Ensino Superior</option>
             <option value="tecnico" {% if e and e.tipo_ensino == 'tecnico' %}selected{% endif %}>Ensino Técnico</option>
             <option value="medio" {% if e and e.tipo_ensino == 'medio' %}selected{% endif %}>Ensino Médio</option>
-            <option value="fundamental" {% if e and e.tipo_ensino == 'fundamental' %}selected{% endif %}>E.F. — Anos Finais (EJA)</option>
+            <option value="fundamental" {% if e and e.tipo_ensino == 'fundamental' %}selected{% endif %}>Ensino Fundamental</option>
             <option value="eja" {% if e and e.tipo_ensino == 'eja' %}selected{% endif %}>EJA</option>
             <option value="proeja" {% if e and e.tipo_ensino == 'proeja' %}selected{% endif %}>PROEJA</option>
           </select>
@@ -138,7 +138,7 @@ function atualizarLabelSemestre() {
   } else if (tipo === 'fundamental') {
     lbl.textContent = 'Ano Atual';
     inp.max = 4;
-    txt.textContent = 'E.F. Anos Finais: 6º ao 9º Ano (1 a 4)';
+    txt.textContent = 'Ensino Fundamental: 6º ao 9º Ano (1 a 4)';
   } else if (tipo === 'eja' || tipo === 'proeja') {
     lbl.textContent = 'Módulo Atual';
     inp.max = 4;
