@@ -857,7 +857,7 @@ def _atualizar_semestres_auto():
         else:
             _run("""UPDATE estagiario SET semestre = CASE
                         WHEN tipo_ensino = 'medio'       THEN LEAST(semestre + 1, 3)
-                        WHEN tipo_ensino = 'fundamental' THEN LEAST(semestre + 1, 4)
+                        WHEN tipo_ensino = 'fundamental' THEN LEAST(semestre + 1, 9)
                         WHEN tipo_ensino IN ('eja','proeja') THEN LEAST(semestre + 1, 4)
                         ELSE LEAST(semestre + 1, 10)
                     END WHERE semestre IS NOT NULL""")

@@ -131,14 +131,16 @@ function atualizarLabelSemestre() {
   const lbl = document.getElementById('lbl-semestre');
   const inp = document.getElementById('inp-semestre');
   const txt = document.getElementById('txt-semestre');
+  inp.min = 1;
   if (tipo === 'medio') {
     lbl.textContent = 'Ano Atual';
     inp.max = 3;
     txt.textContent = 'Ensino Médio: 1º, 2º ou 3º Ano';
   } else if (tipo === 'fundamental') {
     lbl.textContent = 'Ano Atual';
-    inp.max = 4;
-    txt.textContent = 'Ensino Fundamental: 6º ao 9º Ano (1 a 4)';
+    inp.min = 6;
+    inp.max = 9;
+    txt.textContent = 'Ensino Fundamental: 6º ao 9º Ano';
   } else if (tipo === 'eja' || tipo === 'proeja') {
     lbl.textContent = 'Módulo Atual';
     inp.max = 4;
