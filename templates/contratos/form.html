@@ -543,6 +543,81 @@
 </div>
 
 {% if c and c.id %}
+<!-- Card: Retorno de documentos assinados -->
+<div class="card mt-3">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-pen"></i> Retorno de Documentos Assinados
+    {% if c.tce_assinado and c.plano_assinado %}
+    <span class="badge bg-success ms-auto">Todos confirmados</span>
+    {% else %}
+    <span class="badge bg-warning text-dark ms-auto">Pendente(s)</span>
+    {% endif %}
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <!-- TCE -->
+      <div class="col-md-6">
+        <div class="border rounded p-3 d-flex align-items-center justify-content-between gap-3
+             {% if c.tce_assinado %}border-success bg-success bg-opacity-10{% else %}border-warning bg-warning bg-opacity-10{% endif %}">
+          <div>
+            <div class="fw-semibold small">
+              <i class="bi bi-file-earmark-check me-1"></i>TCE Assinado
+            </div>
+            {% if c.tce_assinado %}
+            <div class="text-success small mt-1">
+              <i class="bi bi-check-circle-fill me-1"></i>Confirmado em
+              {{ c.tce_assinado_em.strftime('%d/%m/%Y %H:%M') if c.tce_assinado_em else '—' }}
+              {% if c.tce_assinado_por %}<br><span class="text-muted">por {{ c.tce_assinado_por }}</span>{% endif %}
+            </div>
+            {% else %}
+            <div class="text-warning small mt-1"><i class="bi bi-hourglass-split me-1"></i>Aguardando retorno assinado</div>
+            {% endif %}
+          </div>
+          {% if not c.tce_assinado %}
+          <form method="post" action="{{ url_for('confirmar_doc', id=c.id) }}">
+            <input type="hidden" name="tipo" value="tce">
+            <button type="button" class="btn btn-sm btn-outline-success"
+                    onclick="if(confirm('Confirmar recebimento do TCE assinado?')) this.form.submit()">
+              <i class="bi bi-check-lg me-1"></i>Confirmar
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      <!-- Plano de Atividades -->
+      <div class="col-md-6">
+        <div class="border rounded p-3 d-flex align-items-center justify-content-between gap-3
+             {% if c.plano_assinado %}border-success bg-success bg-opacity-10{% else %}border-warning bg-warning bg-opacity-10{% endif %}">
+          <div>
+            <div class="fw-semibold small">
+              <i class="bi bi-file-earmark-check me-1"></i>Plano de Atividades Assinado
+            </div>
+            {% if c.plano_assinado %}
+            <div class="text-success small mt-1">
+              <i class="bi bi-check-circle-fill me-1"></i>Confirmado em
+              {{ c.plano_assinado_em.strftime('%d/%m/%Y %H:%M') if c.plano_assinado_em else '—' }}
+              {% if c.plano_assinado_por %}<br><span class="text-muted">por {{ c.plano_assinado_por }}</span>{% endif %}
+            </div>
+            {% else %}
+            <div class="text-warning small mt-1"><i class="bi bi-hourglass-split me-1"></i>Aguardando retorno assinado</div>
+            {% endif %}
+          </div>
+          {% if not c.plano_assinado %}
+          <form method="post" action="{{ url_for('confirmar_doc', id=c.id) }}">
+            <input type="hidden" name="tipo" value="plano">
+            <button type="button" class="btn btn-sm btn-outline-success"
+                    onclick="if(confirm('Confirmar recebimento do Plano de Atividades assinado?')) this.form.submit()">
+              <i class="bi bi-check-lg me-1"></i>Confirmar
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% if c and c.id %}
 <!-- Modal Aditivo -->
 <div class="modal fade" id="modal-aditivo" tabindex="-1">
   <div class="modal-dialog">

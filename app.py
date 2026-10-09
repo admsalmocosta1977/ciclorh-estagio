@@ -391,6 +391,12 @@ def init_db():
             data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             descricao TEXT NOT NULL
         )""")
+        cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS tce_assinado BOOLEAN DEFAULT FALSE;")
+        cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS tce_assinado_em TIMESTAMP;")
+        cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS tce_assinado_por TEXT;")
+        cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS plano_assinado BOOLEAN DEFAULT FALSE;")
+        cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS plano_assinado_em TIMESTAMP;")
+        cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS plano_assinado_por TEXT;")
         cur.execute("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS acesso_crm BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE usuario ADD COLUMN IF NOT EXISTS crm_role TEXT DEFAULT 'vendedor';")
         cur.execute("UPDATE usuario SET acesso_crm = TRUE WHERE role = 'admin';")
@@ -1104,11 +1110,25 @@ def index():
         ORDER BY c.created_at DESC LIMIT 10
     """, (hoje,))
 
+    # Contratos ativos com TCE ou Plano ainda não confirmados como assinados
+    docs_pendentes = _q(cte + """
+        SELECT c.*, e.nome est_nome, emp.nome emp_nome,
+               COALESCE(emp.nome_fantasia, emp.nome) emp_display, ef.data_efetiva
+        FROM contrato c
+        JOIN estagiario e ON e.id = c.estagiario_id
+        JOIN empresa emp ON emp.id = c.empresa_id
+        JOIN ef ON ef.id = c.id
+        WHERE c.data_encerramento IS NULL AND ef.data_efetiva >= %s
+          AND (COALESCE(c.tce_assinado, FALSE) = FALSE OR COALESCE(c.plano_assinado, FALSE) = FALSE)
+        ORDER BY c.created_at DESC
+    """, (hoje,))
+
     total_est = _q("SELECT COUNT(*) AS n FROM estagiario", one=True)['n']
     total_emp = _q("SELECT COUNT(*) AS n FROM empresa", one=True)['n']
     total_ie = _q("SELECT COUNT(*) AS n FROM ie", one=True)['n']
     return render_template('index.html', total=total, vencendo=vencendo, recentes=recentes,
                            pendentes=pendentes, rel_pendentes=rel_pendentes,
+                           docs_pendentes=docs_pendentes,
                            total_est=total_est, total_emp=total_emp, total_ie=total_ie)
 
 
@@ -1264,6 +1284,30 @@ def contrato_encerrar(id):
     _log('encerrar', 'contrato', id, f'Encerrou contrato: {est["nome"] if est else id}')
     flash(f'Contrato encerrado em {fmt_date(data_efetiva)}.', 'success')
     return redirect(url_for('index'))
+
+
+@app.route('/contratos/<int:id>/confirmar_doc', methods=['POST'])
+@login_required
+def confirmar_doc(id):
+    tipo = request.form.get('tipo')
+    if tipo not in ('tce', 'plano'):
+        abort(400)
+    c = _q("SELECT * FROM contrato WHERE id = %s", (id,), one=True)
+    if not c:
+        abort(404)
+    unome = (current_user.nome or current_user.username) if current_user.is_authenticated else 'Sistema'
+    now = datetime.now()
+    if tipo == 'tce':
+        _run("UPDATE contrato SET tce_assinado=TRUE, tce_assinado_em=%s, tce_assinado_por=%s WHERE id=%s",
+             (now, unome, id))
+        _hist_contrato(id, f'TCE assinado confirmado por {unome}')
+        flash('Recebimento do TCE assinado confirmado.', 'success')
+    else:
+        _run("UPDATE contrato SET plano_assinado=TRUE, plano_assinado_em=%s, plano_assinado_por=%s WHERE id=%s",
+             (now, unome, id))
+        _hist_contrato(id, f'Plano de Atividades assinado confirmado por {unome}')
+        flash('Recebimento do Plano de Atividades assinado confirmado.', 'success')
+    return redirect(url_for('contrato_editar', id=id))
 
 
 # ─── ESTAGIÁRIOS ──────────────────────────────────────────────────────────────

@@ -204,6 +204,58 @@
 </div>
 {% endif %}
 
+<!-- ── Documentos pendentes de retorno assinado ── -->
+{% if docs_pendentes %}
+<div class="section-divider"><i class="bi bi-pen" style="color:#0891B2"></i>Documentos a confirmar</div>
+<div class="alert-panel" style="border-left:3px solid #0891B2;box-shadow:var(--shadow-card);border-radius:var(--radius);overflow:hidden;margin-bottom:16px">
+  <div class="alert-panel-header" style="background:#E0F2FE;border-bottom:1px solid rgba(8,145,178,.2);color:#0C4A6E">
+    <i class="bi bi-file-earmark-check fs-5 flex-shrink-0"></i>
+    TCE ou Plano de Atividades aguardando retorno assinado
+    <span style="background:#0891B2;color:#fff;border-radius:20px;padding:1px 9px;font-size:.72rem;font-weight:800;margin-left:4px">{{ docs_pendentes|length }}</span>
+  </div>
+  <div class="alert-panel-body">
+    <div class="table-responsive">
+      <table class="bi-table">
+        <thead><tr>
+          <th>Estagiário</th>
+          <th>Empresa</th>
+          <th>TCE</th>
+          <th>Plano</th>
+          <th style="text-align:right;padding-right:20px">Ação</th>
+        </tr></thead>
+        <tbody>
+        {% for r in docs_pendentes %}
+        <tr>
+          <td><strong style="font-weight:600">{{ r.est_nome }}</strong></td>
+          <td style="color:var(--ink-3)">{{ r.emp_display }}</td>
+          <td>
+            {% if r.tce_assinado %}
+            <span class="badge bg-success"><i class="bi bi-check-lg"></i> OK</span>
+            {% else %}
+            <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Pendente</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if r.plano_assinado %}
+            <span class="badge bg-success"><i class="bi bi-check-lg"></i> OK</span>
+            {% else %}
+            <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Pendente</span>
+            {% endif %}
+          </td>
+          <td style="text-align:right;white-space:nowrap">
+            <a href="{{ url_for('contrato_editar', id=r.id) }}" class="btn-action primary">
+              <i class="bi bi-check2-square"></i>Confirmar
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <!-- ── Contratos vencendo em 30 dias ── -->
 {% if vencendo %}
 <div class="alert-panel warning mb-3">
