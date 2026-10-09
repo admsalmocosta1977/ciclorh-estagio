@@ -821,8 +821,10 @@ def _get_config():
 def _fmt_semestre(semestre, tipo_ensino):
     if not semestre:
         return ''
-    if tipo_ensino == 'medio':
+    if tipo_ensino in ('medio', 'fundamental'):
         return f'{semestre}º Ano'
+    if tipo_ensino in ('eja', 'proeja'):
+        return f'{semestre}º Módulo'
     return f'{semestre}º Semestre'
 
 
@@ -848,7 +850,9 @@ def _atualizar_semestres_auto():
                     AND semestre IS NOT NULL AND semestre < 10""")
         else:
             _run("""UPDATE estagiario SET semestre = CASE
-                        WHEN tipo_ensino = 'medio' THEN LEAST(semestre + 1, 3)
+                        WHEN tipo_ensino = 'medio'       THEN LEAST(semestre + 1, 3)
+                        WHEN tipo_ensino = 'fundamental' THEN LEAST(semestre + 1, 4)
+                        WHEN tipo_ensino IN ('eja','proeja') THEN LEAST(semestre + 1, 4)
                         ELSE LEAST(semestre + 1, 10)
                     END WHERE semestre IS NOT NULL""")
         _run("INSERT INTO config (chave, valor) VALUES (%s, %s) ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor",
@@ -2187,6 +2191,7 @@ def _doc_ctx(id):
         'est_email': est['email'] if est else '',
         'est_endereco': est['endereco'] if est else '',
         'est_semestre': _fmt_semestre(est['semestre'], est['tipo_ensino']) if est else '',
+        'est_tipo_ensino': est['tipo_ensino'] if est else 'superior',
         'est_matricula': est['matricula'] if est else '',
         'emp_nome': emp['nome'] if emp else '',
         'emp_cnpj': emp['cnpj'] if emp else '',

@@ -109,7 +109,7 @@ function salvarPDF(btn) {
     <tr><td class="label">Endereço Residencial:</td><td>{{ d.est_endereco or '___________________________' }}</td></tr>
     <tr><td class="label">E-mail:</td><td>{{ d.est_email or '___________________________' }}</td></tr>
     <tr><td class="label">Curso:</td><td>{{ d.curso }}</td></tr>
-    <tr><td class="label">Período:</td><td>{{ d.est_semestre or '_______________' }}</td></tr>
+    <tr><td class="label">{% if d.est_tipo_ensino in ('medio', 'fundamental') %}Ano{% elif d.est_tipo_ensino in ('eja', 'proeja') %}Módulo{% else %}Período{% endif %}:</td><td>{{ d.est_semestre or '_______________' }}</td></tr>
     <tr><td class="label">Matrícula:</td><td>{{ d.est_matricula or '___________________________' }}</td></tr>
   </table>
 
@@ -220,7 +220,7 @@ function salvarPDF(btn) {
 
   <div class="clausula">
     <p><strong>Cláusula 12ª — Das Hipóteses de Descaracterização do Estágio</strong> (art. 15, Lei n.º 11.788/2008). Caracteriza-se vínculo empregatício se verificado que o(a) Estagiário(a):</p>
-    <p class="par">I – Não está regularmente matriculado e frequentando curso de ensino médio, técnico, superior ou equivalente;</p>
+    <p class="par">I – Não está regularmente matriculado e frequentando curso de ensino médio, técnico, superior, dos anos finais do ensino fundamental (modalidade EJA) ou equivalente;</p>
     <p class="par">II – Está sendo utilizado em atividade de substituição de empregado regular;</p>
     <p class="par">III – Está cumprindo jornada superior à estabelecida neste Termo ou à prevista em lei;</p>
     <p class="par">IV – Não está sendo supervisionado por responsável designado pela Parte Concedente;</p>

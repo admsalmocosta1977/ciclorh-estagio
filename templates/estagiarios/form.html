@@ -52,15 +52,15 @@
         </div>
         <div class="col-md-4">
           <label class="form-label fw-semibold">Banco</label>
-          <input type="text" name="banco" class="form-control" value="{{ e.banco if e else '' }}">
+          <input type="text" name="banco" class="form-control" value="{{ (e.banco or '') if e else '' }}">
         </div>
         <div class="col-md-4">
           <label class="form-label fw-semibold">Agência</label>
-          <input type="text" name="agencia" class="form-control" value="{{ e.agencia if e else '' }}">
+          <input type="text" name="agencia" class="form-control" value="{{ (e.agencia or '') if e else '' }}">
         </div>
         <div class="col-md-4">
           <label class="form-label fw-semibold">Conta</label>
-          <input type="text" name="conta" class="form-control" value="{{ e.conta if e else '' }}">
+          <input type="text" name="conta" class="form-control" value="{{ (e.conta or '') if e else '' }}">
         </div>
         <hr class="col-12 my-1">
         <div class="col-md-4">
@@ -69,6 +69,7 @@
             <option value="superior" {% if not e or e.tipo_ensino in ('superior', None, '') %}selected{% endif %}>Ensino Superior</option>
             <option value="tecnico" {% if e and e.tipo_ensino == 'tecnico' %}selected{% endif %}>Ensino Técnico</option>
             <option value="medio" {% if e and e.tipo_ensino == 'medio' %}selected{% endif %}>Ensino Médio</option>
+            <option value="fundamental" {% if e and e.tipo_ensino == 'fundamental' %}selected{% endif %}>E.F. — Anos Finais (EJA)</option>
             <option value="eja" {% if e and e.tipo_ensino == 'eja' %}selected{% endif %}>EJA</option>
             <option value="proeja" {% if e and e.tipo_ensino == 'proeja' %}selected{% endif %}>PROEJA</option>
           </select>
@@ -100,7 +101,7 @@
         </div>
         <div class="col-12">
           <label class="form-label fw-semibold">Observações</label>
-          <textarea name="obs" class="form-control" rows="2">{{ e.obs if e else '' }}</textarea>
+          <textarea name="obs" class="form-control" rows="2">{{ (e.obs or '') if e else '' }}</textarea>
         </div>
       </div>
       <hr>
@@ -134,6 +135,10 @@ function atualizarLabelSemestre() {
     lbl.textContent = 'Ano Atual';
     inp.max = 3;
     txt.textContent = 'Ensino Médio: 1º, 2º ou 3º Ano';
+  } else if (tipo === 'fundamental') {
+    lbl.textContent = 'Ano Atual';
+    inp.max = 4;
+    txt.textContent = 'E.F. Anos Finais: 6º ao 9º Ano (1 a 4)';
   } else if (tipo === 'eja' || tipo === 'proeja') {
     lbl.textContent = 'Módulo Atual';
     inp.max = 4;
