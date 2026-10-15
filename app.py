@@ -2970,6 +2970,43 @@ def admin_restaurar():
     return redirect(url_for('admin_backup'))
 
 
+@app.route('/admin/migrar_data_fim_aditivos')
+@admin_required
+def admin_migrar_data_fim_aditivos():
+    """Migração única: sincroniza data_fim dos contratos com o aditivo mais recente que tenha nova_data_fim."""
+    rows = _q("""
+        SELECT DISTINCT ON (a.contrato_id)
+            a.contrato_id,
+            a.nova_data_fim,
+            c.data_fim AS data_fim_atual,
+            e.nome AS est_nome,
+            COALESCE(emp.nome_fantasia, emp.nome) AS emp_nome
+        FROM aditivo a
+        JOIN contrato c ON c.id = a.contrato_id
+        JOIN estagiario e ON e.id = c.estagiario_id
+        JOIN empresa emp ON emp.id = c.empresa_id
+        WHERE a.nova_data_fim IS NOT NULL
+          AND a.nova_data_fim != c.data_fim
+        ORDER BY a.contrato_id, a.created_at DESC
+    """)
+    atualizados = 0
+    detalhes = []
+    for r in (rows or []):
+        _run("UPDATE contrato SET data_fim = %s WHERE id = %s",
+             (r['nova_data_fim'], r['contrato_id']))
+        _hist_contrato(r['contrato_id'],
+                       f"Migração: data_fim atualizada de {fmt_date(r['data_fim_atual'])} "
+                       f"para {fmt_date(r['nova_data_fim'])} conforme aditivo")
+        atualizados += 1
+        detalhes.append(f"{r['est_nome']} / {r['emp_nome']}: "
+                        f"{fmt_date(r['data_fim_atual'])} → {fmt_date(r['nova_data_fim'])}")
+    if atualizados:
+        flash(f'{atualizados} contrato(s) atualizado(s): ' + ' | '.join(detalhes), 'success')
+    else:
+        flash('Nenhum contrato precisava de atualização — tudo já está sincronizado.', 'info')
+    return redirect(url_for('admin_log'))
+
+
 # ─── ERROS ────────────────────────────────────────────────────────────────────
 
 @app.errorhandler(403)
