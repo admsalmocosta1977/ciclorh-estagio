@@ -2409,6 +2409,8 @@ def doc_aditivo_registrar(id):
     clausulas = data.get('clausulas', [])
     _ins("INSERT INTO aditivo (contrato_id, nova_data_fim, clausulas) VALUES (%s, %s, %s)",
          (id, nova_data_fim, json.dumps(clausulas, ensure_ascii=False)))
+    if nova_data_fim:
+        _run("UPDATE contrato SET data_fim = %s WHERE id = %s", (nova_data_fim, id))
     numero = _q("SELECT COUNT(*) as n FROM aditivo WHERE contrato_id = %s", (id,), one=True)['n']
     _info_adi = _q("""SELECT e.nome est, emp.nome emp FROM contrato ct
                       JOIN estagiario e ON e.id=ct.estagiario_id
@@ -2416,6 +2418,8 @@ def doc_aditivo_registrar(id):
     _log('criar', 'aditivo', id,
          f'Gerou {numero}º aditivo: {_info_adi["est"]} @ {_info_adi["emp"]}' if _info_adi
          else f'Gerou {numero}º aditivo do contrato ID {id}')
+    if nova_data_fim:
+        _hist_contrato(id, f'{numero}º Aditivo: data de término alterada para {fmt_date(nova_data_fim)}')
     return jsonify({'ok': True, 'numero': numero})
 
 
@@ -2430,6 +2434,9 @@ def aditivo_editar(id, aditivo_id):
     clausulas = data.get('clausulas', [])
     _run("UPDATE aditivo SET nova_data_fim=%s, clausulas=%s WHERE id=%s",
          (nova_data_fim, json.dumps(clausulas, ensure_ascii=False), aditivo_id))
+    if nova_data_fim:
+        _run("UPDATE contrato SET data_fim = %s WHERE id = %s", (nova_data_fim, id))
+        _hist_contrato(id, f'Aditivo editado: data de término atualizada para {fmt_date(nova_data_fim)}')
     _log('editar', 'aditivo', aditivo_id, f'Editou aditivo do contrato ID {id}')
     return jsonify({'ok': True})
 
