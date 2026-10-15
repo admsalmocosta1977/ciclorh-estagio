@@ -410,7 +410,7 @@
   <div class="card-body p-0">
     <table class="table table-sm mb-0">
       <thead class="table-light">
-        <tr><th>#</th><th>Registrado em</th><th>Nova Vigência</th><th>Cláusulas</th><th></th></tr>
+        <tr><th>#</th><th>Registrado em</th><th>Nova Vigência</th><th>Cláusulas</th><th>Plano Adic.</th><th></th></tr>
       </thead>
       <tbody>
         {% for ad in aditivos %}
@@ -420,6 +420,17 @@
           <td>{{ fmt_date(ad.created_at) }}</td>
           <td>{{ fmt_date(ad.nova_data_fim) if ad.nova_data_fim else '—' }}</td>
           <td>{{ cls | length }} cláusula(s)</td>
+          <td>
+            {% set pa = planos_por_aditivo.get(ad.id|string) if planos_por_aditivo is defined else none %}
+            {% if pa %}
+            <a href="{{ url_for('plano_adicional_doc', id=c.id, num=pa.numero) }}" target="_blank"
+               class="btn btn-sm btn-outline-success py-0" title="Plano Adicional N.º {{ pa.numero }}">
+              <i class="bi bi-file-earmark-plus"></i> N.º {{ pa.numero }}
+            </a>
+            {% else %}
+            <span class="text-muted small">—</span>
+            {% endif %}
+          </td>
           <td class="text-end">
             <a href="{{ url_for('aditivo_imprimir', id=c.id, aditivo_id=ad.id) }}"
                target="_blank" class="btn btn-sm btn-outline-primary py-0 me-1" title="Imprimir Aditivo">
@@ -620,7 +631,7 @@
 {% if c and c.id %}
 <!-- Modal Aditivo -->
 <div class="modal fade" id="modal-aditivo" tabindex="-1">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title fw-bold">Gerar Termo Aditivo</h5>
@@ -649,7 +660,60 @@
             <textarea class="form-control form-control-sm clausula-texto" rows="2" placeholder="Texto da cláusula..."></textarea>
           </div>
         </div>
-        <p class="text-muted small mt-2 mb-0"><i class="bi bi-info-circle me-1"></i>Preencha ao menos a data de término ou uma cláusula adicional.</p>
+        <p class="text-muted small mt-2 mb-3"><i class="bi bi-info-circle me-1"></i>Preencha ao menos a data de término ou uma cláusula adicional.</p>
+
+        <hr>
+        <!-- Seção Plano de Atividades — Art. 7º Lei 11.788/2008 -->
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="fw-semibold">Plano de Atividades</span>
+          <span class="badge bg-info text-dark" style="font-size:.65rem">Art. 7º Lei 11.788/2008</span>
+        </div>
+        <div class="btn-group w-100 mb-2" role="group">
+          <input type="radio" class="btn-check" name="plano-opcao" id="plano-manter" value="manter" checked>
+          <label class="btn btn-outline-secondary btn-sm" for="plano-manter">
+            <i class="bi bi-check2 me-1"></i>Manter plano atual
+          </label>
+          <input type="radio" class="btn-check" name="plano-opcao" id="plano-alterar" value="alterar">
+          <label class="btn btn-outline-primary btn-sm" for="plano-alterar">
+            <i class="bi bi-pencil me-1"></i>Atualizar plano de atividades
+          </label>
+        </div>
+
+        <div id="painel-plano-adicional" style="display:none" class="border rounded p-3 bg-light">
+          <div class="mb-2">
+            <label class="form-label fw-semibold small mb-1">Área de Atuação</label>
+            {% if areas %}
+            <select class="form-select form-select-sm mb-1" id="adi-sel-area">
+              <option value="">— Manter área atual{% if c.area_atuacao %}: {{ c.area_atuacao }}{% endif %} —</option>
+              {% for a in areas %}
+              <option value="{{ a.id }}" data-nome="{{ a.nome }}"
+                {% if c.area_atuacao == a.nome %}selected{% endif %}>{{ a.nome }}</option>
+              {% endfor %}
+            </select>
+            {% endif %}
+            <input type="text" id="adi-inp-area" class="form-control form-control-sm"
+                   value="{{ c.area_atuacao or '' }}" placeholder="Ou descreva a área livremente">
+          </div>
+
+          <!-- Sugestões de atividades da nova área -->
+          <div id="adi-painel-sugestao" class="border rounded p-2 mb-2 bg-white" style="display:none">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="small fw-semibold"><i class="bi bi-list-check me-1 text-primary"></i>Atividades da área — marque as que se aplicam</span>
+              <div class="d-flex gap-1">
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 adi-btn-marcar" style="font-size:.72rem">Marcar todas</button>
+                <button type="button" class="btn btn-sm btn-primary py-0 px-2 adi-btn-aplicar" style="font-size:.72rem">Aplicar selecionadas</button>
+              </div>
+            </div>
+            <div class="adi-lista-checks row g-1"></div>
+          </div>
+
+          <!-- Linhas de atividade -->
+          <label class="form-label fw-semibold small mb-1">Atividades do Plano</label>
+          <div id="adi-atividades-container" class="mb-1"></div>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="adiAdicionarAtividade()">
+            <i class="bi bi-plus me-1"></i>Adicionar atividade
+          </button>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -1184,7 +1248,89 @@ try { document.getElementById('sel-estagiario').addEventListener('change', check
 if (document.getElementById('sel-estagiario').value && document.getElementById('sel-empresa').value) checkVinculo();
 
 {% if c and c.id %}
-// Gerar aditivo
+// ---- Plano adicional: toggle painel ----
+document.querySelectorAll('input[name="plano-opcao"]').forEach(function(r) {
+  r.addEventListener('change', function() {
+    const painel = document.getElementById('painel-plano-adicional');
+    if (this.value === 'alterar') {
+      painel.style.display = 'block';
+      adiPreencherAtividades();
+    } else {
+      painel.style.display = 'none';
+    }
+  });
+});
+
+// Preenche linhas de atividade com as atividades atuais do contrato
+function adiPreencherAtividades() {
+  const cont = document.getElementById('adi-atividades-container');
+  if (cont.children.length > 0) return; // já preenchido
+  {% if c.atividades %}
+  const ativs = {{ c.atividades | tojson }}.split('||').map(a => a.trim()).filter(Boolean);
+  ativs.forEach(function(a) { adiAdicionarAtividade(a); });
+  {% endif %}
+  if (cont.children.length === 0) adiAdicionarAtividade('');
+}
+
+function adiAdicionarAtividade(valor) {
+  const cont = document.getElementById('adi-atividades-container');
+  const idx = cont.children.length + 1;
+  const div = document.createElement('div');
+  div.className = 'd-flex gap-1 mb-1 adi-ativ-row';
+  div.innerHTML = '<span class="text-muted small align-self-center" style="width:20px;text-align:right">' + idx + '.</span>' +
+    '<input type="text" class="form-control form-control-sm adi-ativ-inp" value="' + (valor || '').replace(/"/g, '&quot;') + '" placeholder="Descreva a atividade...">' +
+    '<button type="button" class="btn btn-sm btn-outline-danger py-0 adi-ativ-rm" title="Remover">✕</button>';
+  cont.appendChild(div);
+}
+
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('adi-ativ-rm')) {
+    e.target.closest('.adi-ativ-row').remove();
+    // reindexar
+    document.querySelectorAll('#adi-atividades-container .adi-ativ-row').forEach(function(row, i) {
+      row.querySelector('span').textContent = (i+1) + '.';
+    });
+  }
+  if (e.target.classList.contains('adi-btn-marcar')) {
+    document.querySelectorAll('#painel-plano-adicional .adi-sugest-check').forEach(function(cb) { cb.checked = true; });
+  }
+  if (e.target.classList.contains('adi-btn-aplicar')) {
+    document.querySelectorAll('#painel-plano-adicional .adi-sugest-check:checked').forEach(function(cb) {
+      adiAdicionarAtividade(cb.value);
+    });
+    document.getElementById('adi-painel-sugestao').style.display = 'none';
+  }
+});
+
+// Ao trocar área no select, busca sugestões
+var _selArea = document.getElementById('adi-sel-area');
+if (_selArea) {
+  _selArea.addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    if (opt && opt.dataset.nome) {
+      document.getElementById('adi-inp-area').value = opt.dataset.nome;
+    }
+    const areaId = this.value;
+    if (!areaId) { document.getElementById('adi-painel-sugestao').style.display = 'none'; return; }
+    fetch('/api/area_atividades/' + areaId)
+      .then(r => r.json())
+      .then(function(d) {
+        const lista = document.querySelector('.adi-lista-checks');
+        lista.innerHTML = '';
+        (d.atividades || []).forEach(function(a) {
+          const col = document.createElement('div');
+          col.className = 'col-12 col-md-6';
+          col.innerHTML = '<div class="form-check"><input class="form-check-input adi-sugest-check" type="checkbox" value="' +
+            a.replace(/"/g,'&quot;') + '" checked><label class="form-check-label small">' + a + '</label></div>';
+          lista.appendChild(col);
+        });
+        document.getElementById('adi-painel-sugestao').style.display = (d.atividades && d.atividades.length) ? 'block' : 'none';
+      })
+      .catch(function() { document.getElementById('adi-painel-sugestao').style.display = 'none'; });
+  });
+}
+
+// ---- Gerar aditivo ----
 function gerarAditivo() {
   const data = document.getElementById('aditivo-data').value;
   const rows = document.querySelectorAll('#clausulas-container .clausula-extra-row');
@@ -1196,25 +1342,61 @@ function gerarAditivo() {
     return;
   }
   const contratoId = {{ c.id }};
-  function abrirPDF(numero) {
-    const url = new URL('/contratos/' + contratoId + '/aditivo', window.location.origin);
-    if (data) url.searchParams.set('nova_data_fim', data);
-    clausulas.forEach((cl, i) => {
-      url.searchParams.set('clausula_' + (i+1) + '_titulo', cl.titulo);
-      url.searchParams.set('clausula_' + (i+1) + '_texto', cl.texto);
-    });
-    if (numero) url.searchParams.set('aditivo_num', numero);
-    window.open(url.toString(), '_blank');
-    bootstrap.Modal.getInstance(document.getElementById('modal-aditivo')).hide();
-  }
+  const planoOpcao = document.querySelector('input[name="plano-opcao"]:checked');
+  const alterar = planoOpcao && planoOpcao.value === 'alterar';
+
   fetch('/contratos/' + contratoId + '/aditivo/registrar', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({nova_data_fim: data, clausulas: clausulas})
   })
   .then(r => r.json())
-  .then(d => abrirPDF(d.numero))
-  .catch(() => abrirPDF(null));
+  .then(function(d) {
+    const aditiNum = d.numero;
+    const aditiId = d.id;
+    // Abrir PDF do aditivo
+    const url = new URL('/contratos/' + contratoId + '/aditivo', window.location.origin);
+    if (data) url.searchParams.set('nova_data_fim', data);
+    clausulas.forEach(function(cl, i) {
+      url.searchParams.set('clausula_' + (i+1) + '_titulo', cl.titulo);
+      url.searchParams.set('clausula_' + (i+1) + '_texto', cl.texto);
+    });
+    if (aditiNum) url.searchParams.set('aditivo_num', aditiNum);
+    window.open(url.toString(), '_blank');
+    bootstrap.Modal.getInstance(document.getElementById('modal-aditivo')).hide();
+
+    if (alterar) {
+      const area = (document.getElementById('adi-inp-area') || {value:''}).value.trim();
+      const ativInputs = document.querySelectorAll('#adi-atividades-container .adi-ativ-inp');
+      const atividades = Array.from(ativInputs).map(i => i.value.trim()).filter(Boolean);
+      fetch('/contratos/' + contratoId + '/plano_adicional/registrar', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({aditivo_id: aditiId, area_atuacao: area, atividades: atividades})
+      })
+      .then(r => r.json())
+      .then(function(pd) {
+        if (pd.ok) {
+          window.open('/contratos/' + contratoId + '/plano_adicional/' + pd.numero, '_blank');
+        }
+        location.reload();
+      })
+      .catch(function() { location.reload(); });
+    } else {
+      location.reload();
+    }
+  })
+  .catch(function() {
+    const url = new URL('/contratos/' + contratoId + '/aditivo', window.location.origin);
+    if (data) url.searchParams.set('nova_data_fim', data);
+    clausulas.forEach(function(cl, i) {
+      url.searchParams.set('clausula_' + (i+1) + '_titulo', cl.titulo);
+      url.searchParams.set('clausula_' + (i+1) + '_texto', cl.texto);
+    });
+    window.open(url.toString(), '_blank');
+    bootstrap.Modal.getInstance(document.getElementById('modal-aditivo')).hide();
+    location.reload();
+  });
 }
 
 // Adicionar/remover cláusulas

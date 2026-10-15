@@ -1,0 +1,580 @@
+{% extends 'base.html' %}
+{% block title %}{{ vaga.titulo }} — Vaga{% endblock %}
+{% block content %}
+<style>
+.cand-row { background:#fff; border-radius:8px; padding:10px 14px; margin-bottom:8px;
+  box-shadow:0 1px 3px rgba(0,0,0,.07); display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.cand-nome { font-weight:600; font-size:.9rem; flex:1; min-width:160px; }
+.cand-meta { font-size:.78rem; color:#777; }
+</style>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+  <a href="{{ url_for('vagas_lista') }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <div class="flex-grow-1">
+    <h4 class="fw-bold mb-0">{{ vaga.titulo }}</h4>
+    <small class="text-muted">{{ vaga.emp_nome or 'Empresa não definida' }}
+      {% if vaga.area_nome %} · {{ vaga.area_nome }}{% endif %}
+    </small>
+  </div>
+  <span class="badge bg-{{ status_vaga_cor[vaga.status] }} fs-6 px-3 py-2">
+    {{ vaga.status | replace('_',' ') }}
+  </span>
+  <a href="{{ url_for('vaga_editar', id=vaga.id) }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-pencil me-1"></i>Editar
+  </a>
+  <form method="post" action="{{ url_for('vaga_excluir', id=vaga.id) }}" class="d-inline"
+        onsubmit="return confirm('Excluir a vaga &quot;{{ vaga.titulo }}&quot;? Todas as candidaturas associadas também serão excluídas. Esta ação não pode ser desfeita.')">
+    <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir vaga">
+      <i class="bi bi-trash me-1"></i>Excluir
+    </button>
+  </form>
+</div>
+
+<div class="row g-3">
+
+  <!-- ── Coluna esquerda: dados + pipeline ── -->
+  <div class="col-lg-4">
+
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-info-circle me-1"></i>Detalhes</div>
+      <div class="card-body py-2" style="font-size:.86rem">
+        {% macro row(lbl, val) %}
+        {% if val %}<div class="d-flex justify-content-between py-1 border-bottom">
+          <span class="text-muted">{{ lbl }}</span><span class="text-end">{{ val }}</span>
+        </div>{% endif %}
+        {% endmacro %}
+        {{ row('Nível', vaga.nivel|capitalize) }}
+        {{ row('Curso desejado', vaga.curso_desejado) }}
+        {{ row('Carga horária', (vaga.carga_horaria|string + 'h/sem') if vaga.carga_horaria else None) }}
+        {{ row('Bolsa', ('R$ ' + '%.2f'|format(vaga.bolsa|float)) if vaga.bolsa else None) }}
+        {{ row('Benefícios', vaga.beneficios) }}
+        {{ row('Vagas', vaga.vagas_total|string) }}
+        {{ row('Data limite', fmt_date(vaga.data_limite) if vaga.data_limite else None) }}
+        {{ row('Responsável', vaga.resp_nome) }}
+      </div>
+    </div>
+
+    {% if vaga.descricao or vaga.requisitos %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-text-left me-1"></i>Descrição / Requisitos</div>
+      <div class="card-body" style="font-size:.85rem">
+        {% if vaga.descricao %}<p class="mb-2" style="white-space:pre-wrap">{{ vaga.descricao }}</p>{% endif %}
+        {% if vaga.requisitos %}<p class="mb-0 text-muted" style="white-space:pre-wrap">{{ vaga.requisitos }}</p>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Mudar status da vaga -->
+    {% if vaga.status not in ['preenchida','cancelada'] %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-arrow-repeat me-1"></i>Alterar Status da Vaga</div>
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+          {% if vaga.status == 'aberta' %}
+          <form method="post" action="{{ url_for('vaga_status', id=vaga.id) }}">
+            <input type="hidden" name="status" value="em_selecao">
+            <button class="btn btn-sm btn-primary">Em seleção</button>
+          </form>
+          {% endif %}
+          <form method="post" action="{{ url_for('vaga_status', id=vaga.id) }}">
+            <input type="hidden" name="status" value="preenchida">
+            <button class="btn btn-sm btn-secondary">Marcar preenchida</button>
+          </form>
+          <form method="post" action="{{ url_for('vaga_status', id=vaga.id) }}"
+                onsubmit="return confirm('Cancelar esta vaga?')">
+            <input type="hidden" name="status" value="cancelada">
+            <button class="btn btn-sm btn-outline-danger">Cancelar vaga</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Encaminhar candidato -->
+    {% if vaga.status in ['aberta','em_selecao'] and disponiveis %}
+    <div class="card">
+      <div class="card-header"><i class="bi bi-person-plus me-1"></i>Encaminhar Candidato</div>
+      <div class="card-body">
+        <!-- form oculto — submetido pelo modal de confirmação -->
+        <form method="post" action="{{ url_for('candidatura_nova') }}" id="form-encaminhar">
+          <input type="hidden" name="vaga_id" value="{{ vaga.id }}">
+          <input type="hidden" name="origem" value="vaga">
+          <div class="d-flex gap-2 mb-2">
+            <select name="candidato_id" id="sel-candidato" class="form-select form-select-sm" required>
+              <option value="">Selecionar candidato…</option>
+              {% for c in disponiveis %}
+              <option value="{{ c.id }}" data-nome="{{ c.nome }}" data-whatsapp="{{ c.whatsapp or '' }}">
+                {{ c.nome }}{% if c.curso %} — {{ c.curso }}{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+            <button type="button" class="btn btn-sm btn-primary flex-shrink-0" id="btn-encaminhar">
+              <i class="bi bi-plus"></i>
+            </button>
+          </div>
+          <!-- Aviso de histórico na empresa -->
+          <div id="aviso-historico" class="d-none alert alert-warning py-2 mb-0" style="font-size:.84rem">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            <strong id="aviso-nome"></strong> já participou de uma seleção anterior para
+            <strong>{{ vaga.emp_nome or 'esta empresa' }}</strong>:
+            <ul id="aviso-lista" class="mb-2 mt-1 ps-3" style="font-size:.8rem"></ul>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-warning btn-sm fw-semibold" id="btn-confirmar-aviso">
+                <i class="bi bi-check-lg me-1"></i>Confirmar mesmo assim
+              </button>
+              <button type="button" id="btn-cancelar-aviso" class="btn btn-outline-secondary btn-sm">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </form>
+        <small class="text-muted d-block mt-2">
+          Ou <a href="{{ url_for('candidato_novo') }}">cadastre um novo candidato</a>.
+        </small>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Coluna direita: candidatos ── -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-people me-1"></i>Candidatos ({{ candidaturas|length }})</span>
+        {% set ativos = candidaturas | selectattr('status','in',['inscrito','em_entrevista','aprovado']) | list %}
+        {% if ativos %}
+        <a href="{{ url_for('vaga_curriculos', id=vaga.id) }}" target="_blank"
+           class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-file-person me-1"></i>Currículos
+        </a>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        {% set grupos = [
+          ('inscrito','Inscritos','secondary'),
+          ('em_entrevista','Em entrevista','primary'),
+          ('aprovado','Aprovados','success'),
+          ('reprovado','Não aprovados','danger'),
+          ('nao_compareceu_j','Não compareceu (justificou)','warning'),
+          ('nao_compareceu_nj','Não compareceu (sem justificativa)','danger'),
+          ('desistiu','Desistiram','warning')
+        ] %}
+        {% set ns = namespace(tem_algum=false) %}
+        {% for status_key, label, cor in grupos %}
+          {% set grupo = candidaturas | selectattr('status','equalto',status_key) | list %}
+          {% if grupo %}
+          {% set ns.tem_algum = true %}
+          <h6 class="text-{{ cor }} mb-2 mt-3" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.5px">
+            <i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>{{ label }} ({{ grupo|length }})
+          </h6>
+          {% for c in grupo %}
+          <div class="cand-row">
+            <div>
+              <div class="cand-nome">
+                <a href="{{ url_for('candidato_detalhe', id=c.cand_id) }}" class="text-decoration-none text-dark">
+                  {{ c.cand_nome }}
+                </a>
+              </div>
+              <div class="cand-meta">
+                {% if c.curso %}{{ c.curso }} · {% endif %}
+                {% if c.disponibilidade %}{{ c.disponibilidade }} · {% endif %}
+                {% if c.whatsapp %}
+                <a href="https://wa.me/55{{ c.whatsapp | replace(' ','') | replace('-','') | replace('(','') | replace(')','') }}" target="_blank">
+                  <i class="bi bi-whatsapp"></i> {{ c.whatsapp }}
+                </a>
+                {% endif %}
+              </div>
+              {% if c.obs %}<div class="cand-meta mt-1"><i class="bi bi-sticky"></i> {{ c.obs }}</div>{% endif %}
+            </div>
+            <div class="ms-auto d-flex flex-wrap gap-1 align-items-center">
+              <a href="{{ url_for('candidato_curriculo', id=c.cand_id) }}" target="_blank"
+                 class="btn btn-xs btn-outline-secondary" style="font-size:.75rem;padding:2px 8px"
+                 title="Ver currículo">
+                <i class="bi bi-file-person"></i>
+              </a>
+              {% if status_key == 'inscrito' %}
+              <button class="btn btn-xs btn-outline-primary btn-agendar-entrevista"
+                      style="font-size:.75rem;padding:2px 8px"
+                      data-cand-id="{{ c.id }}"
+                      data-cand-nome="{{ c.cand_nome }}"
+                      data-data="" data-hora="" data-local="">
+                <i class="bi bi-calendar-event me-1"></i>Entrevista
+              </button>
+              {% endif %}
+              {% if status_key == 'em_entrevista' %}
+              <button class="btn btn-xs btn-outline-primary btn-agendar-entrevista"
+                      style="font-size:.75rem;padding:2px 8px"
+                      data-cand-id="{{ c.id }}"
+                      data-cand-nome="{{ c.cand_nome }}"
+                      data-data="{{ c.data_entrevista.strftime('%Y-%m-%d') if c.data_entrevista else '' }}"
+                      data-hora="{{ c.hora_entrevista.strftime('%H:%M') if c.hora_entrevista else '' }}"
+                      data-local="{{ c.local_entrevista or '' }}"
+                      title="{{ ('Agendada: ' ~ fmt_date(c.data_entrevista) ~ (' às ' ~ c.hora_entrevista.strftime('%H:%M') if c.hora_entrevista else '')) if c.data_entrevista else 'Agendar entrevista' }}">
+                <i class="bi bi-calendar2-check me-1"></i>{% if c.data_entrevista %}{{ fmt_date(c.data_entrevista) }}{% if c.hora_entrevista %} {{ c.hora_entrevista.strftime('%H:%M') }}{% endif %}{% else %}Agendar{% endif %}
+              </button>
+              {% if c.whatsapp and c.data_entrevista %}
+              {% set tel = c.whatsapp | replace(' ','') | replace('-','') | replace('(','') | replace(')','') %}
+              {% set msg_wa = 'Olá, ' ~ c.cand_nome.split()[0] ~ '! Sua entrevista para vaga de estágio de ' ~ vaga.titulo ~ ' na empresa ' ~ (vaga.emp_nome or '') ~ ' está agendada para ' ~ fmt_date(c.data_entrevista) ~ ((' às ' ~ c.hora_entrevista.strftime('%H:%M') ~ 'h') if c.hora_entrevista else '') ~ ((' — Local: ' ~ c.local_entrevista) if c.local_entrevista else '') ~ '. Confirme sua presença respondendo esta mensagem. Att, Ciclo RH' %}
+              <a href="https://wa.me/55{{ tel }}?text={{ msg_wa | urlencode }}" target="_blank"
+                 class="btn btn-xs btn-success" style="font-size:.75rem;padding:2px 8px"
+                 title="Enviar convite de entrevista via WhatsApp">
+                <i class="bi bi-whatsapp"></i>
+              </a>
+              {% endif %}
+              {% endif %}
+              {% if status_key in ['inscrito','em_entrevista'] %}
+              <form method="post" action="{{ url_for('candidatura_status', id=c.id) }}">
+                <input type="hidden" name="status" value="aprovado">
+                <button class="btn btn-xs btn-success" style="font-size:.75rem;padding:2px 8px">Aprovado</button>
+              </form>
+              <form method="post" action="{{ url_for('candidatura_status', id=c.id) }}">
+                <input type="hidden" name="status" value="reprovado">
+                <button class="btn btn-xs btn-outline-danger" style="font-size:.75rem;padding:2px 8px">Não aprovado</button>
+              </form>
+              <form method="post" action="{{ url_for('candidatura_status', id=c.id) }}">
+                <input type="hidden" name="status" value="nao_compareceu_j">
+                <button class="btn btn-xs btn-outline-warning" style="font-size:.75rem;padding:2px 8px" title="Não compareceu — justificou">N/C justif.</button>
+              </form>
+              <form method="post" action="{{ url_for('candidatura_status', id=c.id) }}"
+                    onsubmit="return confirm('Registrar falta SEM justificativa? Na 2ª vez o candidato será excluído automaticamente.')">
+                <input type="hidden" name="status" value="nao_compareceu_nj">
+                <button class="btn btn-xs btn-danger" style="font-size:.75rem;padding:2px 8px" title="Não compareceu — sem justificativa">N/C s/ justif.</button>
+              </form>
+              {% endif %}
+              {% if status_key == 'aprovado' and vaga.empresa_id %}
+              <a href="{{ url_for('contrato_novo') }}?empresa_id={{ vaga.empresa_id }}"
+                 class="btn btn-xs btn-success" style="font-size:.75rem;padding:2px 8px">
+                <i class="bi bi-file-earmark-plus me-1"></i>Criar Contrato
+              </a>
+              {% endif %}
+              <button class="btn btn-xs btn-outline-secondary" style="font-size:.75rem;padding:2px 8px"
+                      type="button" data-bs-toggle="collapse"
+                      data-bs-target="#obs-{{ c.id }}">
+                <i class="bi bi-sticky"></i>
+              </button>
+            </div>
+            <div class="collapse w-100 mt-2" id="obs-{{ c.id }}">
+              <form method="post" action="{{ url_for('candidatura_obs', id=c.id) }}"
+                    class="d-flex gap-2">
+                <input type="text" name="obs" class="form-control form-control-sm"
+                       value="{{ c.obs or '' }}" placeholder="Anotação sobre este candidato…">
+                <button class="btn btn-sm btn-primary flex-shrink-0">OK</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+          {% endif %}
+        {% endfor %}
+        {% if not ns.tem_algum %}
+        <p class="text-muted text-center py-4 mb-0 small">
+          <i class="bi bi-people me-1"></i>Nenhum candidato inscrito ainda.
+        </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Modal Agendar Entrevista ── -->
+<div class="modal fade" id="modalAgendarEntrevista" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-calendar-event text-primary me-2"></i>Agendar Entrevista</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="" id="form-agendar-entrevista">
+        <div class="modal-body">
+          <p class="text-muted small mb-3">Candidato: <strong id="mae-cand-nome">—</strong></p>
+          <input type="hidden" name="status" value="em_entrevista">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Data da entrevista <span class="text-danger">*</span></label>
+            <input type="date" name="data_entrevista" id="mae-data" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Horário</label>
+            <input type="time" name="hora_entrevista" id="mae-hora" class="form-control">
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Local / endereço</label>
+            <input type="text" name="local_entrevista" id="mae-local" class="form-control"
+                   placeholder="Ex.: Rua das Acácias, 100 — Sala 5">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-calendar-check me-1"></i>Salvar agendamento
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal WhatsApp ── -->
+<div class="modal fade" id="modalWhatsApp" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-whatsapp text-success me-2"></i>Mensagem de Encaminhamento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" id="btn-fechar-modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-3">
+          Candidato: <strong id="modal-cand-nome">—</strong>
+        </p>
+        <div class="row g-3 mb-3">
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold">Data da seleção</label>
+            <input type="date" id="inp-data-selecao" class="form-control">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label fw-semibold">Horário</label>
+            <input type="time" id="inp-horario" class="form-control">
+          </div>
+        </div>
+        <label class="form-label fw-semibold">Mensagem para enviar via WhatsApp</label>
+        <textarea id="msg-whatsapp" class="form-control font-monospace" rows="12"
+                  style="font-size:.84rem;line-height:1.6"></textarea>
+        <div class="d-flex flex-wrap gap-2 mt-2 align-items-center">
+          <button type="button" id="btn-copiar-msg" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-clipboard me-1"></i>Copiar mensagem
+          </button>
+          <a id="btn-abrir-whatsapp" href="#" target="_blank"
+             class="btn btn-sm btn-success d-none">
+            <i class="bi bi-whatsapp me-1"></i>Abrir no WhatsApp
+          </a>
+          <small class="text-muted my-auto" id="hint-whatsapp">Cole e envie pelo WhatsApp do candidato.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" id="btn-cancelar-modal">
+          <i class="bi bi-x-lg me-1"></i>Cancelar
+        </button>
+        <button type="button" id="btn-confirmar-encaminhar" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>Confirmar encaminhamento
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+(function() {
+  const sel            = document.getElementById('sel-candidato');
+  const aviso          = document.getElementById('aviso-historico');
+  const btnEnc         = document.getElementById('btn-encaminhar');
+  const btnCancelAviso = document.getElementById('btn-cancelar-aviso');
+  const btnConfAviso   = document.getElementById('btn-confirmar-aviso');
+  const form           = document.getElementById('form-encaminhar');
+  if (!sel) return;
+
+  const empresaId = {{ vaga.empresa_id or 'null' }};
+
+  // Dados da vaga para a mensagem
+  const bairro     = {{ ('`' + vaga.emp_bairro|replace('`','\\`') + '`') if vaga.emp_bairro else 'null' }};
+  const cidade     = {{ ('`' + vaga.emp_cidade|replace('`','\\`') + '`') if vaga.emp_cidade else 'null' }};
+  const bolsa      = {{ ('`R$ ' + '%.2f'|format(vaga.bolsa|float) + '`') if vaga.bolsa else 'null' }};
+  const beneficios = {{ ('`' + vaga.beneficios|replace('`','\\`') + '`') if vaga.beneficios else 'null' }};
+  const empNome    = {{ ('`' + vaga.emp_nome|replace('`','\\`') + '`') if vaga.emp_nome else 'null' }};
+
+  let modalBS = null;
+
+  function getModal() {
+    if (!modalBS) modalBS = new bootstrap.Modal(document.getElementById('modalWhatsApp'));
+    return modalBS;
+  }
+
+  function montarMensagem(candNome, data, hora) {
+    const dataFmt = data ? new Date(data + 'T12:00').toLocaleDateString('pt-BR') : '___/___/______';
+    const horaFmt = hora || '__:__';
+    const linhas = [
+      `Olá${candNome ? ', ' + candNome.split(' ')[0] : ''}! Você foi selecionado(a) para participar de um processo seletivo de vaga de estágio.`,
+      '',
+      (bairro || cidade) ? `📍 Local: ${[bairro, cidade].filter(Boolean).join(' — ')}` : null,
+      '',
+      `💰 Bolsa auxílio: ${bolsa || '—'}`,
+      `🎁 Benefícios: ${beneficios || '—'}`,
+      '',
+      `📅 Data da seleção: ${dataFmt}`,
+      `🕐 Horário: ${horaFmt}`,
+      '',
+      'Em caso de aceite, enviaremos o endereço completo para a entrevista.',
+      '',
+      'Por favor, confirme sua presença respondendo esta mensagem.',
+      '',
+      'Atenciosamente,\nCiclo RH'
+    ].filter(l => l !== null);
+    return linhas.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  function abrirModal() {
+    const opt      = sel.options[sel.selectedIndex];
+    const candNome = opt ? (opt.dataset.nome || '') : '';
+    const whatsapp = opt ? (opt.dataset.whatsapp || '') : '';
+    const data     = document.getElementById('inp-data-selecao').value;
+    const hora     = document.getElementById('inp-horario').value;
+    const msg      = montarMensagem(candNome, data, hora);
+
+    document.getElementById('modal-cand-nome').textContent = candNome || '—';
+    document.getElementById('msg-whatsapp').value = msg;
+    atualizarBtnWA(whatsapp, msg);
+    getModal().show();
+  }
+
+  function atualizarBtnWA(whatsapp, msg) {
+    const btnWA   = document.getElementById('btn-abrir-whatsapp');
+    const hintWA  = document.getElementById('hint-whatsapp');
+    const num     = (whatsapp || '').replace(/\D/g, '');
+    if (num.length >= 8) {
+      const url = `https://wa.me/55${num}?text=${encodeURIComponent(msg)}`;
+      btnWA.href = url;
+      btnWA.classList.remove('d-none');
+      hintWA.classList.add('d-none');
+    } else {
+      btnWA.classList.add('d-none');
+      hintWA.classList.remove('d-none');
+    }
+  }
+
+  // Ao selecionar candidato: checa histórico e abre modal (ou mostra aviso)
+  sel.addEventListener('change', function() {
+    aviso.classList.add('d-none');
+    if (btnEnc) btnEnc.disabled = !this.value;
+    if (!this.value) return;
+
+    if (!empresaId) {
+      // Sem empresa vinculada: abre modal diretamente
+      abrirModal();
+      return;
+    }
+
+    fetch(`/api/candidato/${this.value}/historico-empresa/${empresaId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.historico || !data.historico.length) {
+          // Sem histórico de rejeição: abre modal direto
+          abrirModal();
+          return;
+        }
+        // Com histórico: mostra aviso amarelo primeiro
+        const nome = sel.options[sel.selectedIndex].dataset.nome || '';
+        document.getElementById('aviso-nome').textContent = nome;
+        const ul = document.getElementById('aviso-lista');
+        ul.innerHTML = '';
+        data.historico.forEach(h => {
+          const li = document.createElement('li');
+          li.textContent = `${h.titulo} — reprovado em ${h.data}`;
+          ul.appendChild(li);
+        });
+        aviso.classList.remove('d-none');
+        if (btnEnc) btnEnc.disabled = true;
+      });
+  });
+
+  // Botão "+" — abre modal somente se candidato selecionado
+  if (btnEnc) {
+    btnEnc.addEventListener('click', function() {
+      if (!sel.value) { sel.focus(); return; }
+      abrirModal();
+    });
+  }
+
+  // "Confirmar mesmo assim" no aviso de histórico
+  if (btnConfAviso) {
+    btnConfAviso.addEventListener('click', function() {
+      if (!sel.value) return;
+      abrirModal();
+    });
+  }
+
+  if (btnCancelAviso) {
+    btnCancelAviso.addEventListener('click', function() {
+      aviso.classList.add('d-none');
+      sel.value = '';
+      if (btnEnc) btnEnc.disabled = false;
+    });
+  }
+
+  // Atualizar mensagem ao mudar data/hora dentro do modal
+  function atualizarMsg() {
+    const opt      = sel.options[sel.selectedIndex];
+    const candNome = opt ? (opt.dataset.nome || '') : '';
+    const whatsapp = opt ? (opt.dataset.whatsapp || '') : '';
+    const data     = document.getElementById('inp-data-selecao').value;
+    const hora     = document.getElementById('inp-horario').value;
+    const msg      = montarMensagem(candNome, data, hora);
+    document.getElementById('msg-whatsapp').value = msg;
+    atualizarBtnWA(whatsapp, msg);
+  }
+  document.getElementById('inp-data-selecao').addEventListener('change', atualizarMsg);
+  document.getElementById('inp-horario').addEventListener('change', atualizarMsg);
+
+  // Atualizar link WA ao editar textarea manualmente
+  document.getElementById('msg-whatsapp').addEventListener('input', function() {
+    const opt      = sel.options[sel.selectedIndex];
+    const whatsapp = opt ? (opt.dataset.whatsapp || '') : '';
+    atualizarBtnWA(whatsapp, this.value);
+  });
+
+  // Copiar mensagem
+  document.getElementById('btn-copiar-msg').addEventListener('click', function() {
+    const txt = document.getElementById('msg-whatsapp').value;
+    navigator.clipboard.writeText(txt).then(() => {
+      this.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copiado!';
+      setTimeout(() => { this.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copiar mensagem'; }, 2500);
+    });
+  });
+
+  // Cancelar/fechar modal: limpa seleção
+  function limparModal() {
+    sel.value = '';
+    aviso.classList.add('d-none');
+    if (btnEnc) btnEnc.disabled = false;
+  }
+  document.getElementById('btn-cancelar-modal').addEventListener('click', limparModal);
+  document.getElementById('btn-fechar-modal').addEventListener('click', limparModal);
+
+  // Confirmar encaminhamento
+  document.getElementById('btn-confirmar-encaminhar').addEventListener('click', function() {
+    if (!sel.value) return;
+    if (btnEnc) btnEnc.disabled = false;
+    form.submit();
+  });
+
+  // Estado inicial
+  if (btnEnc) btnEnc.disabled = !sel.value;
+})();
+
+// ── Modal Agendar Entrevista ──────────────────────────────────────────────────
+(function() {
+  const modalEl  = document.getElementById('modalAgendarEntrevista');
+  const formAg   = document.getElementById('form-agendar-entrevista');
+  if (!modalEl) return;
+  const modalBS  = new bootstrap.Modal(modalEl);
+
+  document.querySelectorAll('.btn-agendar-entrevista').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const candId   = this.dataset.candId;
+      const candNome = this.dataset.candNome || '—';
+      const data     = this.dataset.data  || '';
+      const hora     = this.dataset.hora  || '';
+      const local    = this.dataset.local || '';
+
+      document.getElementById('mae-cand-nome').textContent = candNome;
+      document.getElementById('mae-data').value  = data;
+      document.getElementById('mae-hora').value  = hora;
+      document.getElementById('mae-local').value = local;
+      formAg.action = '/candidatura/' + candId + '/status';
+      modalBS.show();
+    });
+  });
+})();
+</script>
+{% endblock %}

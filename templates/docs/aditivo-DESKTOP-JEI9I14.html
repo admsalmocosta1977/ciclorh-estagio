@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Termo Aditivo – {{ d.est_nome }}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 9pt; color: #000; background: #fff; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm 22mm 11mm; }
+  h1 { font-size: 11pt; text-align: center; text-transform: uppercase; margin-bottom: 4px; font-weight: bold; }
+  .subtitulo { font-size: 9pt; text-align: center; font-weight: bold; font-style: italic; margin-bottom: 16px; }
+  p { margin-bottom: 8px; line-height: 1.55; text-align: justify; }
+  .clausula-titulo { font-weight: bold; margin-top: 14px; margin-bottom: 4px; }
+  .assinaturas { display: flex; justify-content: space-between; gap: 16px; margin-top: 30px; }
+  .assinaturas-2 { display: flex; justify-content: center; gap: 16px; margin-top: 20px; }
+  .assinatura-bloco { flex: 1; text-align: center; max-width: 200px; }
+  .assinatura-linha { border-top: 1px solid #000; padding-top: 5px; font-size: 9pt; line-height: 1.4; }
+  .assinatura-img { height: 65px; display: block; margin: 0 auto 4px; object-fit: contain; }
+  .assinatura-agente { text-align: center; margin-top: 12px; }
+  .rodape { font-size: 7.5pt; color: #555; text-align: center; margin-top: 10px; border-top: 1px solid #ccc; padding-top: 4px; }
+  .bloco-assinaturas { break-inside: avoid; page-break-inside: avoid; }
+  p, .clausula-titulo, table, tr, .assinaturas, .assinaturas-2, .assinatura-agente, .bloco-assinaturas {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  @media print {
+    body { print-color-adjust: exact; }
+    .no-print { display: none !important; }
+    .page { padding: 15mm 22mm 11mm; }
+  }
+</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='ciclorh_doc.css') }}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+function salvarPDF(btn) {
+  var orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = 'Gerando...';
+  html2pdf().set({
+    margin: 0, filename: document.title + '.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: 'avoid-all' }
+  }).from(document.querySelector('.page')).save().finally(function(){
+    btn.disabled = false; btn.innerHTML = orig;
+  });
+}
+</script>
+</head>
+<body>
+<div class="no-print" style="background:#1a2845;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center">
+  <span>Termo Aditivo — {{ d.est_nome }}</span>
+  <div>
+    <button onclick="salvarPDF(this)" style="background:#fff;color:#1a2845;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:bold;margin-right:6px">Salvar PDF</button>
+    <button onclick="window.print()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:bold">Imprimir</button>
+    <button onclick="window.close()" style="background:transparent;color:#aaa;border:none;padding:6px 12px;cursor:pointer">✕</button>
+  </div>
+</div>
+
+<div class="page">
+{% include 'docs/_cabecalho.html' %}
+  <h1>{% if aditivo_num %}{{ aditivo_num }}º {% endif %}Termo Aditivo</h1>
+  <div class="subtitulo">(Instrumento jurídico de que trata a Lei 11.788/08)</div>
+
+  <p>
+    A empresa <strong>{{ d.emp_nome }}</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob o n.º <strong>{{ d.emp_cnpj or '___________________________' }}</strong>, sediada na <strong>{{ d.emp_endereco or '___________________________' }}, {{ d.emp_cidade or 'Vitória da Conquista – BA' }}</strong>, doravante denominada <strong>CONCEDENTE</strong>, neste ato através do seu representante legal, o(a) Sr.(a) <strong>{{ d.emp_representante or '___________________________' }}</strong>{% if d.emp_cargo_rep %}, {{ d.emp_cargo_rep }}{% endif %}, e de outro lado, o(a) Sr.(a) <strong>{{ d.est_nome }}</strong>, estudante, regularmente matriculado(a) no curso de <strong>{{ d.curso }}</strong>, portador(a) do CPF n.º <strong>{{ d.est_cpf }}</strong>, doravante denominado(a) <strong>EDUCANDO(A)/ESTAGIÁRIO(A)</strong>, e como <strong>INSTITUIÇÃO DE ENSINO</strong>, <strong>{{ d.ie_nome }}</strong>{% if d.ie_cnpj %}, inscrita no CNPJ sob o n.º <strong>{{ d.ie_cnpj }}</strong>{% endif %}{% if d.ie_coordenador %}, representada neste ato pelo(a) <strong>{{ d.ie_coordenador }}</strong>{% if d.ie_coord_cargo %}, {{ d.ie_coord_cargo }}{% endif %}{% endif %}, doravante denominada <strong>INSTITUIÇÃO DE ENSINO</strong>, resolvem firmar o presente <strong>TERMO ADITIVO</strong>, nos termos da Lei n.º 11.788/08, intermediados pelo <strong>AGENTE</strong>, a <strong>{{ agente.nome }}</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob o n.º <strong>{{ agente.cnpj }}</strong>, endereço eletrônico: <strong>{{ agente.email }}</strong>, situada à <strong>{{ agente.endereco }}, {{ agente.cidade }}</strong>, mediante as seguintes cláusulas:
+  </p>
+
+  {# Numeração dinâmica das cláusulas #}
+  {% set ns = namespace(num=0) %}
+
+  {% if nova_data_fim %}
+  {% set ns.num = ns.num + 1 %}
+  <p class="clausula-titulo">CLÁUSULA {{ ns.num }}ª — DA VIGÊNCIA:</p>
+  <p>Fica alterada a vigência do TCE original para a data <strong>{{ fmt_date(nova_data_fim) }}</strong>.</p>
+  {% endif %}
+
+  {% for cl in clausulas_extras %}
+  {% set ns.num = ns.num + 1 %}
+  <p class="clausula-titulo">CLÁUSULA {{ ns.num }}ª — {{ cl.titulo | upper }}:</p>
+  <p>{{ cl.texto }}</p>
+  {% endfor %}
+
+  {% set ns.num = ns.num + 1 %}
+  <p class="clausula-titulo">CLÁUSULA {{ ns.num }}ª — DAS DISPOSIÇÕES GERAIS:</p>
+  <p>Permanecem inalteradas as demais cláusulas vigentes do Termo de Compromisso de Estágio que não colidirem com as disposições do presente instrumento.</p>
+
+  <p style="margin-top:18px; text-align:justify">E, por estarem justas e convencionadas, as partes assinam o presente TERMO ADITIVO, em 04 (quatro) vias de igual teor e forma, para que produza seus efeitos jurídicos e legais.</p>
+
+  <p style="text-align:center; margin-top:22px">Vitória da Conquista, {{ data_hoje }}</p>
+
+  <div class="bloco-assinaturas">
+  <div class="assinaturas">
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Parte Concedente</strong><br>
+        <small>{{ d.emp_nome }}</small><br>
+        <small>{{ d.emp_representante or '' }}{% if d.emp_cargo_rep %} — {{ d.emp_cargo_rep }}{% endif %}</small>
+      </div>
+    </div>
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Instituição de Ensino</strong><br>
+        <small>{{ d.ie_nome }}</small><br>
+        <small>{{ d.ie_signatario_nome or '' }}{% if d.ie_signatario_cargo %} — {{ d.ie_signatario_cargo }}{% endif %}</small>
+        {% if d.ie_signatario_tipo %}<br><em style="font-size:7.5pt">{{ d.ie_signatario_tipo }}</em>{% endif %}
+      </div>
+    </div>
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Estagiário(a)</strong><br>
+        <small>{{ d.est_nome }}</small><br>
+        <small>CPF: {{ d.est_cpf }}</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="assinatura-agente">
+    <img src="{{ url_for('static', filename='assinatura_ciclorh.jpg') }}" class="assinatura-img">
+    <strong>{{ agente.nome }}</strong><br>
+    <small>{{ agente.representante }} — {{ agente.cargo }} — CNPJ: {{ agente.cnpj }}</small>
+  </div>
+
+  <div class="rodape">
+    {{ agente.nome }} — CNPJ {{ agente.cnpj }} — {{ agente.endereco }}, {{ agente.cidade }} — {{ agente.email }}
+  </div>
+  </div>
+</div>
+</body>
+</html>

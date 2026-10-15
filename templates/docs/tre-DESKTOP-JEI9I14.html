@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>TRE – {{ d.est_nome }}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 9pt; color: #000; background: #fff; }
+  .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 13mm 20mm 11mm; }
+  h1 { font-size: 11pt; text-align: center; text-transform: uppercase; margin-bottom: 3px; font-weight: bold; }
+  .subtitulo { font-size: 8.5pt; text-align: center; color: #333; margin-bottom: 3px; }
+  .subtitulo2 { font-size: 8pt; text-align: center; color: #333; margin-bottom: 10px; }
+  .secao { font-size: 9pt; font-weight: bold; text-transform: uppercase; margin: 8px 0 4px; border-bottom: 1.5px solid #000; padding-bottom: 2px; letter-spacing: 0.5px; }
+  table.dados { width: 100%; border-collapse: collapse; margin-bottom: 3px; }
+  table.dados td { padding: 2px 4px; vertical-align: top; border-bottom: 1px dotted #ddd; }
+  table.dados td.label { font-weight: bold; width: 38%; }
+  p { margin-bottom: 4px; line-height: 1.4; text-align: justify; }
+  .par { margin-bottom: 4px; line-height: 1.38; text-align: justify; }
+  .clausula { margin-bottom: 4px; }
+  .atividade-item { margin: 1px 0 1px 12px; line-height: 1.35; }
+  .assinaturas { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; }
+  .assinaturas-2 { display: flex; justify-content: space-around; gap: 12px; margin-top: 14px; }
+  .assinatura-bloco { flex: 1; text-align: center; }
+  .assinatura-bloco-2 { flex: 1; text-align: center; }
+  .assinatura-linha { border-top: 1px solid #000; padding-top: 4px; font-size: 8.5pt; }
+  .assinatura-img { height: 70px; display: block; margin: 0 auto 4px; object-fit: contain; }
+  .assinatura-agente { text-align: center; margin-top: 12px; }
+  .rodape { font-size: 7.5pt; color: #555; text-align: center; margin-top: 10px; border-top: 1px solid #ccc; padding-top: 4px; }
+  .caixa-destaque { border: 1px solid #333; padding: 6px 10px; margin: 5px 0; background: #fafafa; }
+  p, .par, .clausula, .caixa-destaque, .atividade-item, table, tr, .assinaturas, .assinaturas-2, .assinatura-agente {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  @media print {
+    body { print-color-adjust: exact; }
+    .no-print { display: none !important; }
+    .page { padding: 13mm 20mm 11mm; }
+  }
+</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='ciclorh_doc.css') }}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+function salvarPDF(btn) {
+  var orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = 'Gerando...';
+  html2pdf().set({
+    margin: 0, filename: document.title + '.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: 'avoid-all' }
+  }).from(document.querySelector('.page')).save().finally(function(){
+    btn.disabled = false; btn.innerHTML = orig;
+  });
+}
+</script>
+</head>
+<body>
+<div class="no-print" style="background:#1a2845;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center">
+  <span>TRE — {{ d.est_nome }}</span>
+  <div>
+    <button onclick="salvarPDF(this)" style="background:#fff;color:#1a2845;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:bold;margin-right:6px">Salvar PDF</button>
+    <button onclick="window.print()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:bold">Imprimir</button>
+    <button onclick="window.close()" style="background:transparent;color:#aaa;border:none;padding:6px 12px;cursor:pointer">✕</button>
+  </div>
+</div>
+
+<div class="page">
+{% include 'docs/_cabecalho.html' %}
+  <h1>Termo de Realização de Estágio — TRE</h1>
+  <div class="subtitulo">Lei Federal n.º 11.788, de 25 de setembro de 2008 — art. 7.º, IV</div>
+  <div class="subtitulo2">Declaração de Conclusão / Encerramento de Estágio Curricular</div>
+
+  <!-- IDENTIFICAÇÃO -->
+  <div class="secao">I — Identificação das Partes</div>
+
+  <p><strong>AGENTE DE INTEGRAÇÃO:</strong></p>
+  <table class="dados">
+    <tr><td class="label">Razão Social:</td><td>{{ agente.nome }}</td></tr>
+    <tr><td class="label">CNPJ:</td><td>{{ agente.cnpj }}</td></tr>
+    <tr><td class="label">Endereço:</td><td>{{ agente.endereco }}, {{ agente.cidade }}</td></tr>
+    <tr><td class="label">Representante Legal:</td><td>{{ agente.representante }} — {{ agente.cargo }} — CPF: {{ agente.cpf }}</td></tr>
+  </table>
+
+  <p style="margin-top:7px"><strong>PARTE CONCEDENTE (EMPRESA):</strong></p>
+  <table class="dados">
+    <tr><td class="label">Razão Social / Nome:</td><td>{{ d.emp_nome }}</td></tr>
+    <tr><td class="label">CNPJ / CPF:</td><td>{{ d.emp_cnpj or '___________________________' }}</td></tr>
+    <tr><td class="label">Endereço:</td><td>{{ d.emp_endereco or '___________________________' }}, {{ d.emp_cidade or 'Vitória da Conquista – BA' }}</td></tr>
+    <tr><td class="label">Representante Legal:</td><td>{{ d.emp_representante or '___________________________' }}{% if d.emp_cargo_rep %} — {{ d.emp_cargo_rep }}{% endif %}</td></tr>
+    <tr><td class="label">Supervisor de Estágio:</td><td>{{ d.supervisor_nome or '___________________________' }}{% if d.supervisor_cargo %} — {{ d.supervisor_cargo }}{% endif %}{% if d.supervisor_registro %} — Reg.: {{ d.supervisor_registro }}{% endif %}</td></tr>
+  </table>
+
+  <p style="margin-top:7px"><strong>INSTITUIÇÃO DE ENSINO:</strong></p>
+  <table class="dados">
+    <tr><td class="label">Nome:</td><td>{{ d.ie_nome }}</td></tr>
+    {% if d.ie_cnpj %}<tr><td class="label">CNPJ:</td><td>{{ d.ie_cnpj }}</td></tr>{% endif %}
+    <tr><td class="label">Coordenador(a) de Estágio:</td><td>{{ d.ie_coordenador or '___________________________' }}{% if d.ie_coord_cargo %} — {{ d.ie_coord_cargo }}{% endif %}</td></tr>
+  </table>
+
+  <p style="margin-top:7px"><strong>ESTAGIÁRIO(A):</strong></p>
+  <table class="dados">
+    <tr><td class="label">Nome Completo:</td><td>{{ d.est_nome }}</td></tr>
+    <tr><td class="label">CPF:</td><td>{{ d.est_cpf }}</td></tr>
+    <tr><td class="label">RG:</td><td>{{ d.est_rg or '___________________________' }}</td></tr>
+    <tr><td class="label">Curso:</td><td>{{ d.curso }}</td></tr>
+    <tr><td class="label">Matrícula:</td><td>{{ d.est_matricula or '___________________________' }}</td></tr>
+  </table>
+
+  <!-- DADOS DO ESTÁGIO -->
+  <div class="secao">II — Dados do Estágio Realizado</div>
+  <table class="dados">
+    <tr><td class="label">Área de Atuação:</td><td>{{ d.area_atuacao or d.curso }}</td></tr>
+    <tr><td class="label">Tipo de Estágio:</td><td>{{ d.tipo_estagio or 'Não Obrigatório' }}</td></tr>
+    <tr><td class="label">Data de Início:</td><td>{{ fmt_date(d.data_inicio) }}</td></tr>
+    <tr><td class="label">Data de Encerramento:</td><td>{{ fmt_date(d.data_encerramento or d.data_fim) }}{% if d.data_encerramento and d.data_encerramento != d.data_fim %} <em style="font-size:.85em;color:#666">(previsto: {{ fmt_date(d.data_fim) }})</em>{% endif %}</td></tr>
+    <tr><td class="label">Carga Horária Diária:</td><td>{{ d.ch_diaria or 6 }} horas</td></tr>
+    <tr><td class="label">Carga Horária Semanal:</td><td>{{ d.ch_semanal or 30 }} horas</td></tr>
+    <tr><td class="label">Carga Horária Total Cumprida:</td><td><strong>{{ ch_total_real }} horas</strong></td></tr>
+    <tr><td class="label">Bolsa-Auxílio {% if d.bolsa_tipo == 'diaria' %}por Dia{% elif d.bolsa_tipo == 'hora' %}por Hora{% else %}Mensal{% endif %}:</td><td>R$ {{ '%.2f'|format(d.bolsa or 0) }}{% if d.bolsa_tipo == 'diaria' %} por dia trabalhado{% elif d.bolsa_tipo == 'hora' %} por hora trabalhada{% endif %}</td></tr>
+  </table>
+
+  <!-- ATIVIDADES -->
+  {% if d.atividades %}
+  <div class="secao">III — Atividades Desenvolvidas</div>
+  {% set ats = d.atividades.split('||') %}
+  {% for at in ats %}{% if at.strip() %}
+  <p class="atividade-item">{{ loop.index }}. {{ at.strip() }}</p>
+  {% endif %}{% endfor %}
+  {% endif %}
+
+  <!-- AVALIAÇÃO DE DESEMPENHO -->
+  <div class="secao">{% if d.atividades %}IV{% else %}III{% endif %} — Avaliação de Desempenho</div>
+  <table class="dados">
+    <tr><td class="label">Assiduidade:</td><td>{{ d.aval_assiduidade or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+    <tr><td class="label">Pontualidade:</td><td>{{ d.aval_pontualidade or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+    <tr><td class="label">Iniciativa:</td><td>{{ d.aval_iniciativa or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+    <tr><td class="label">Relacionamento Interpessoal:</td><td>{{ d.aval_relacionamento or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+    <tr><td class="label">Desempenho Técnico:</td><td>{{ d.aval_tecnico or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+    <tr><td class="label">Responsabilidade:</td><td>{{ d.aval_responsabilidade or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+    <tr><td class="label">Aprendizagem / Desenvolvimento:</td><td>{{ d.aval_aprendizagem or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+    <tr><td class="label">Conceito Geral:</td><td>{{ d.aval_geral or '(  ) Ótimo   (  ) Bom   (  ) Regular   (  ) Insuficiente' }}</td></tr>
+  </table>
+
+  {% if d.aval_observacoes %}
+  <p style="margin-top:6px"><strong>Observações do Supervisor:</strong> {{ d.aval_observacoes }}</p>
+  {% else %}
+  <p style="margin-top:6px"><strong>Observações do Supervisor:</strong> _______________________________________________________________________________ _______________________________________________________________________________</p>
+  {% endif %}
+
+  <!-- DECLARAÇÃO -->
+  <div class="secao">{% if d.atividades %}V{% else %}IV{% endif %} — Declaração de Realização</div>
+
+  <div class="caixa-destaque">
+    <p>O Agente de Integração <strong>{{ agente.nome }}</strong>, CNPJ {{ agente.cnpj }}, por meio deste instrumento, declara que o(a) estudante <strong>{{ d.est_nome }}</strong>, CPF n.º <strong>{{ d.est_cpf }}</strong>, matriculado(a) no curso de <strong>{{ d.curso }}</strong> na <strong>{{ d.ie_nome }}</strong>, realizou estágio curricular {{ (d.tipo_estagio or 'não obrigatório').lower() }} junto à empresa <strong>{{ d.emp_nome }}</strong>, no período de <strong>{{ fmt_date(d.data_inicio) }}</strong> a <strong>{{ fmt_date(d.data_encerramento or d.data_fim) }}</strong>, na área de <strong>{{ d.area_atuacao or d.curso }}</strong>, sob a supervisão de <strong>{{ d.supervisor_nome or '___________________________' }}</strong>{% if d.supervisor_cargo %} ({{ d.supervisor_cargo }}){% endif %}, cumprindo carga horária total de <strong>{{ ch_total_real }} horas</strong>.</p>
+  </div>
+
+  <!-- CLÁUSULAS -->
+  <div class="secao">{% if d.atividades %}VI{% else %}V{% endif %} — Disposições Finais</div>
+
+  <div class="clausula">
+    <p><strong>Cláusula 1ª — Da Natureza do Vínculo.</strong> Fica expressamente consignado que o estágio objeto deste Termo não gerou, em nenhum momento, vínculo empregatício entre o(a) Estagiário(a) e a Parte Concedente, nos termos do art. 3.º da Lei n.º 11.788/2008, tendo sido observados todos os requisitos legais durante sua realização.</p>
+  </div>
+
+  <div class="clausula">
+    <p><strong>Cláusula 2ª — Das Obrigações Cumpridas.</strong> As partes declaram que as obrigações legais e contratuais decorrentes do Termo de Compromisso de Estágio foram integralmente cumpridas durante o período de estágio, incluindo: supervisão adequada, atividades compatíveis com o curso, pagamento da bolsa-auxílio, manutenção do seguro contra acidentes pessoais e envio de relatórios periódicos à Instituição de Ensino.</p>
+  </div>
+
+  <div class="clausula">
+    <p><strong>Cláusula 3ª — Do Recesso.</strong> As partes declaram que o recesso a que tem direito o(a) Estagiário(a), nos termos do art. 13 da Lei n.º 11.788/2008, foi: (  ) concedido integralmente  (  ) concedido proporcionalmente  (  ) compensado financeiramente.</p>
+  </div>
+
+  <div class="clausula">
+    <p><strong>Cláusula 4ª — Da Documentação.</strong> O presente Termo é emitido em 3 (três) vias de igual teor e forma: uma para o(a) Estagiário(a), uma para a Parte Concedente e uma para a Instituição de Ensino, ficando sob responsabilidade do(a) próprio(a) Estagiário(a) a entrega da respectiva via à Instituição de Ensino, conforme art. 7.º, IV, da Lei n.º 11.788/2008.</p>
+  </div>
+
+  <div class="clausula">
+    <p><strong>Cláusula 5ª — Do Foro.</strong> As partes elegem o Foro da Comarca de Vitória da Conquista – BA para dirimir eventuais conflitos oriundos do presente Termo.</p>
+  </div>
+
+  <p style="text-align:center; margin-top:16px">
+    Vitória da Conquista – BA, {{ data_hoje }}
+  </p>
+
+  <div class="assinaturas">
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Parte Concedente</strong><br>
+        {{ d.emp_nome }}<br>
+        {{ d.emp_representante or '' }}{% if d.emp_cargo_rep %}<br>{{ d.emp_cargo_rep }}{% endif %}
+      </div>
+    </div>
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Instituição de Ensino</strong><br>
+        {{ d.ie_nome }}<br>
+        {{ d.ie_signatario_nome or '' }}
+        {% if d.ie_signatario_cargo %}<br>{{ d.ie_signatario_cargo }}{% endif %}
+        {% if d.ie_signatario_tipo %}<br><em style="font-size:8pt">{{ d.ie_signatario_tipo }}</em>{% endif %}
+      </div>
+    </div>
+    <div class="assinatura-bloco">
+      <div class="assinatura-linha">
+        <strong>Estagiário(a)</strong><br>
+        {{ d.est_nome }}<br>
+        CPF: {{ d.est_cpf }}
+      </div>
+    </div>
+  </div>
+
+  <div class="assinatura-agente">
+    <img src="{{ url_for('static', filename='assinatura_ciclorh.jpg') }}" class="assinatura-img">
+    <strong>{{ agente.nome }}</strong><br>
+    <small>{{ agente.representante }} — {{ agente.cargo }} — CNPJ: {{ agente.cnpj }}</small>
+  </div>
+
+  <div class="rodape">
+    {{ agente.nome }} — CNPJ {{ agente.cnpj }} — {{ agente.endereco }}, {{ agente.cidade }} — {{ agente.email }}
+  </div>
+</div>
+</body>
+</html>

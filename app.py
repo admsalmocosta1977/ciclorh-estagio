@@ -391,6 +391,16 @@ def init_db():
             data_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             descricao TEXT NOT NULL
         )""")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS plano_adicional (
+            id SERIAL PRIMARY KEY,
+            contrato_id INTEGER NOT NULL REFERENCES contrato(id) ON DELETE CASCADE,
+            aditivo_id INTEGER REFERENCES aditivo(id) ON DELETE SET NULL,
+            numero INTEGER NOT NULL,
+            area_atuacao TEXT,
+            atividades TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
         cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS tce_assinado BOOLEAN DEFAULT FALSE;")
         cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS tce_assinado_em TIMESTAMP;")
         cur.execute("ALTER TABLE contrato ADD COLUMN IF NOT EXISTS tce_assinado_por TEXT;")
@@ -2003,6 +2013,8 @@ def contrato_editar(id):
     areas_list = _q("SELECT id, nome FROM area_estagio WHERE status='ativo' ORDER BY nome")
     aditivos = _q("SELECT * FROM aditivo WHERE contrato_id = %s ORDER BY created_at", (id,))
     relatorios = _q("SELECT * FROM relatorio_periodo WHERE contrato_id=%s ORDER BY numero", (id,))
+    _planos_adi = _q("SELECT * FROM plano_adicional WHERE contrato_id=%s ORDER BY numero", (id,))
+    planos_por_aditivo = {str(p['aditivo_id']): p for p in _planos_adi if p['aditivo_id']}
     if request.method == 'POST':
         erros = []
         if not request.form.get('estagiario_id'): erros.append('Estagiário obrigatório.')
@@ -2130,7 +2142,7 @@ def contrato_editar(id):
                            estagiarios=estagiarios, empresas=empresas_list, ies=ies_list,
                            areas=areas_list, aditivos=aditivos,
                            relatorios=relatorios, relatorio_pendente=relatorio_pendente,
-                           historico=historico)
+                           historico=historico, planos_por_aditivo=planos_por_aditivo)
 
 
 @app.route('/contratos/<int:id>/excluir')
@@ -2407,8 +2419,8 @@ def doc_aditivo_registrar(id):
     data = request.get_json(silent=True) or {}
     nova_data_fim = data.get('nova_data_fim') or None
     clausulas = data.get('clausulas', [])
-    _ins("INSERT INTO aditivo (contrato_id, nova_data_fim, clausulas) VALUES (%s, %s, %s)",
-         (id, nova_data_fim, json.dumps(clausulas, ensure_ascii=False)))
+    novo_adi_id = _ins("INSERT INTO aditivo (contrato_id, nova_data_fim, clausulas) VALUES (%s, %s, %s)",
+                       (id, nova_data_fim, json.dumps(clausulas, ensure_ascii=False)))
     if nova_data_fim:
         _run("UPDATE contrato SET data_fim = %s WHERE id = %s", (nova_data_fim, id))
     numero = _q("SELECT COUNT(*) as n FROM aditivo WHERE contrato_id = %s", (id,), one=True)['n']
@@ -2420,7 +2432,7 @@ def doc_aditivo_registrar(id):
          else f'Gerou {numero}º aditivo do contrato ID {id}')
     if nova_data_fim:
         _hist_contrato(id, f'{numero}º Aditivo: data de término alterada para {fmt_date(nova_data_fim)}')
-    return jsonify({'ok': True, 'numero': numero})
+    return jsonify({'ok': True, 'numero': numero, 'id': novo_adi_id})
 
 
 @app.route('/contratos/<int:id>/aditivo/<int:aditivo_id>/editar', methods=['POST'])
@@ -2455,6 +2467,49 @@ def aditivo_imprimir(id, aditivo_id):
         params[f'clausula_{i}_titulo'] = cl.get('titulo', '')
         params[f'clausula_{i}_texto']  = cl.get('texto', '')
     return redirect(url_for('doc_aditivo', id=id, **params))
+
+
+@app.route('/contratos/<int:id>/plano_adicional/registrar', methods=['POST'])
+@login_required
+def plano_adicional_registrar(id):
+    c = _q("SELECT id FROM contrato WHERE id=%s", (id,), one=True)
+    if not c:
+        return jsonify({'ok': False}), 404
+    data = request.get_json(silent=True) or {}
+    aditivo_id = data.get('aditivo_id') or None
+    area_atuacao = (data.get('area_atuacao') or '').strip()
+    atividades_list = data.get('atividades', [])
+    atividades = '||'.join(a.strip() for a in atividades_list if a.strip())
+    numero = (_q("SELECT COUNT(*) AS n FROM plano_adicional WHERE contrato_id=%s", (id,), one=True)['n'] or 0) + 1
+    novo_id = _ins(
+        "INSERT INTO plano_adicional (contrato_id, aditivo_id, numero, area_atuacao, atividades)"
+        " VALUES (%s,%s,%s,%s,%s)",
+        (id, aditivo_id, numero, area_atuacao, atividades)
+    )
+    _hist_contrato(id, f'Plano de Atividades Adicional N.º {numero} emitido')
+    return jsonify({'ok': True, 'id': novo_id, 'numero': numero})
+
+
+@app.route('/contratos/<int:id>/plano_adicional/<int:num>')
+@login_required
+def plano_adicional_doc(id, num):
+    ctx = _doc_ctx(id)
+    if not ctx:
+        abort(404)
+    plano = _q("SELECT * FROM plano_adicional WHERE contrato_id=%s AND numero=%s", (id, num), one=True)
+    if not plano:
+        abort(404)
+    # número do aditivo vinculado
+    num_aditivo = None
+    if plano['aditivo_id']:
+        todos = _q("SELECT id FROM aditivo WHERE contrato_id=%s ORDER BY created_at", (id,))
+        for i, r in enumerate(todos, 1):
+            if r['id'] == plano['aditivo_id']:
+                num_aditivo = i
+                break
+    return render_template('docs/plano_adicional.html', d=ctx, plano=plano,
+                           num_aditivo=num_aditivo, agente=AGENTE,
+                           data_hoje=fmt_date(date.today()))
 
 
 @app.route('/contratos/<int:id>/aditivo/<int:aditivo_id>/excluir', methods=['POST'])
