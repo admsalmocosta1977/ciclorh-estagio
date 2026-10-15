@@ -2142,7 +2142,8 @@ def contrato_editar(id):
                            estagiarios=estagiarios, empresas=empresas_list, ies=ies_list,
                            areas=areas_list, aditivos=aditivos,
                            relatorios=relatorios, relatorio_pendente=relatorio_pendente,
-                           historico=historico, planos_por_aditivo=planos_por_aditivo)
+                           historico=historico, planos_por_aditivo=planos_por_aditivo,
+                           todos_planos=_planos_adi)
 
 
 @app.route('/contratos/<int:id>/excluir')

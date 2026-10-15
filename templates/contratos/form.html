@@ -457,6 +457,51 @@
   </div>
 </div>
 {% endif %}
+{% if c and c.id %}
+<div class="card mt-3">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-file-earmark-plus"></i> Planos de Atividades Adicionais
+    <span class="badge bg-secondary ms-auto">{{ todos_planos | length if todos_planos is defined else 0 }}</span>
+    <button type="button" class="btn btn-sm btn-outline-primary"
+            onclick="abrirModalPlanoAvulso()">
+      <i class="bi bi-plus me-1"></i>Novo Plano
+    </button>
+  </div>
+  <div class="card-body p-0">
+    {% if todos_planos is defined and todos_planos %}
+    <table class="table table-sm mb-0">
+      <thead class="table-light">
+        <tr><th>#</th><th>Área</th><th>Emitido em</th><th>Aditivo vinculado</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for pl in todos_planos %}
+        {% set adi_num = namespace(val=none) %}
+        {% if pl.aditivo_id and aditivos %}
+          {% for idx in range(aditivos|length) %}
+            {% if aditivos[idx].id == pl.aditivo_id %}{% set adi_num.val = idx + 1 %}{% endif %}
+          {% endfor %}
+        {% endif %}
+        <tr>
+          <td>N.º {{ pl.numero }}</td>
+          <td>{{ pl.area_atuacao or '—' }}</td>
+          <td>{{ fmt_date(pl.created_at) }}</td>
+          <td>{% if adi_num.val %}{{ adi_num.val }}º Aditivo{% else %}<span class="text-muted small">Avulso</span>{% endif %}</td>
+          <td class="text-end">
+            <a href="{{ url_for('plano_adicional_doc', id=c.id, num=pl.numero) }}"
+               target="_blank" class="btn btn-sm btn-outline-success py-0">
+              <i class="bi bi-eye me-1"></i>PDF
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="px-3 py-2 text-muted small"><i class="bi bi-info-circle me-1"></i>Nenhum plano adicional emitido ainda.</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
 {% if c %}
 <div class="card mt-3">
   <div class="card-header d-flex align-items-center gap-2">
@@ -724,6 +769,64 @@
     </div>
   </div>
 </div>
+<!-- Modal Plano de Atividades Adicional Avulso -->
+<div class="modal fade" id="modal-plano-avulso" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-file-earmark-plus me-2"></i>Novo Plano de Atividades Adicional
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info py-2 small mb-3">
+          <i class="bi bi-info-circle me-1"></i>
+          Emite um Plano de Atividades Adicional sem vinculação a um aditivo, em conformidade com o <strong>art. 7.º da Lei 11.788/2008</strong>.
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold small mb-1">Área de Atuação</label>
+          {% if areas %}
+          <select class="form-select form-select-sm mb-1" id="avulso-sel-area">
+            <option value="">— Manter área atual{% if c.area_atuacao %}: {{ c.area_atuacao }}{% endif %} —</option>
+            {% for a in areas %}
+            <option value="{{ a.id }}" data-nome="{{ a.nome }}"
+              {% if c.area_atuacao == a.nome %}selected{% endif %}>{{ a.nome }}</option>
+            {% endfor %}
+          </select>
+          {% endif %}
+          <input type="text" id="avulso-inp-area" class="form-control form-control-sm"
+                 value="{{ c.area_atuacao or '' }}" placeholder="Ou descreva a área livremente">
+        </div>
+
+        <!-- Sugestões da área -->
+        <div id="avulso-painel-sugestao" class="border rounded p-2 mb-2 bg-light" style="display:none">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="small fw-semibold"><i class="bi bi-list-check me-1 text-primary"></i>Atividades da área — marque as que se aplicam</span>
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 avulso-btn-marcar" style="font-size:.72rem">Marcar todas</button>
+              <button type="button" class="btn btn-sm btn-primary py-0 px-2 avulso-btn-aplicar" style="font-size:.72rem">Aplicar selecionadas</button>
+            </div>
+          </div>
+          <div class="avulso-lista-checks row g-1"></div>
+        </div>
+
+        <label class="form-label fw-semibold small mb-1">Atividades do Plano</label>
+        <div id="avulso-atividades-container" class="mb-1"></div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="avulsoAdicionarAtividade('')">
+          <i class="bi bi-plus me-1"></i>Adicionar atividade
+        </button>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success" onclick="gerarPlanoAvulso()">
+          <i class="bi bi-file-earmark-text me-1"></i>Gerar Plano
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Editar Aditivo -->
 <div class="modal fade" id="modal-editar-aditivo" tabindex="-1">
   <div class="modal-dialog">
@@ -1248,6 +1351,101 @@ try { document.getElementById('sel-estagiario').addEventListener('change', check
 if (document.getElementById('sel-estagiario').value && document.getElementById('sel-empresa').value) checkVinculo();
 
 {% if c and c.id %}
+// ---- Plano Adicional Avulso ----
+function abrirModalPlanoAvulso() {
+  const cont = document.getElementById('avulso-atividades-container');
+  if (cont.children.length === 0) {
+    {% if c.atividades %}
+    const ativs = {{ c.atividades | tojson }}.split('||').map(a => a.trim()).filter(Boolean);
+    ativs.forEach(function(a) { avulsoAdicionarAtividade(a); });
+    {% endif %}
+    if (cont.children.length === 0) avulsoAdicionarAtividade('');
+  }
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-plano-avulso')).show();
+}
+
+function avulsoAdicionarAtividade(valor) {
+  const cont = document.getElementById('avulso-atividades-container');
+  const idx = cont.children.length + 1;
+  const div = document.createElement('div');
+  div.className = 'd-flex gap-1 mb-1 avulso-ativ-row';
+  div.innerHTML = '<span class="text-muted small align-self-center" style="width:20px;text-align:right">' + idx + '.</span>' +
+    '<input type="text" class="form-control form-control-sm avulso-ativ-inp" value="' + (valor || '').replace(/"/g,'&quot;') + '" placeholder="Descreva a atividade...">' +
+    '<button type="button" class="btn btn-sm btn-outline-danger py-0 avulso-ativ-rm" title="Remover">✕</button>';
+  cont.appendChild(div);
+}
+
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('avulso-ativ-rm')) {
+    e.target.closest('.avulso-ativ-row').remove();
+    document.querySelectorAll('#avulso-atividades-container .avulso-ativ-row').forEach(function(row, i) {
+      row.querySelector('span').textContent = (i+1) + '.';
+    });
+  }
+  if (e.target.classList.contains('avulso-btn-marcar')) {
+    document.querySelectorAll('#modal-plano-avulso .avulso-sugest-check').forEach(function(cb) { cb.checked = true; });
+  }
+  if (e.target.classList.contains('avulso-btn-aplicar')) {
+    document.querySelectorAll('#modal-plano-avulso .avulso-sugest-check:checked').forEach(function(cb) {
+      avulsoAdicionarAtividade(cb.value);
+    });
+    document.getElementById('avulso-painel-sugestao').style.display = 'none';
+  }
+});
+
+var _avulsoSelArea = document.getElementById('avulso-sel-area');
+if (_avulsoSelArea) {
+  _avulsoSelArea.addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    if (opt && opt.dataset.nome) document.getElementById('avulso-inp-area').value = opt.dataset.nome;
+    const areaId = this.value;
+    if (!areaId) { document.getElementById('avulso-painel-sugestao').style.display = 'none'; return; }
+    fetch('/api/area_atividades/' + areaId)
+      .then(r => r.json())
+      .then(function(d) {
+        const lista = document.querySelector('.avulso-lista-checks');
+        lista.innerHTML = '';
+        (d.atividades || []).forEach(function(a) {
+          const col = document.createElement('div');
+          col.className = 'col-12 col-md-6';
+          col.innerHTML = '<div class="form-check"><input class="form-check-input avulso-sugest-check" type="checkbox" value="' +
+            a.replace(/"/g,'&quot;') + '" checked><label class="form-check-label small">' + a + '</label></div>';
+          lista.appendChild(col);
+        });
+        document.getElementById('avulso-painel-sugestao').style.display = (d.atividades && d.atividades.length) ? 'block' : 'none';
+      })
+      .catch(function() { document.getElementById('avulso-painel-sugestao').style.display = 'none'; });
+  });
+}
+
+function gerarPlanoAvulso() {
+  const area = (document.getElementById('avulso-inp-area') || {value:''}).value.trim();
+  const ativInputs = document.querySelectorAll('#avulso-atividades-container .avulso-ativ-inp');
+  const atividades = Array.from(ativInputs).map(i => i.value.trim()).filter(Boolean);
+  if (!area && atividades.length === 0) {
+    alert('Informe a área de atuação ou ao menos uma atividade.');
+    return;
+  }
+  const contratoId = {{ c.id }};
+  fetch('/contratos/' + contratoId + '/plano_adicional/registrar', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({aditivo_id: null, area_atuacao: area, atividades: atividades})
+  })
+  .then(r => r.json())
+  .then(function(pd) {
+    bootstrap.Modal.getInstance(document.getElementById('modal-plano-avulso')).hide();
+    if (pd.ok) {
+      window.open('/contratos/' + contratoId + '/plano_adicional/' + pd.numero, '_blank');
+    }
+    location.reload();
+  })
+  .catch(function() {
+    bootstrap.Modal.getInstance(document.getElementById('modal-plano-avulso')).hide();
+    location.reload();
+  });
+}
+
 // ---- Plano adicional: toggle painel ----
 document.querySelectorAll('input[name="plano-opcao"]').forEach(function(r) {
   r.addEventListener('change', function() {
