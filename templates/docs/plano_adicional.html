@@ -77,6 +77,7 @@ function salvarPDF(btn) {
     <tr><td class="label">Empresa:</td><td>{{ d.emp_nome }}</td></tr>
     <tr><td class="label">Supervisor:</td><td>{{ d.supervisor_nome or '________________' }}{% if d.supervisor_cargo %} — {{ d.supervisor_cargo }}{% endif %}</td></tr>
     <tr><td class="label">Período de Estágio:</td><td>{{ fmt_date(d.data_inicio) }} a {{ fmt_date(d.data_fim) }}</td></tr>
+    <tr><td class="label">Vigência deste Plano:</td><td>{{ data_hoje }} a {{ fmt_date(d.data_fim) }}</td></tr>
     <tr><td class="label">Área de Atuação:</td><td>{{ plano.area_atuacao or d.area_atuacao or d.curso }}</td></tr>
     {% if num_aditivo %}
     <tr><td class="label">Termo Aditivo vinculado:</td><td>{{ num_aditivo }}º Aditivo ao TCE</td></tr>
