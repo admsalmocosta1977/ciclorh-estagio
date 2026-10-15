@@ -2508,9 +2508,8 @@ def plano_adicional_doc(id, num):
             if r['id'] == plano['aditivo_id']:
                 num_aditivo = i
                 break
-    return render_template('docs/plano_adicional.html', d=ctx, plano=plano,
-                           num_aditivo=num_aditivo, agente=AGENTE,
-                           data_hoje=fmt_date(date.today()))
+    return render_template('docs/plano_adicional.html', **ctx, plano=plano,
+                           num_aditivo=num_aditivo)
 
 
 @app.route('/contratos/<int:id>/aditivo/<int:aditivo_id>/excluir', methods=['POST'])
