@@ -217,6 +217,7 @@
   <div class="nav-item"><a href="#doc-relatorio">— Relatórios (6 meses)</a></div>
   <div class="nav-item"><a href="#doc-ciencia">— Termo de Ciência</a></div>
   <div class="nav-item"><a href="#doc-aditivo">— Aditivo</a></div>
+  <div class="nav-item"><a href="#doc-plano-adicional">— Plano de Atividades Adicional</a></div>
   <div class="nav-item"><a href="#doc-tre">— TRE</a></div>
   <div class="nav-group">Seleção</div>
   <div class="nav-item"><a href="#vagas">Vagas de Estágio</a></div>
@@ -225,6 +226,7 @@
   <div class="nav-item"><a href="#curriculos">Currículos</a></div>
   <div class="nav-group">Contratos e Relatórios</div>
   <div class="nav-item"><a href="#contratos">Contratos</a></div>
+  <div class="nav-item"><a href="#retorno-docs">— Retorno de Documentos</a></div>
   <div class="nav-item"><a href="#relatorios">Relatórios</a></div>
   <div class="nav-group">Recursos Avançados</div>
   <div class="nav-item"><a href="#relacionamento">Relacionamento</a></div>
@@ -266,7 +268,7 @@
       relatórios e regras de negócio aplicadas ao processo de intermediação de estágios.
     </div>
 
-    <div class="cover-version">Versão 6.0 &nbsp;·&nbsp; Julho de 2026</div>
+    <div class="cover-version">Versão 6.1 &nbsp;·&nbsp; Outubro de 2026</div>
 
     <div class="cover-bottom-bar">
       <span>Ciclo RH &copy; 2026 — Todos os direitos reservados</span>
@@ -374,6 +376,13 @@
     <div class="info">
       <strong>Atalho rápido:</strong> Clique no logotipo "Ciclo RH" no topo do menu a qualquer momento para retornar à tela inicial sem precisar usar o botão Voltar do navegador.
     </div>
+
+    <h3>Painel de Documentos Pendentes de Retorno</h3>
+    <p>Abaixo dos indicadores principais, o painel exibe automaticamente todos os contratos ativos nos quais o <strong>TCE assinado</strong> ou o <strong>Plano de Atividades assinado</strong> ainda não foram devolvidos à integradora. Cada linha indica o nome do estagiário, a empresa e quais documentos estão pendentes, com link direto para o contrato.</p>
+    <p>O painel desaparece sozinho quando todos os contratos ativos tiverem seus documentos confirmados — não há necessidade de dispensá-lo manualmente.</p>
+    <div class="tip">
+      <strong>Por que acompanhar:</strong> O TCE e o Plano de Atividades precisam estar assinados por todas as partes antes do início do estágio (Lei n.º 11.788/2008, art. 7.º e art. 16). Contratos sem retorno dos documentos assinados expõem a integradora a riscos legais caso haja fiscalização.
+    </div>
   </div>
 
   <!-- ══════════════════════════════════════ EMPRESAS ══════════════════════════════════════ -->
@@ -462,7 +471,7 @@
     </ol>
 
     <div class="tip">
-      <strong>Modalidades de ensino disponíveis:</strong> além de Superior e Técnico, o sistema aceita as modalidades <strong>EJA</strong> (Educação de Jovens e Adultos) e <strong>PROEJA</strong> (Programa Nacional de Integração da Educação Profissional com a Educação Básica na Modalidade de Educação de Jovens e Adultos), atendendo candidatos vinculados a programas de educação continuada.
+      <strong>Modalidades de ensino disponíveis:</strong> além de Superior e Técnico, o sistema aceita <strong>Ensino Médio</strong> (anos 1 a 3), <strong>Ensino Fundamental</strong> (anos 6 a 9 — nono ano), <strong>EJA</strong> (Educação de Jovens e Adultos, módulos 1 a 4) e <strong>PROEJA</strong> (módulos 1 a 4). O campo "Período Atual" se ajusta automaticamente ao selecionar o nível: para Fundamental, aceita valores de 6 a 9 (sexto ao nono ano).
     </div>
 
     <h3>Busca de candidatos por Instituição de Ensino</h3>
@@ -771,10 +780,16 @@
     <h3>Como registrar um aditivo no sistema</h3>
     <ol class="steps">
       <li>Acesse <strong>Contratos</strong> no menu lateral e abra o contrato que será alterado.</li>
-      <li>Clique em <strong>"Novo Aditivo"</strong> e selecione o tipo de alteração.</li>
-      <li>Preencha os novos dados (data, valores, nomes, conforme o caso).</li>
+      <li>Clique em <strong>"Novo Aditivo"</strong> no card de aditivos do contrato.</li>
+      <li>Preencha a <strong>Nova Data de Término</strong> (se a vigência for alterada) e as <strong>Cláusulas Adicionais</strong> que o aditivo contempla. Preencha ao menos um dos dois campos.</li>
+      <li>Selecione a opção de <strong>Plano de Atividades</strong>: "Manter plano atual" (padrão) ou "Atualizar plano de atividades" (veja seção 8.7).</li>
+      <li>Clique em <strong>"Gerar Aditivo"</strong> — o sistema abre o PDF do aditivo em nova aba, registra o aditivo no banco e atualiza a data de término do contrato automaticamente (quando informada).</li>
       <li>Imprima em 3 vias e colete as mesmas assinaturas do TCE original. O aditivo passa a fazer parte integrante do TCE.</li>
     </ol>
+
+    <div class="success">
+      <strong>Atualização automática da vigência:</strong> quando o aditivo informar uma nova data de término, o sistema atualiza <em>automaticamente</em> a data de encerramento do contrato, sem necessidade de edição manual adicional. O histórico do contrato registra a alteração com data e usuário responsável.
+    </div>
   </div>
 
   <div class="section" id="doc-tre">
@@ -826,6 +841,48 @@
 
     <div class="tip">
       <strong>Recesso proporcional:</strong> Se o estagiário trabalhou mais de 6 meses e não usufruiu de recesso remunerado, o TRE deve mencionar o recesso proporcional — que é pago em dinheiro na rescisão. Verifique isso antes de imprimir o TRE.
+    </div>
+  </div>
+
+  <div class="section" id="doc-plano-adicional">
+    <h2>8.7 Plano de Atividades Adicional</h2>
+
+    <p>O <strong>Plano de Atividades Adicional</strong> é um documento emitido junto ao Termo Aditivo quando ocorre mudança na área de atuação do estagiário ou quando as atividades previstas precisam ser atualizadas. Sua base legal está no <strong>art. 7.º da Lei n.º 11.788/2008</strong>, que exige que o plano de atividades integre o instrumento jurídico de estágio.</p>
+
+    <p>Diferente do Plano de Atividades original (emitido com o TCE), o Plano Adicional é vinculado a um aditivo específico e possui numeração própria (1.º Adicional, 2.º Adicional etc.), permitindo rastrear a evolução das atividades ao longo do contrato.</p>
+
+    <h3>Quando emitir o Plano de Atividades Adicional</h3>
+    <table>
+      <tr><th>Situação</th><th>Ação recomendada</th></tr>
+      <tr>
+        <td>Aditivo <strong>sem</strong> alteração de área ou atividades (ex.: apenas prorrogação de prazo ou reajuste de bolsa)</td>
+        <td>Manter o plano atual — nenhum documento adicional necessário</td>
+      </tr>
+      <tr>
+        <td>Aditivo com <strong>mudança de setor ou área de atuação</strong></td>
+        <td>Emitir Plano Adicional com a nova área e novas atividades correspondentes</td>
+      </tr>
+      <tr>
+        <td>Aditivo com <strong>acréscimo ou alteração de atividades</strong> (mesma área)</td>
+        <td>Emitir Plano Adicional com as atividades atualizadas</td>
+      </tr>
+    </table>
+
+    <h3>Como gerar o Plano de Atividades Adicional</h3>
+    <ol class="steps">
+      <li>Ao criar um aditivo (clique em "Novo Aditivo" no contrato), no final do modal selecione <strong>"Atualizar plano de atividades"</strong>.</li>
+      <li>Escolha ou descreva a <strong>nova área de atuação</strong>: use o menu de áreas cadastradas (o sistema sugerirá automaticamente as atividades típicas da área selecionada) ou preencha livremente no campo de texto.</li>
+      <li>Na seção <strong>Atividades do Plano</strong>, as atividades do contrato original aparecerão pré-preenchidas e editáveis. Adicione novas linhas, edite ou remova conforme necessário. Atividades sugeridas pela área podem ser marcadas e aplicadas com um clique.</li>
+      <li>Clique em <strong>"Gerar Aditivo"</strong> — o sistema abre o PDF do aditivo e, na sequência, o PDF do Plano Adicional em nova aba.</li>
+      <li>Imprima o Plano Adicional em 3 vias e colete as assinaturas da empresa concedente, da IE e do estagiário. Arquive junto ao dossiê do contrato.</li>
+    </ol>
+
+    <div class="info">
+      <strong>Sugestão de atividades por área:</strong> o sistema oferece sugestões automáticas de atividades com base na área selecionada (áreas e atividades cadastradas em <strong>Cadastros → Áreas de Estágio</strong>). Clique em "Marcar todas" para selecionar todas as sugestões ou marque individualmente as que se aplicam e clique em "Aplicar selecionadas" para adicioná-las ao plano.
+    </div>
+
+    <div class="tip">
+      <strong>Rastreabilidade:</strong> Na tabela de aditivos do contrato, a coluna <strong>"Plano Adic."</strong> exibe um botão de acesso direto ao Plano de Atividades Adicional vinculado a cada aditivo. Se o aditivo não gerou plano adicional, a coluna exibe "—".
     </div>
   </div>
 
@@ -1090,6 +1147,41 @@
     <p>O sistema destaca automaticamente no Dashboard os contratos com vencimento nos próximos 30 dias. Esses contratos também aparecem no relatório de "Contratos a Vencer". Use esse recurso para antecipar o contato com as empresas e evitar encerramentos abruptos de estágio.</p>
   </div>
 
+  <div class="section" id="retorno-docs">
+    <h2>13.1 Retorno de Documentos Assinados</h2>
+
+    <p>Após a emissão do TCE e do Plano de Atividades, os documentos precisam ser assinados por todas as partes — empresa, IE e estagiário — e devolvidos à integradora. O sistema permite registrar o recebimento de cada documento individualmente, criando um controle de pendências rastreável com data e usuário responsável pela confirmação.</p>
+
+    <h3>Como confirmar o recebimento dos documentos</h3>
+    <ol class="steps">
+      <li>Abra o contrato em <strong>Contratos → (selecione o contrato)</strong>.</li>
+      <li>Role até o card <strong>"Retorno de Documentos Assinados"</strong>, logo abaixo dos dados do contrato.</li>
+      <li>Para cada documento pendente (TCE e/ou Plano de Atividades), clique no botão <strong>"Confirmar recebimento"</strong> correspondente.</li>
+      <li>O sistema registra a confirmação com data e nome do usuário, e o card passa a exibir o status <span class="badge-demo bd-green">Recebido</span> com a data de confirmação.</li>
+    </ol>
+
+    <h3>Status dos documentos no card</h3>
+    <table>
+      <tr><th>Status</th><th>Significado</th></tr>
+      <tr>
+        <td><span class="badge-demo bd-yellow">Pendente</span></td>
+        <td>O documento ainda não retornou assinado para a integradora — botão "Confirmar recebimento" disponível</td>
+      </tr>
+      <tr>
+        <td><span class="badge-demo bd-green">Recebido</span></td>
+        <td>Recebimento confirmado — exibe data e nome do usuário que confirmou</td>
+      </tr>
+    </table>
+
+    <div class="info">
+      <strong>Visibilidade no Dashboard:</strong> Contratos com documentos pendentes de retorno aparecem no <strong>Painel de Documentos Pendentes</strong> na tela inicial, permitindo que toda a equipe acompanhe a situação sem precisar abrir cada contrato individualmente.
+    </div>
+
+    <div class="tip">
+      <strong>Registro no histórico:</strong> cada confirmação de recebimento gera automaticamente uma entrada no histórico do contrato (seção "Linha do Tempo"), com data, hora e usuário responsável. O registro é permanente e não pode ser desfeito.
+    </div>
+  </div>
+
   <!-- ══════════════════════════════════════ RELATÓRIOS ══════════════════════════════════════ -->
   <div class="section" id="relatorios">
     <h2>14. Relatórios e Exportação de Dados</h2>
@@ -1196,6 +1288,16 @@
         <td>Contrato com vencimento em 30 dias</td>
         <td>Aparece com destaque no Dashboard e no relatório de vencimentos</td>
         <td>Antecipar decisão de renovação ou encerramento</td>
+      </tr>
+      <tr>
+        <td>Aditivo com nova data de término registrada</td>
+        <td>Data de encerramento do contrato atualizada automaticamente; evento registrado no histórico</td>
+        <td>Eliminar necessidade de atualização manual e evitar divergência entre aditivo e contrato</td>
+      </tr>
+      <tr>
+        <td>Documentos (TCE / Plano de Atividades) pendentes de retorno</td>
+        <td>Contrato exibido no painel "Documentos Pendentes" na tela inicial até confirmação de recebimento</td>
+        <td>Garantir rastreabilidade e alertar sobre contratos sem documentação completa</td>
       </tr>
     </table>
 
