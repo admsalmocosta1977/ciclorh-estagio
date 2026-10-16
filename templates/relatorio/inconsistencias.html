@@ -28,7 +28,7 @@
   .chip-ok   { background:#d1fae5; color:#065f46; }
   .chip-nok  { background:#fee2e2; color:#991b1b; }
   .chip-warn { background:#fef3c7; color:#92400e; }
-  .filter-bar { background:#f8f9fa; border:1px solid #dee2e6; border-radius:.375rem; padding:10px 14px; margin-bottom:14px; }
+  .filter-bar { background:#f8f9fa; border:1px solid #dee2e6; border-radius:.375rem; padding:10px 14px; margin-bottom:10px; }
   @media print {
     @page { size:A4 landscape; margin:8mm; }
     .no-print { display:none !important; }
@@ -54,45 +54,78 @@
 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
   <h5 class="fw-bold mb-0">
     <i class="bi bi-exclamation-triangle me-2 text-warning"></i>Contratos Inconsistentes
+    {% if emp_nome %}<span class="text-muted fw-normal fs-6 ms-2">— {{ emp_nome }}</span>{% endif %}
   </h5>
   <div class="d-flex gap-2">
-    <button class="btn btn-sm btn-outline-primary" onclick="window.open('/relatorio/inconsistencias?modo=doc','_blank')">
+    <button class="btn btn-sm btn-outline-primary" onclick="gerarDoc()">
       <i class="bi bi-file-earmark-text me-1"></i>Gerar PDF / Imprimir
     </button>
     <span class="text-muted small align-self-center">Emitido em {{ data_hoje }}</span>
   </div>
 </div>
 
-<!-- Barra de filtros (checkboxes) -->
-<div class="filter-bar no-print d-flex flex-wrap gap-3 align-items-center mb-3">
-  <span class="fw-semibold small me-1">Exibir:</span>
-  <div class="form-check mb-0">
-    <input class="form-check-input" type="checkbox" id="f-rel" checked onchange="toggleSecao('sec-rel',this)">
-    <label class="form-check-label small" for="f-rel">
-      Relatórios Pendentes
-      <span class="badge bg-warning text-dark badge-cnt">{{ rel_pend|length }}</span>
-    </label>
-  </div>
-  <div class="form-check mb-0">
-    <input class="form-check-input" type="checkbox" id="f-docs" checked onchange="toggleSecao('sec-docs',this)">
-    <label class="form-check-label small" for="f-docs">
-      TCE / Plano Assinado Pendente
-      <span class="badge bg-primary badge-cnt">{{ docs_pend|length }}</span>
-    </label>
-  </div>
-  <div class="form-check mb-0">
-    <input class="form-check-input" type="checkbox" id="f-v30" checked onchange="toggleSecao('sec-v30',this)">
-    <label class="form-check-label small" for="f-v30">
-      Vencendo em 30 dias
-      <span class="badge bg-warning text-dark badge-cnt">{{ venc_30|length }}</span>
-    </label>
-  </div>
-  <div class="form-check mb-0">
-    <input class="form-check-input" type="checkbox" id="f-venc" checked onchange="toggleSecao('sec-venc',this)">
-    <label class="form-check-label small" for="f-venc">
-      Vencidos
-      <span class="badge bg-danger badge-cnt">{{ vencidos|length }}</span>
-    </label>
+<!-- Barra de filtros -->
+<div class="filter-bar no-print">
+  <!-- Linha 1: Empresa + Valores -->
+  <form method="GET" action="" class="row g-2 align-items-end mb-2">
+    <div class="col-md-5">
+      <label class="form-label small fw-semibold mb-1">Empresa</label>
+      <select name="empresa_id" id="sel-empresa" class="form-select form-select-sm">
+        <option value="">— Todas as empresas —</option>
+        {% for emp in empresas %}
+        <option value="{{ emp.id }}" {% if emp.id|string == empresa_id %}selected{% endif %}>{{ emp.display }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto d-flex gap-2">
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-funnel me-1"></i>Filtrar
+      </button>
+      {% if empresa_id %}
+      <a href="{{ url_for('relatorio_inconsistencias') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-x me-1"></i>Limpar
+      </a>
+      {% endif %}
+    </div>
+    <div class="col-auto ms-auto d-flex align-items-center">
+      <div class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" id="chk-valores"
+               {% if mostrar_valores %}checked{% endif %} onchange="toggleValores(this)">
+        <label class="form-check-label small fw-semibold" for="chk-valores">Exibir valores financeiros</label>
+      </div>
+    </div>
+  </form>
+  <!-- Linha 2: Seções -->
+  <div class="d-flex flex-wrap gap-3 align-items-center border-top pt-2">
+    <span class="fw-semibold small text-muted me-1">Seções:</span>
+    <div class="form-check mb-0">
+      <input class="form-check-input" type="checkbox" id="f-rel" checked onchange="toggleSecao('sec-rel',this)">
+      <label class="form-check-label small" for="f-rel">
+        Relatórios Pendentes
+        <span class="badge bg-warning text-dark badge-cnt">{{ rel_pend|length }}</span>
+      </label>
+    </div>
+    <div class="form-check mb-0">
+      <input class="form-check-input" type="checkbox" id="f-docs" checked onchange="toggleSecao('sec-docs',this)">
+      <label class="form-check-label small" for="f-docs">
+        TCE / Plano Assinado Pendente
+        <span class="badge bg-primary badge-cnt">{{ docs_pend|length }}</span>
+      </label>
+    </div>
+    <div class="form-check mb-0">
+      <input class="form-check-input" type="checkbox" id="f-v30" checked onchange="toggleSecao('sec-v30',this)">
+      <label class="form-check-label small" for="f-v30">
+        Vencendo em 30 dias
+        <span class="badge bg-warning text-dark badge-cnt">{{ venc_30|length }}</span>
+      </label>
+    </div>
+    <div class="form-check mb-0">
+      <input class="form-check-input" type="checkbox" id="f-venc" checked onchange="toggleSecao('sec-venc',this)">
+      <label class="form-check-label small" for="f-venc">
+        Vencidos
+        <span class="badge bg-danger badge-cnt">{{ vencidos|length }}</span>
+      </label>
+    </div>
   </div>
 </div>
 
@@ -206,7 +239,9 @@
         <th>Curso</th>
         <th>Início</th>
         <th>Vencimento</th>
-        <th style="text-align:right">Bolsa</th>
+        <th class="col-valor" style="text-align:right;{% if not mostrar_valores %}display:none{% endif %}">Bolsa</th>
+        <th class="col-valor" style="text-align:right;{% if not mostrar_valores %}display:none{% endif %}">Aux. Transp.</th>
+        <th class="col-valor" style="text-align:right;{% if not mostrar_valores %}display:none{% endif %}">Taxa</th>
         <th class="no-print">Ação</th>
       </tr>
     </thead>
@@ -218,16 +253,16 @@
         <td>{{ c.ie_sigla }}</td>
         <td>{{ c.curso or '—' }}</td>
         <td>{{ fmt_date(c.data_inicio) }}</td>
-        <td>
-          <span class="chip chip-warn">{{ fmt_date(c.data_efetiva) }}</span>
-        </td>
-        <td style="text-align:right">{{ 'R$ {:,.2f}'.format(c.bolsa).replace(',','X').replace('.',',').replace('X','.') if c.bolsa else '—' }}</td>
+        <td><span class="chip chip-warn">{{ fmt_date(c.data_efetiva) }}</span></td>
+        <td class="col-valor" style="text-align:right;{% if not mostrar_valores %}display:none{% endif %}">{{ br_currency(c.bolsa) if c.bolsa else '—' }}</td>
+        <td class="col-valor" style="text-align:right;{% if not mostrar_valores %}display:none{% endif %}">{{ br_currency(c.aux_transporte) if c.aux_transporte else '—' }}</td>
+        <td class="col-valor" style="text-align:right;{% if not mostrar_valores %}display:none{% endif %}">{{ br_currency(c.taxa) if c.taxa else '—' }}</td>
         <td class="no-print">
           <a href="{{ url_for('contrato_editar', id=c.id) }}" class="btn btn-xs btn-outline-warning" style="font-size:.65rem;padding:1px 7px">Abrir</a>
         </td>
       </tr>
       {% else %}
-      <tr class="empty-row"><td colspan="8">Nenhum contrato vencendo nos próximos 30 dias.</td></tr>
+      <tr class="empty-row"><td colspan="10">Nenhum contrato vencendo nos próximos 30 dias.</td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -249,7 +284,9 @@
         <th>Curso</th>
         <th>Início</th>
         <th>Venceu em</th>
-        <th style="text-align:right">Bolsa</th>
+        <th class="col-valor" style="text-align:right;{% if not mostrar_valores %}display:none{% endif %}">Bolsa</th>
+        <th class="col-valor" style="text-align:right;{% if not mostrar_valores %}display:none{% endif %}">Aux. Transp.</th>
+        <th class="col-valor" style="text-align:right;{% if not mostrar_valores %}display:none{% endif %}">Taxa</th>
         <th class="no-print">Ação</th>
       </tr>
     </thead>
@@ -262,13 +299,15 @@
         <td>{{ c.curso or '—' }}</td>
         <td>{{ fmt_date(c.data_inicio) }}</td>
         <td><span class="chip chip-nok">{{ fmt_date(c.data_efetiva) }}</span></td>
-        <td style="text-align:right">{{ 'R$ {:,.2f}'.format(c.bolsa).replace(',','X').replace('.',',').replace('X','.') if c.bolsa else '—' }}</td>
+        <td class="col-valor" style="text-align:right;{% if not mostrar_valores %}display:none{% endif %}">{{ br_currency(c.bolsa) if c.bolsa else '—' }}</td>
+        <td class="col-valor" style="text-align:right;{% if not mostrar_valores %}display:none{% endif %}">{{ br_currency(c.aux_transporte) if c.aux_transporte else '—' }}</td>
+        <td class="col-valor" style="text-align:right;{% if not mostrar_valores %}display:none{% endif %}">{{ br_currency(c.taxa) if c.taxa else '—' }}</td>
         <td class="no-print">
           <a href="{{ url_for('contrato_editar', id=c.id) }}" class="btn btn-xs btn-outline-danger" style="font-size:.65rem;padding:1px 7px">Abrir</a>
         </td>
       </tr>
       {% else %}
-      <tr class="empty-row"><td colspan="8">Nenhum contrato vencido sem encerramento.</td></tr>
+      <tr class="empty-row"><td colspan="10">Nenhum contrato vencido sem encerramento.</td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -276,7 +315,22 @@
 
 <script>
 function toggleSecao(id, cb) {
-  document.getElementById(id).style.display = cb.checked ? '' : 'none';
+  document.getElementById(id).style.display = cb.checked ? 'block' : 'none';
+}
+
+function toggleValores(cb) {
+  document.querySelectorAll('.col-valor').forEach(function(el) {
+    el.style.display = cb.checked ? '' : 'none';
+  });
+}
+
+function gerarDoc() {
+  let url = '/relatorio/inconsistencias?modo=doc';
+  const emp = document.getElementById('sel-empresa');
+  if (emp && emp.value) url += '&empresa_id=' + encodeURIComponent(emp.value);
+  const chk = document.getElementById('chk-valores');
+  url += '&mostrar_valores=' + (chk && chk.checked ? 'sim' : 'nao');
+  window.open(url, '_blank');
 }
 </script>
 {% endblock %}

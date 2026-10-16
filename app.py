@@ -2581,6 +2581,26 @@ def relatorio_inconsistencias():
     hoje = date.today()
     d30  = hoje + timedelta(days=30)
 
+    empresa_id      = request.args.get('empresa_id', '').strip()
+    mostrar_valores = request.args.get('mostrar_valores', 'nao') == 'sim'
+    modo            = request.args.get('modo', 'tela')
+
+    # Lista de empresas com contratos ativos para o filtro
+    empresas = _q("""
+        SELECT DISTINCT emp.id, COALESCE(emp.nome_fantasia, emp.nome) AS display
+        FROM empresa emp
+        JOIN contrato c ON c.empresa_id = emp.id
+        WHERE c.data_encerramento IS NULL
+        ORDER BY 2
+    """) or []
+
+    emp_nome = ''
+    if empresa_id:
+        r = _q("SELECT COALESCE(nome_fantasia, nome) AS display FROM empresa WHERE id = %s",
+               (int(empresa_id),))
+        if r:
+            emp_nome = r[0]['display']
+
     cte = """
         WITH ef AS (
             SELECT c.id,
@@ -2594,9 +2614,11 @@ def relatorio_inconsistencias():
             FROM contrato c
         )
     """
-    base_cols = """
+    empresa_filter = 'AND c.empresa_id = %s' if empresa_id else ''
+    base_cols = f"""
         SELECT c.id, c.data_inicio, c.data_fim, c.data_encerramento, c.created_at,
-               c.tce_assinado, c.plano_assinado, c.bolsa, c.taxa, c.curso, c.area_atuacao,
+               c.tce_assinado, c.plano_assinado, c.bolsa, c.aux_transporte, c.taxa,
+               c.curso, c.area_atuacao,
                e.nome  est_nome,
                COALESCE(emp.nome_fantasia, emp.nome) emp_display,
                ie.sigla ie_sigla,
@@ -2609,7 +2631,13 @@ def relatorio_inconsistencias():
         JOIN ie            ON ie.id  = c.ie_id
         JOIN ef            ON ef.id  = c.id
         WHERE c.data_encerramento IS NULL
+        {empresa_filter}
     """
+
+    # Monta tupla de params: empresa_id no início (se filtrado) + params específicos da query
+    def ep(*args):
+        base = [int(empresa_id)] if empresa_id else []
+        return tuple(base + list(args))
 
     # ── 1. Relatórios semestrais pendentes ──
     rel_pend = _q(cte + base_cols + """
@@ -2620,35 +2648,38 @@ def relatorio_inconsistencias():
                 NULLIF(c.data_inicio,'')::date
             )) >= 180, FALSE)
         ORDER BY c.data_inicio
-    """) or []
+    """, ep()) or []
 
     # ── 2. TCE ou Plano de Atividades não confirmados assinados ──
     docs_pend = _q(cte + base_cols + """
         AND ef.data_efetiva >= %s
         AND (COALESCE(c.tce_assinado, FALSE) = FALSE OR COALESCE(c.plano_assinado, FALSE) = FALSE)
         ORDER BY c.created_at DESC
-    """, (hoje.isoformat(),)) or []
+    """, ep(hoje.isoformat())) or []
 
     # ── 3. Vencendo nos próximos 30 dias ──
     venc_30 = _q(cte + base_cols + """
         AND ef.data_efetiva >= %s AND ef.data_efetiva <= %s
         ORDER BY ef.data_efetiva
-    """, (hoje.isoformat(), d30.isoformat())) or []
+    """, ep(hoje.isoformat(), d30.isoformat())) or []
 
     # ── 4. Vencidos (sem encerramento registrado) ──
     vencidos = _q(cte + base_cols + """
         AND ef.data_efetiva < %s
         ORDER BY ef.data_efetiva DESC
-    """, (hoje.isoformat(),)) or []
+    """, ep(hoje.isoformat())) or []
 
-    modo = request.args.get('modo', 'tela')  # 'tela' ou 'doc'
-    tpl  = 'docs/relatorio_inconsistencias.html' if modo == 'doc' else 'relatorio/inconsistencias.html'
+    tpl = 'docs/relatorio_inconsistencias.html' if modo == 'doc' else 'relatorio/inconsistencias.html'
 
     return render_template(tpl,
                            rel_pend=rel_pend,
                            docs_pend=docs_pend,
                            venc_30=venc_30,
                            vencidos=vencidos,
+                           empresas=empresas,
+                           empresa_id=empresa_id,
+                           emp_nome=emp_nome,
+                           mostrar_valores=mostrar_valores,
                            fmt_date=fmt_date,
                            br_currency=br_currency,
                            agente=AGENTE,

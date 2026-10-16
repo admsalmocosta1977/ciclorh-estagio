@@ -19,6 +19,9 @@
   .titulo-bloco h1 { font-size:10pt; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#1a2845; }
   .titulo-bloco .meta { font-size:6.5pt; color:#777; text-align:right; }
 
+  .filtro-tag { display:inline-block; background:#e8f0fe; color:#1a2845; border:1px solid #c5d3f5;
+                border-radius:3px; padding:1px 6px; font-size:6.5pt; font-weight:600; margin-left:6px; }
+
   /* Seções */
   .grupo { margin-bottom:12px; page-break-inside:avoid; }
   .grupo-header { padding:3px 7px; display:flex; justify-content:space-between; align-items:center; }
@@ -73,7 +76,11 @@ function salvarPDF(btn) {
 <body>
 
 <div class="no-print" style="background:#1a2845;color:#fff;padding:8px 18px;display:flex;justify-content:space-between;align-items:center">
-  <span style="font-size:8.5pt;font-weight:600">Relatório de Contratos Inconsistentes</span>
+  <span style="font-size:8.5pt;font-weight:600">
+    Relatório de Contratos Inconsistentes
+    {% if emp_nome %}<span style="font-size:7pt;color:#c8d6e8;margin-left:8px">— {{ emp_nome }}</span>{% endif %}
+    {% if mostrar_valores %}<span style="font-size:7pt;color:#c8d6e8;margin-left:6px">· com valores</span>{% endif %}
+  </span>
   <div>
     <button onclick="salvarPDF(this)" style="background:#fff;color:#1a2845;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;font-weight:700;margin-right:6px;font-size:8pt">Salvar PDF</button>
     <button onclick="window.print()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);padding:5px 14px;border-radius:4px;cursor:pointer;font-weight:700;font-size:8pt">Imprimir</button>
@@ -93,8 +100,14 @@ function salvarPDF(btn) {
   <div class="stripe"></div>
 
   <div class="titulo-bloco">
-    <h1>Relatório de Contratos Inconsistentes</h1>
-    <div class="meta">Emitido em: {{ data_hoje }}</div>
+    <h1>
+      Relatório de Contratos Inconsistentes
+      {% if emp_nome %}<span class="filtro-tag">{{ emp_nome }}</span>{% endif %}
+    </h1>
+    <div class="meta">
+      Emitido em: {{ data_hoje }}<br>
+      {% if mostrar_valores %}Com valores financeiros{% else %}Sem valores financeiros{% endif %}
+    </div>
   </div>
 
   <!-- 1. Relatórios Semestrais Pendentes -->
@@ -177,13 +190,17 @@ function salvarPDF(btn) {
     </div>
     <table>
       <thead><tr>
-        <th style="width:26%">Estagiário</th>
-        <th style="width:26%">Empresa</th>
-        <th style="width:8%">IE</th>
-        <th style="width:16%">Curso</th>
-        <th style="width:10%">Início</th>
-        <th style="width:10%">Vencimento</th>
-        <th style="width:8%;text-align:right">Bolsa</th>
+        <th style="width:{% if mostrar_valores %}22{% else %}28{% endif %}%">Estagiário</th>
+        <th style="width:{% if mostrar_valores %}20{% else %}26{% endif %}%">Empresa</th>
+        <th style="width:7%">IE</th>
+        <th style="width:{% if mostrar_valores %}13{% else %}17{% endif %}%">Curso</th>
+        <th style="width:9%">Início</th>
+        <th style="width:9%">Vencimento</th>
+        {% if mostrar_valores %}
+        <th style="width:7%;text-align:right">Bolsa</th>
+        <th style="width:7%;text-align:right">Aux.Transp.</th>
+        <th style="width:6%;text-align:right">Taxa</th>
+        {% endif %}
       </tr></thead>
       <tbody>
         {% for c in venc_30 %}
@@ -194,10 +211,14 @@ function salvarPDF(btn) {
           <td>{{ c.curso or '—' }}</td>
           <td>{{ fmt_date(c.data_inicio) }}</td>
           <td><span class="chip chip-warn">{{ fmt_date(c.data_efetiva) }}</span></td>
+          {% if mostrar_valores %}
           <td style="text-align:right">{{ br_currency(c.bolsa) if c.bolsa else '—' }}</td>
+          <td style="text-align:right">{{ br_currency(c.aux_transporte) if c.aux_transporte else '—' }}</td>
+          <td style="text-align:right">{{ br_currency(c.taxa) if c.taxa else '—' }}</td>
+          {% endif %}
         </tr>
         {% else %}
-        <tr class="empty-row"><td colspan="7">Nenhum vencendo em 30 dias.</td></tr>
+        <tr class="empty-row"><td colspan="{{ 9 if mostrar_valores else 6 }}">Nenhum vencendo em 30 dias.</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -211,13 +232,17 @@ function salvarPDF(btn) {
     </div>
     <table>
       <thead><tr>
-        <th style="width:26%">Estagiário</th>
-        <th style="width:26%">Empresa</th>
-        <th style="width:8%">IE</th>
-        <th style="width:16%">Curso</th>
-        <th style="width:10%">Início</th>
-        <th style="width:10%">Venceu em</th>
-        <th style="width:8%;text-align:right">Bolsa</th>
+        <th style="width:{% if mostrar_valores %}22{% else %}28{% endif %}%">Estagiário</th>
+        <th style="width:{% if mostrar_valores %}20{% else %}26{% endif %}%">Empresa</th>
+        <th style="width:7%">IE</th>
+        <th style="width:{% if mostrar_valores %}13{% else %}17{% endif %}%">Curso</th>
+        <th style="width:9%">Início</th>
+        <th style="width:9%">Venceu em</th>
+        {% if mostrar_valores %}
+        <th style="width:7%;text-align:right">Bolsa</th>
+        <th style="width:7%;text-align:right">Aux.Transp.</th>
+        <th style="width:6%;text-align:right">Taxa</th>
+        {% endif %}
       </tr></thead>
       <tbody>
         {% for c in vencidos %}
@@ -228,10 +253,14 @@ function salvarPDF(btn) {
           <td>{{ c.curso or '—' }}</td>
           <td>{{ fmt_date(c.data_inicio) }}</td>
           <td><span class="chip chip-nok">{{ fmt_date(c.data_efetiva) }}</span></td>
+          {% if mostrar_valores %}
           <td style="text-align:right">{{ br_currency(c.bolsa) if c.bolsa else '—' }}</td>
+          <td style="text-align:right">{{ br_currency(c.aux_transporte) if c.aux_transporte else '—' }}</td>
+          <td style="text-align:right">{{ br_currency(c.taxa) if c.taxa else '—' }}</td>
+          {% endif %}
         </tr>
         {% else %}
-        <tr class="empty-row"><td colspan="7">Nenhum contrato vencido.</td></tr>
+        <tr class="empty-row"><td colspan="{{ 9 if mostrar_valores else 6 }}">Nenhum contrato vencido.</td></tr>
         {% endfor %}
       </tbody>
     </table>
