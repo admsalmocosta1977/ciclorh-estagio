@@ -2641,12 +2641,17 @@ def relatorio_inconsistencias():
         ORDER BY ef.data_efetiva DESC
     """, (hoje.isoformat(),)) or []
 
-    return render_template('relatorio/inconsistencias.html',
+    modo = request.args.get('modo', 'tela')  # 'tela' ou 'doc'
+    tpl  = 'docs/relatorio_inconsistencias.html' if modo == 'doc' else 'relatorio/inconsistencias.html'
+
+    return render_template(tpl,
                            rel_pend=rel_pend,
                            docs_pend=docs_pend,
                            venc_30=venc_30,
                            vencidos=vencidos,
                            fmt_date=fmt_date,
+                           br_currency=br_currency,
+                           agente=AGENTE,
                            data_hoje=fmt_date(hoje),
                            hoje=hoje.isoformat())
 

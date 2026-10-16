@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Contratos Inconsistentes — Ciclo RH</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 7.5pt; color: #111; background: #fff; }
+  .page { width:210mm; min-height:297mm; margin:0 auto; padding:13mm 16mm 12mm; }
+
+  .cabecalho { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+  .cabecalho img { height:40px; object-fit:contain; }
+  .cab-nome { font-size:9.5pt; font-weight:700; color:#1a2845; display:block; }
+  .cab-sub  { font-size:7pt; color:#555; display:block; }
+  .cab-det  { font-size:6.5pt; color:#777; display:block; margin-top:1px; }
+  .stripe   { height:3px; background:linear-gradient(90deg,#1a2845 70%,#4a7ab5); margin:6px 0 8px; border-radius:1px; }
+
+  .titulo-bloco { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px; }
+  .titulo-bloco h1 { font-size:10pt; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#1a2845; }
+  .titulo-bloco .meta { font-size:6.5pt; color:#777; text-align:right; }
+
+  /* Seções */
+  .grupo { margin-bottom:12px; page-break-inside:avoid; }
+  .grupo-header { padding:3px 7px; display:flex; justify-content:space-between; align-items:center; }
+  .grupo-header .sec-titulo { font-size:7.5pt; font-weight:700; letter-spacing:.02em; }
+  .grupo-header .sec-cnt   { font-size:6.5pt; }
+  .header-rel   { background:#664d03; color:#fff; }
+  .header-docs  { background:#084298; color:#fff; }
+  .header-v30   { background:#856404; color:#fff; }
+  .header-venc  { background:#842029; color:#fff; }
+
+  /* Tabelas */
+  table { width:100%; border-collapse:collapse; }
+  thead tr { background:#e9ecef; }
+  thead th { font-size:6pt; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+             color:#444; padding:2px 5px; border-bottom:1px solid #ccc; white-space:nowrap; }
+  tbody td { font-size:7pt; padding:2px 5px; border-bottom:1px solid #ebebeb; vertical-align:middle; }
+  tbody tr:last-child td { border-bottom:none; }
+  tbody tr:nth-child(even) td { background:#f8fafc; }
+  .empty-row td { color:#aaa; font-style:italic; text-align:center; padding:6px; }
+
+  .chip { display:inline-block; padding:1px 5px; border-radius:10px; font-size:6pt; font-weight:700; }
+  .chip-ok   { background:#d1fae5; color:#065f46; }
+  .chip-nok  { background:#fee2e2; color:#991b1b; }
+  .chip-warn { background:#fef3c7; color:#78350f; }
+
+  .rodape { margin-top:16px; border-top:1px solid #ddd; padding-top:5px;
+            font-size:6pt; color:#888; display:flex; justify-content:space-between; }
+
+  @media print {
+    @page { size: A4 portrait; margin: 0; }
+    .no-print { display:none !important; }
+    .page { padding:13mm 16mm 12mm; }
+    .grupo { page-break-inside:avoid; }
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+function salvarPDF(btn) {
+  var orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = 'Gerando…';
+  html2pdf().set({
+    margin: 0, filename: 'Contratos-Inconsistentes.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: 'avoid-all' }
+  }).from(document.querySelector('.page')).save().finally(function(){
+    btn.disabled = false; btn.innerHTML = orig;
+  });
+}
+</script>
+</head>
+<body>
+
+<div class="no-print" style="background:#1a2845;color:#fff;padding:8px 18px;display:flex;justify-content:space-between;align-items:center">
+  <span style="font-size:8.5pt;font-weight:600">Relatório de Contratos Inconsistentes</span>
+  <div>
+    <button onclick="salvarPDF(this)" style="background:#fff;color:#1a2845;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;font-weight:700;margin-right:6px;font-size:8pt">Salvar PDF</button>
+    <button onclick="window.print()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);padding:5px 14px;border-radius:4px;cursor:pointer;font-weight:700;font-size:8pt">Imprimir</button>
+    <button onclick="window.close()" style="background:transparent;color:#aaa;border:none;padding:5px 12px;cursor:pointer;font-size:9pt">✕</button>
+  </div>
+</div>
+
+<div class="page">
+  <div class="cabecalho">
+    <img src="/static/Logo_CicloRH.png" alt="Ciclo RH">
+    <div>
+      <span class="cab-nome">{{ agente.nome }}</span>
+      <span class="cab-sub">Agente de Integração de Estágio — Lei Federal n.º 11.788/2008</span>
+      <span class="cab-det">CNPJ: {{ agente.cnpj }} &nbsp;|&nbsp; {{ agente.email }}</span>
+    </div>
+  </div>
+  <div class="stripe"></div>
+
+  <div class="titulo-bloco">
+    <h1>Relatório de Contratos Inconsistentes</h1>
+    <div class="meta">Emitido em: {{ data_hoje }}</div>
+  </div>
+
+  <!-- 1. Relatórios Semestrais Pendentes -->
+  <div class="grupo">
+    <div class="grupo-header header-rel">
+      <span class="sec-titulo">Relatórios Semestrais Pendentes</span>
+      <span class="sec-cnt">{{ rel_pend|length }} contrato(s)</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:26%">Estagiário</th>
+        <th style="width:26%">Empresa</th>
+        <th style="width:8%">IE</th>
+        <th style="width:16%">Curso</th>
+        <th style="width:10%">Início</th>
+        <th style="width:10%">Último Rel.</th>
+        <th style="width:10%">Vencimento</th>
+      </tr></thead>
+      <tbody>
+        {% for c in rel_pend %}
+        <tr>
+          <td>{{ c.est_nome }}</td>
+          <td>{{ c.emp_display }}</td>
+          <td>{{ c.ie_sigla }}</td>
+          <td>{{ c.curso or '—' }}</td>
+          <td>{{ fmt_date(c.data_inicio) }}</td>
+          <td>{{ fmt_date(c.ult_rel_fim) if c.ult_rel_fim else '—' }}</td>
+          <td>{{ fmt_date(c.data_efetiva) }}</td>
+        </tr>
+        {% else %}
+        <tr class="empty-row"><td colspan="7">Nenhum pendente.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 2. TCE / Plano Assinado Pendente -->
+  <div class="grupo">
+    <div class="grupo-header header-docs">
+      <span class="sec-titulo">TCE / Plano de Atividades — Retorno Assinado Pendente</span>
+      <span class="sec-cnt">{{ docs_pend|length }} contrato(s)</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:26%">Estagiário</th>
+        <th style="width:26%">Empresa</th>
+        <th style="width:8%">IE</th>
+        <th style="width:12%">Início</th>
+        <th style="width:10%;text-align:center">TCE</th>
+        <th style="width:10%;text-align:center">Plano</th>
+        <th style="width:10%">Vencimento</th>
+      </tr></thead>
+      <tbody>
+        {% for c in docs_pend %}
+        <tr>
+          <td>{{ c.est_nome }}</td>
+          <td>{{ c.emp_display }}</td>
+          <td>{{ c.ie_sigla }}</td>
+          <td>{{ fmt_date(c.data_inicio) }}</td>
+          <td style="text-align:center">
+            {% if c.tce_assinado %}<span class="chip chip-ok">Sim</span>{% else %}<span class="chip chip-nok">Pendente</span>{% endif %}
+          </td>
+          <td style="text-align:center">
+            {% if c.plano_assinado %}<span class="chip chip-ok">Sim</span>{% else %}<span class="chip chip-nok">Pendente</span>{% endif %}
+          </td>
+          <td>{{ fmt_date(c.data_efetiva) }}</td>
+        </tr>
+        {% else %}
+        <tr class="empty-row"><td colspan="7">Nenhum pendente.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 3. Vencendo em 30 dias -->
+  <div class="grupo">
+    <div class="grupo-header header-v30">
+      <span class="sec-titulo">Vencendo nos Próximos 30 Dias</span>
+      <span class="sec-cnt">{{ venc_30|length }} contrato(s)</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:26%">Estagiário</th>
+        <th style="width:26%">Empresa</th>
+        <th style="width:8%">IE</th>
+        <th style="width:16%">Curso</th>
+        <th style="width:10%">Início</th>
+        <th style="width:10%">Vencimento</th>
+        <th style="width:8%;text-align:right">Bolsa</th>
+      </tr></thead>
+      <tbody>
+        {% for c in venc_30 %}
+        <tr>
+          <td>{{ c.est_nome }}</td>
+          <td>{{ c.emp_display }}</td>
+          <td>{{ c.ie_sigla }}</td>
+          <td>{{ c.curso or '—' }}</td>
+          <td>{{ fmt_date(c.data_inicio) }}</td>
+          <td><span class="chip chip-warn">{{ fmt_date(c.data_efetiva) }}</span></td>
+          <td style="text-align:right">{{ br_currency(c.bolsa) if c.bolsa else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr class="empty-row"><td colspan="7">Nenhum vencendo em 30 dias.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 4. Vencidos -->
+  <div class="grupo">
+    <div class="grupo-header header-venc">
+      <span class="sec-titulo">Contratos Vencidos sem Encerramento</span>
+      <span class="sec-cnt">{{ vencidos|length }} contrato(s)</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th style="width:26%">Estagiário</th>
+        <th style="width:26%">Empresa</th>
+        <th style="width:8%">IE</th>
+        <th style="width:16%">Curso</th>
+        <th style="width:10%">Início</th>
+        <th style="width:10%">Venceu em</th>
+        <th style="width:8%;text-align:right">Bolsa</th>
+      </tr></thead>
+      <tbody>
+        {% for c in vencidos %}
+        <tr>
+          <td>{{ c.est_nome }}</td>
+          <td>{{ c.emp_display }}</td>
+          <td>{{ c.ie_sigla }}</td>
+          <td>{{ c.curso or '—' }}</td>
+          <td>{{ fmt_date(c.data_inicio) }}</td>
+          <td><span class="chip chip-nok">{{ fmt_date(c.data_efetiva) }}</span></td>
+          <td style="text-align:right">{{ br_currency(c.bolsa) if c.bolsa else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr class="empty-row"><td colspan="7">Nenhum contrato vencido.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="rodape">
+    <span>{{ agente.nome }} — CNPJ {{ agente.cnpj }} — {{ agente.endereco }}, {{ agente.cidade }}</span>
+    <span>Documento gerado em {{ data_hoje }} — Uso interno</span>
+  </div>
+</div>
+</body>
+</html>
