@@ -2700,57 +2700,67 @@ def relatorio_por_empresa_lista():
 @app.route('/relatorio/por-empresa/doc')
 @login_required
 def relatorio_por_empresa_doc():
-    ids_raw = request.args.get('empresas', '')
+    ids_raw        = request.args.get('empresas', '')
+    mostrar_valores = request.args.get('valores', 'sim') == 'sim'
+
     if not ids_raw:
         flash('Selecione ao menos uma empresa.', 'warning')
         return redirect(url_for('relatorio_por_empresa'))
 
-    try:
-        ids = [int(i) for i in ids_raw.split(',') if i.strip().isdigit()]
-    except ValueError:
-        ids = []
+    ids = [int(i) for i in ids_raw.split(',') if i.strip().isdigit()]
     if not ids:
         flash('Parâmetro inválido.', 'danger')
         return redirect(url_for('relatorio_por_empresa'))
 
     placeholders = ','.join(['%s'] * len(ids))
     contratos = _q(f"""
-        SELECT c.*, e.nome est_nome, e.cpf est_cpf, e.telefone est_telefone,
+        SELECT c.id, c.data_inicio, c.data_fim, c.data_encerramento,
+               c.bolsa, c.taxa, c.aux_transporte, c.curso, c.area_atuacao,
+               e.nome est_nome, e.cpf est_cpf,
                e.tipo_ensino est_tipo_ensino, e.semestre est_semestre,
                COALESCE(emp.nome_fantasia, emp.nome) emp_display, emp.nome emp_nome,
                emp.ramo emp_ramo, emp.cidade emp_cidade, emp.estado emp_estado,
                ie.nome ie_nome, ie.sigla ie_sigla
         FROM contrato c
-        JOIN estagiario e ON e.id = c.estagiario_id
-        JOIN empresa emp ON emp.id = c.empresa_id
-        JOIN ie ON ie.id = c.ie_id
+        JOIN estagiario e  ON e.id  = c.estagiario_id
+        JOIN empresa   emp ON emp.id = c.empresa_id
+        JOIN ie            ON ie.id  = c.ie_id
         WHERE c.empresa_id IN ({placeholders})
           AND c.data_encerramento IS NULL
         ORDER BY emp.nome, e.nome
-    """, ids)
+    """, ids) or []
 
     grupos = {}
-    for c in (contratos or []):
+    for c in contratos:
         k = c['emp_nome']
         if k not in grupos:
             grupos[k] = {
                 'display': c['emp_display'],
-                'ramo': c['emp_ramo'] or '—',
-                'cidade': c['emp_cidade'] or '',
-                'estado': c['emp_estado'] or '',
-                'itens': []
+                'ramo':    c['emp_ramo'] or '—',
+                'cidade':  c['emp_cidade'] or '',
+                'estado':  c['emp_estado'] or '',
+                'itens':   [],
+                'sub_bolsa': 0.0,
+                'sub_aux':   0.0,
+                'sub_taxa':  0.0,
             }
         grupos[k]['itens'].append(c)
+        grupos[k]['sub_bolsa'] += float(c['bolsa']         or 0)
+        grupos[k]['sub_aux']   += float(c['aux_transporte'] or 0)
+        grupos[k]['sub_taxa']  += float(c['taxa']           or 0)
 
-    total_geral = sum(len(g['itens']) for g in grupos.values())
-    total_bolsa = sum(c['bolsa'] or 0 for c in (contratos or []))
-    total_taxa  = sum(c['taxa'] or 0 for c in (contratos or []))
+    total_geral = len(contratos)
+    total_bolsa = sum(g['sub_bolsa'] for g in grupos.values())
+    total_aux   = sum(g['sub_aux']   for g in grupos.values())
+    total_taxa  = sum(g['sub_taxa']  for g in grupos.values())
 
     return render_template('docs/relatorio_por_empresa.html',
                            grupos=grupos,
                            total_geral=total_geral,
                            total_bolsa=total_bolsa,
+                           total_aux=total_aux,
                            total_taxa=total_taxa,
+                           mostrar_valores=mostrar_valores,
                            agente=AGENTE,
                            fmt_date=fmt_date,
                            br_currency=br_currency,
