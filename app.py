@@ -2658,14 +2658,16 @@ def relatorio_por_empresa():
     ramo    = request.args.get('ramo', '').strip()
     cidade  = request.args.get('cidade', '').strip()
     estado  = request.args.get('estado', '').strip()
+    ie_id   = request.args.get('ie_id', '').strip()
 
     ramos   = _q("SELECT DISTINCT ramo FROM empresa WHERE ramo IS NOT NULL AND ramo <> '' ORDER BY ramo")
     cidades = _q("SELECT DISTINCT cidade FROM empresa WHERE cidade IS NOT NULL AND cidade <> '' ORDER BY cidade")
     estados = _q("SELECT DISTINCT estado FROM empresa WHERE estado IS NOT NULL AND estado <> '' ORDER BY estado")
+    ies     = _q("SELECT id, nome, sigla FROM ie ORDER BY nome")
 
     return render_template('relatorio/por_empresa.html',
-                           ramo=ramo, cidade=cidade, estado=estado,
-                           ramos=ramos, cidades=cidades, estados=estados)
+                           ramo=ramo, cidade=cidade, estado=estado, ie_id=ie_id,
+                           ramos=ramos, cidades=cidades, estados=estados, ies=ies)
 
 
 @app.route('/relatorio/por-empresa/empresas')
@@ -2674,16 +2676,29 @@ def relatorio_por_empresa_lista():
     ramo   = request.args.get('ramo', '').strip()
     cidade = request.args.get('cidade', '').strip()
     estado = request.args.get('estado', '').strip()
+    ie_id  = request.args.get('ie_id', '').strip()
 
-    sql = """
-        SELECT emp.id, COALESCE(emp.nome_fantasia, emp.nome) AS display,
-               emp.nome, emp.ramo, emp.cidade, emp.estado,
-               COUNT(c.id) AS total_ativos
-        FROM empresa emp
-        LEFT JOIN contrato c ON c.empresa_id = emp.id AND c.data_encerramento IS NULL
-        WHERE emp.status = 'ativo'
-    """
-    params = []
+    if ie_id:
+        sql = """
+            SELECT emp.id, COALESCE(emp.nome_fantasia, emp.nome) AS display,
+                   emp.nome, emp.ramo, emp.cidade, emp.estado,
+                   COUNT(c.id) AS total_ativos
+            FROM empresa emp
+            JOIN contrato c ON c.empresa_id = emp.id AND c.data_encerramento IS NULL
+            WHERE emp.status = 'ativo' AND c.ie_id = %s
+        """
+        params = [ie_id]
+    else:
+        sql = """
+            SELECT emp.id, COALESCE(emp.nome_fantasia, emp.nome) AS display,
+                   emp.nome, emp.ramo, emp.cidade, emp.estado,
+                   COUNT(c.id) AS total_ativos
+            FROM empresa emp
+            LEFT JOIN contrato c ON c.empresa_id = emp.id AND c.data_encerramento IS NULL
+            WHERE emp.status = 'ativo'
+        """
+        params = []
+
     if ramo:
         sql += " AND emp.ramo = %s"; params.append(ramo)
     if cidade:
@@ -2700,8 +2715,9 @@ def relatorio_por_empresa_lista():
 @app.route('/relatorio/por-empresa/doc')
 @login_required
 def relatorio_por_empresa_doc():
-    ids_raw        = request.args.get('empresas', '')
+    ids_raw         = request.args.get('empresas', '')
     mostrar_valores = request.args.get('valores', 'sim') == 'sim'
+    ie_id           = request.args.get('ie_id', '').strip()
 
     if not ids_raw:
         flash('Selecione ao menos uma empresa.', 'warning')
@@ -2727,8 +2743,9 @@ def relatorio_por_empresa_doc():
         JOIN ie            ON ie.id  = c.ie_id
         WHERE c.empresa_id IN ({placeholders})
           AND c.data_encerramento IS NULL
+          {('AND c.ie_id = %s' if ie_id else '')}
         ORDER BY emp.nome, e.nome
-    """, ids) or []
+    """, ids + ([ie_id] if ie_id else [])) or []
 
     grupos = {}
     for c in contratos:

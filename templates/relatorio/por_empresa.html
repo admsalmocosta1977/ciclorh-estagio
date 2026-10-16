@@ -13,7 +13,7 @@
   </div>
   <div class="card-body">
     <div class="row g-2">
-      <div class="col-md-4">
+      <div class="col-md-3">
         <label class="form-label small fw-semibold mb-1">Segmento / Ramo de Atividade</label>
         <select id="sel-ramo" class="form-select form-select-sm">
           <option value="">— Todos —</option>
@@ -22,7 +22,7 @@
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <label class="form-label small fw-semibold mb-1">Cidade</label>
         <select id="sel-cidade" class="form-select form-select-sm">
           <option value="">— Todas —</option>
@@ -40,7 +40,18 @@
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-2 d-flex align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold mb-1">Unidade de Ensino (IE)</label>
+        <select id="sel-ie" class="form-select form-select-sm">
+          <option value="">— Todas —</option>
+          {% for ie in ies %}
+          <option value="{{ ie.id }}" {% if ie.id|string == ie_id %}selected{% endif %}>
+            {{ ie.sigla or ie.nome }} — {{ ie.nome }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-1 d-flex align-items-end">
         <button class="btn btn-primary btn-sm w-100" onclick="buscarEmpresas()">
           <i class="bi bi-search me-1"></i>Buscar
         </button>
@@ -89,11 +100,13 @@ async function buscarEmpresas() {
   const ramo   = document.getElementById('sel-ramo').value;
   const cidade = document.getElementById('sel-cidade').value;
   const estado = document.getElementById('sel-estado').value;
+  const ie_id  = document.getElementById('sel-ie').value;
 
   const params = new URLSearchParams();
   if (ramo)   params.set('ramo', ramo);
   if (cidade) params.set('cidade', cidade);
   if (estado) params.set('estado', estado);
+  if (ie_id)  params.set('ie_id', ie_id);
 
   const resp = await fetch('/relatorio/por-empresa/empresas?' + params);
   empresasData = await resp.json();
@@ -154,7 +167,10 @@ function gerarRelatorio() {
   const ids = [...document.querySelectorAll('.cb-emp:checked')].map(cb => cb.value).join(',');
   if (!ids) return;
   const valores = document.getElementById('chk-valores').checked ? 'sim' : 'nao';
-  window.open('/relatorio/por-empresa/doc?empresas=' + ids + '&valores=' + valores, '_blank');
+  const ie_id   = document.getElementById('sel-ie').value;
+  let url = '/relatorio/por-empresa/doc?empresas=' + ids + '&valores=' + valores;
+  if (ie_id) url += '&ie_id=' + ie_id;
+  window.open(url, '_blank');
 }
 </script>
 {% endblock %}
