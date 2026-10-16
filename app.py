@@ -2595,16 +2595,14 @@ def relatorio_inconsistencias():
         )
     """
     base_cols = """
-        SELECT DISTINCT c.id, c.data_inicio, c.data_fim, c.data_encerramento,
+        SELECT c.id, c.data_inicio, c.data_fim, c.data_encerramento, c.created_at,
                c.tce_assinado, c.plano_assinado, c.bolsa, c.taxa, c.curso, c.area_atuacao,
                e.nome  est_nome,
                COALESCE(emp.nome_fantasia, emp.nome) emp_display,
                ie.sigla ie_sigla,
                ef.data_efetiva,
-               COALESCE(
-                   (SELECT MAX(NULLIF(rp.data_fim,'')::date) FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
-                   NULL
-               ) AS ult_rel_fim
+               (SELECT MAX(NULLIF(rp.data_fim,'')::date)
+                FROM relatorio_periodo rp WHERE rp.contrato_id = c.id) AS ult_rel_fim
         FROM contrato c
         JOIN estagiario e  ON e.id  = c.estagiario_id
         JOIN empresa   emp ON emp.id = c.empresa_id
@@ -2617,7 +2615,8 @@ def relatorio_inconsistencias():
     rel_pend = _q(cte + base_cols + """
         AND COALESCE(
             (CURRENT_DATE - COALESCE(
-                (SELECT MAX(NULLIF(rp.data_fim,'')::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
+                (SELECT MAX(NULLIF(rp.data_fim,'')::date) + 1
+                 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
                 NULLIF(c.data_inicio,'')::date
             )) >= 180, FALSE)
         ORDER BY c.data_inicio
