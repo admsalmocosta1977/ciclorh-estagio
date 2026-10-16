@@ -29,6 +29,11 @@
   .chip-nok  { background:#fee2e2; color:#991b1b; }
   .chip-warn { background:#fef3c7; color:#92400e; }
   .filter-bar { background:#f8f9fa; border:1px solid #dee2e6; border-radius:.375rem; padding:10px 14px; margin-bottom:10px; }
+  /* Dropdown multi-empresa */
+  #emp-panel { min-width:340px; max-height:340px; overflow-y:auto; }
+  .emp-item { padding:2px 0; }
+  .emp-item.d-none { display:none !important; }
+  #btn-emp-toggle { text-align:left; }
   @media print {
     @page { size:A4 landscape; margin:8mm; }
     .no-print { display:none !important; }
@@ -54,7 +59,11 @@
 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
   <h5 class="fw-bold mb-0">
     <i class="bi bi-exclamation-triangle me-2 text-warning"></i>Contratos Inconsistentes
-    {% if emp_nome %}<span class="text-muted fw-normal fs-6 ms-2">— {{ emp_nome }}</span>{% endif %}
+    {% if emp_nomes %}
+      <span class="text-muted fw-normal fs-6 ms-2">
+        — {% if emp_nomes|length == 1 %}{{ emp_nomes[0] }}{% else %}{{ emp_nomes|length }} empresas{% endif %}
+      </span>
+    {% endif %}
   </h5>
   <div class="d-flex gap-2">
     <button class="btn btn-sm btn-outline-primary" onclick="gerarDoc()">
@@ -67,26 +76,51 @@
 <!-- Barra de filtros -->
 <div class="filter-bar no-print">
   <!-- Linha 1: Empresa + Valores -->
-  <form method="GET" action="" class="row g-2 align-items-end mb-2">
+  <form method="GET" action="" id="form-filtro" class="row g-2 align-items-end mb-2">
+    <input type="hidden" name="empresa_ids" id="inp-empresa-ids" value="{{ empresa_ids_raw }}">
+
     <div class="col-md-5">
-      <label class="form-label small fw-semibold mb-1">Empresa</label>
-      <select name="empresa_id" id="sel-empresa" class="form-select form-select-sm">
-        <option value="">— Todas as empresas —</option>
-        {% for emp in empresas %}
-        <option value="{{ emp.id }}" {% if emp.id|string == empresa_id %}selected{% endif %}>{{ emp.display }}</option>
-        {% endfor %}
-      </select>
+      <label class="form-label small fw-semibold mb-1">Empresas</label>
+      <div class="dropdown w-100">
+        <button type="button" id="btn-emp-toggle"
+                class="btn btn-outline-secondary btn-sm w-100 d-flex justify-content-between align-items-center"
+                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+          <span id="emp-label" class="text-truncate me-1">— Todas as empresas —</span>
+          <i class="bi bi-chevron-down flex-shrink-0" style="font-size:.7rem"></i>
+        </button>
+        <div class="dropdown-menu p-2 shadow-sm" id="emp-panel">
+          <input type="text" class="form-control form-control-sm mb-2" id="emp-search"
+                 placeholder="Buscar empresa..." oninput="filtrarEmpSearch(this.value)">
+          <div class="form-check border-bottom pb-1 mb-1">
+            <input class="form-check-input" type="checkbox" id="chk-emp-all" onchange="toggleTodasEmps(this)">
+            <label class="form-check-label small fw-semibold" for="chk-emp-all">Selecionar todas</label>
+          </div>
+          <div id="emp-list">
+            {% for emp in empresas %}
+            <div class="form-check emp-item mb-0" data-nome="{{ emp.display|lower }}">
+              <input class="form-check-input cb-emp" type="checkbox"
+                     id="chk-emp-{{ emp.id }}" value="{{ emp.id }}"
+                     {% if emp.id|string in empresa_ids_list %}checked{% endif %}
+                     onchange="atualizarLabelEmps()">
+              <label class="form-check-label small" for="chk-emp-{{ emp.id }}">{{ emp.display }}</label>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
     </div>
+
     <div class="col-auto d-flex gap-2">
-      <button type="submit" class="btn btn-primary btn-sm">
+      <button type="button" class="btn btn-primary btn-sm" onclick="aplicarFiltro()">
         <i class="bi bi-funnel me-1"></i>Filtrar
       </button>
-      {% if empresa_id %}
+      {% if empresa_ids_raw %}
       <a href="{{ url_for('relatorio_inconsistencias') }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-x me-1"></i>Limpar
       </a>
       {% endif %}
     </div>
+
     <div class="col-auto ms-auto d-flex align-items-center">
       <div class="form-check form-switch mb-0">
         <input class="form-check-input" type="checkbox" id="chk-valores"
@@ -95,6 +129,7 @@
       </div>
     </div>
   </form>
+
   <!-- Linha 2: Seções -->
   <div class="d-flex flex-wrap gap-3 align-items-center border-top pt-2">
     <span class="fw-semibold small text-muted me-1">Seções:</span>
@@ -314,6 +349,54 @@
 </div>
 
 <script>
+// ── Dropdown multi-empresa ──
+var empresasIds = {{ empresa_ids_list | tojson }};
+
+function atualizarLabelEmps() {
+  var selecionadas = document.querySelectorAll('.cb-emp:checked');
+  var total = document.querySelectorAll('.cb-emp').length;
+  var lbl = document.getElementById('emp-label');
+  if (selecionadas.length === 0) {
+    lbl.textContent = '— Todas as empresas —';
+  } else if (selecionadas.length === total) {
+    lbl.textContent = 'Todas as empresas (' + total + ')';
+  } else if (selecionadas.length === 1) {
+    lbl.textContent = selecionadas[0].closest('.emp-item').querySelector('label').textContent.trim();
+  } else {
+    lbl.textContent = selecionadas.length + ' empresa(s) selecionada(s)';
+  }
+  // Atualiza "selecionar todas"
+  var all = document.getElementById('chk-emp-all');
+  all.checked = selecionadas.length === total;
+  all.indeterminate = selecionadas.length > 0 && selecionadas.length < total;
+}
+
+function toggleTodasEmps(cb) {
+  var visiveis = document.querySelectorAll('.emp-item:not(.d-none) .cb-emp');
+  visiveis.forEach(function(el) { el.checked = cb.checked; });
+  atualizarLabelEmps();
+}
+
+function filtrarEmpSearch(q) {
+  var termo = q.toLowerCase().trim();
+  document.querySelectorAll('.emp-item').forEach(function(el) {
+    var nome = el.getAttribute('data-nome') || '';
+    el.classList.toggle('d-none', termo !== '' && nome.indexOf(termo) === -1);
+  });
+}
+
+function aplicarFiltro() {
+  var ids = [...document.querySelectorAll('.cb-emp:checked')].map(function(cb){ return cb.value; });
+  document.getElementById('inp-empresa-ids').value = ids.join(',');
+  document.getElementById('form-filtro').submit();
+}
+
+// Restaura label na carga da página
+document.addEventListener('DOMContentLoaded', function() {
+  atualizarLabelEmps();
+});
+
+// ── Toggles ──
 function toggleSecao(id, cb) {
   document.getElementById(id).style.display = cb.checked ? 'block' : 'none';
 }
@@ -325,10 +408,10 @@ function toggleValores(cb) {
 }
 
 function gerarDoc() {
-  let url = '/relatorio/inconsistencias?modo=doc';
-  const emp = document.getElementById('sel-empresa');
-  if (emp && emp.value) url += '&empresa_id=' + encodeURIComponent(emp.value);
-  const chk = document.getElementById('chk-valores');
+  var ids = [...document.querySelectorAll('.cb-emp:checked')].map(function(cb){ return cb.value; }).join(',');
+  var url = '/relatorio/inconsistencias?modo=doc';
+  if (ids) url += '&empresa_ids=' + encodeURIComponent(ids);
+  var chk = document.getElementById('chk-valores');
   url += '&mostrar_valores=' + (chk && chk.checked ? 'sim' : 'nao');
   window.open(url, '_blank');
 }

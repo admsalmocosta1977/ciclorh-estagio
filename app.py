@@ -2581,7 +2581,8 @@ def relatorio_inconsistencias():
     hoje = date.today()
     d30  = hoje + timedelta(days=30)
 
-    empresa_id      = request.args.get('empresa_id', '').strip()
+    empresa_ids_raw = request.args.get('empresa_ids', '').strip()
+    empresa_ids     = [int(x) for x in empresa_ids_raw.split(',') if x.strip().isdigit()]
     mostrar_valores = request.args.get('mostrar_valores', 'nao') == 'sim'
     modo            = request.args.get('modo', 'tela')
 
@@ -2594,12 +2595,12 @@ def relatorio_inconsistencias():
         ORDER BY 2
     """) or []
 
-    emp_nome = ''
-    if empresa_id:
-        r = _q("SELECT COALESCE(nome_fantasia, nome) AS display FROM empresa WHERE id = %s",
-               (int(empresa_id),))
-        if r:
-            emp_nome = r[0]['display']
+    emp_nomes = []
+    if empresa_ids:
+        ph = ','.join(['%s'] * len(empresa_ids))
+        r = _q(f"SELECT COALESCE(nome_fantasia, nome) AS display FROM empresa WHERE id IN ({ph})",
+               tuple(empresa_ids))
+        emp_nomes = [row['display'] for row in (r or [])]
 
     cte = """
         WITH ef AS (
@@ -2614,7 +2615,12 @@ def relatorio_inconsistencias():
             FROM contrato c
         )
     """
-    empresa_filter = 'AND c.empresa_id = %s' if empresa_id else ''
+    if empresa_ids:
+        ph = ','.join(['%s'] * len(empresa_ids))
+        empresa_filter = f'AND c.empresa_id IN ({ph})'
+    else:
+        empresa_filter = ''
+
     base_cols = f"""
         SELECT c.id, c.data_inicio, c.data_fim, c.data_encerramento, c.created_at,
                c.tce_assinado, c.plano_assinado, c.bolsa, c.aux_transporte, c.taxa,
@@ -2634,10 +2640,9 @@ def relatorio_inconsistencias():
         {empresa_filter}
     """
 
-    # Monta tupla de params: empresa_id no início (se filtrado) + params específicos da query
+    # Monta tupla de params: empresa_ids no início (se filtrado) + params específicos da query
     def ep(*args):
-        base = [int(empresa_id)] if empresa_id else []
-        return tuple(base + list(args))
+        return tuple(empresa_ids + list(args))
 
     # ── 1. Relatórios semestrais pendentes ──
     rel_pend = _q(cte + base_cols + """
@@ -2677,8 +2682,9 @@ def relatorio_inconsistencias():
                            venc_30=venc_30,
                            vencidos=vencidos,
                            empresas=empresas,
-                           empresa_id=empresa_id,
-                           emp_nome=emp_nome,
+                           empresa_ids_raw=empresa_ids_raw,
+                           empresa_ids_list=[str(x) for x in empresa_ids],
+                           emp_nomes=emp_nomes,
                            mostrar_valores=mostrar_valores,
                            fmt_date=fmt_date,
                            br_currency=br_currency,
