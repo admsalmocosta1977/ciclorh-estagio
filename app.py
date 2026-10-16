@@ -2574,6 +2574,84 @@ def admin_config():
 
 # ─── RELATÓRIOS ───────────────────────────────────────────────────────────────
 
+@app.route('/relatorio/inconsistencias')
+@login_required
+def relatorio_inconsistencias():
+    from datetime import date, timedelta
+    hoje = date.today()
+    d30  = hoje + timedelta(days=30)
+
+    cte = """
+        WITH ef AS (
+            SELECT c.id,
+                   COALESCE(
+                       c.data_encerramento,
+                       (SELECT a.nova_data_fim FROM aditivo a
+                        WHERE a.contrato_id = c.id AND a.nova_data_fim IS NOT NULL AND a.nova_data_fim <> ''
+                        ORDER BY a.created_at DESC LIMIT 1),
+                       c.data_fim
+                   ) AS data_efetiva
+            FROM contrato c
+        )
+    """
+    base_cols = """
+        SELECT DISTINCT c.id, c.data_inicio, c.data_fim, c.data_encerramento,
+               c.tce_assinado, c.plano_assinado, c.bolsa, c.taxa, c.curso, c.area_atuacao,
+               e.nome  est_nome,
+               COALESCE(emp.nome_fantasia, emp.nome) emp_display,
+               ie.sigla ie_sigla,
+               ef.data_efetiva,
+               COALESCE(
+                   (SELECT MAX(NULLIF(rp.data_fim,'')::date) FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
+                   NULL
+               ) AS ult_rel_fim
+        FROM contrato c
+        JOIN estagiario e  ON e.id  = c.estagiario_id
+        JOIN empresa   emp ON emp.id = c.empresa_id
+        JOIN ie            ON ie.id  = c.ie_id
+        JOIN ef            ON ef.id  = c.id
+        WHERE c.data_encerramento IS NULL
+    """
+
+    # ── 1. Relatórios semestrais pendentes ──
+    rel_pend = _q(cte + base_cols + """
+        AND COALESCE(
+            (CURRENT_DATE - COALESCE(
+                (SELECT MAX(NULLIF(rp.data_fim,'')::date) + 1 FROM relatorio_periodo rp WHERE rp.contrato_id = c.id),
+                NULLIF(c.data_inicio,'')::date
+            )) >= 180, FALSE)
+        ORDER BY c.data_inicio
+    """) or []
+
+    # ── 2. TCE ou Plano de Atividades não confirmados assinados ──
+    docs_pend = _q(cte + base_cols + """
+        AND ef.data_efetiva >= %s
+        AND (COALESCE(c.tce_assinado, FALSE) = FALSE OR COALESCE(c.plano_assinado, FALSE) = FALSE)
+        ORDER BY c.created_at DESC
+    """, (hoje.isoformat(),)) or []
+
+    # ── 3. Vencendo nos próximos 30 dias ──
+    venc_30 = _q(cte + base_cols + """
+        AND ef.data_efetiva >= %s AND ef.data_efetiva <= %s
+        ORDER BY ef.data_efetiva
+    """, (hoje.isoformat(), d30.isoformat())) or []
+
+    # ── 4. Vencidos (sem encerramento registrado) ──
+    vencidos = _q(cte + base_cols + """
+        AND ef.data_efetiva < %s
+        ORDER BY ef.data_efetiva DESC
+    """, (hoje.isoformat(),)) or []
+
+    return render_template('relatorio/inconsistencias.html',
+                           rel_pend=rel_pend,
+                           docs_pend=docs_pend,
+                           venc_30=venc_30,
+                           vencidos=vencidos,
+                           fmt_date=fmt_date,
+                           data_hoje=fmt_date(hoje),
+                           hoje=hoje.isoformat())
+
+
 @app.route('/relatorio/por-empresa')
 @login_required
 def relatorio_por_empresa():

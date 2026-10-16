@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+{% block title %}Contratos Inconsistentes{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='ciclorh_doc.css') }}">
+<style>
+  .badge-cnt { font-size:.65rem; vertical-align:middle; }
+  .inc-table  { font-size:.75rem; }
+  .inc-table thead th {
+    font-size:.65rem; text-transform:uppercase; letter-spacing:.05em;
+    color:#555; font-weight:700; background:#f0f2f5; padding:4px 8px;
+    white-space:nowrap; border-bottom:2px solid #dee2e6;
+  }
+  .inc-table td { padding:4px 8px; vertical-align:middle; border-bottom:1px solid #ebebeb; }
+  .inc-table tr:last-child td { border-bottom:none; }
+  .inc-table tr:nth-child(even) td { background:#f9fafb; }
+  .section-title {
+    font-size:.78rem; font-weight:700; text-transform:uppercase;
+    letter-spacing:.06em; color:#1a2845; display:flex; align-items:center; gap:8px;
+    border-left:3px solid; padding-left:8px; margin-bottom:6px;
+  }
+  .section-rel   { border-color:#fd7e14; }
+  .section-docs  { border-color:#0d6efd; }
+  .section-venc30{ border-color:#ffc107; }
+  .section-vencid{ border-color:#dc3545; }
+  .empty-row td { color:#aaa; font-style:italic; font-size:.7rem; text-align:center; }
+  .chip { display:inline-block; padding:1px 6px; border-radius:20px; font-size:.6rem; font-weight:700; line-height:1.4; }
+  .chip-ok   { background:#d1fae5; color:#065f46; }
+  .chip-nok  { background:#fee2e2; color:#991b1b; }
+  .chip-warn { background:#fef3c7; color:#92400e; }
+  .filter-bar { background:#f8f9fa; border:1px solid #dee2e6; border-radius:.375rem; padding:10px 14px; margin-bottom:14px; }
+  @media print {
+    @page { size:A4 landscape; margin:8mm; }
+    .no-print { display:none !important; }
+    .inc-table { font-size:6pt !important; }
+    .inc-table thead th, .inc-table td { padding:2px 4px !important; font-size:5.5pt !important; }
+    .section-title { font-size:7pt !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Cabeçalho imprimível -->
+<div class="doc-cabecalho mb-2 d-none d-print-flex">
+  <img src="{{ url_for('static', filename='Logo_CicloRH.png') }}" style="height:44px;object-fit:contain" alt="">
+  <div class="doc-cab-info">
+    <span class="doc-cab-nome">Ciclo RH – Sistema de Estágio</span>
+    <span class="doc-cab-sub">Relatório de Contratos Inconsistentes — emitido em {{ data_hoje }}</span>
+  </div>
+</div>
+<div class="doc-stripe d-none d-print-block mb-2"></div>
+
+<!-- Título tela -->
+<div class="d-flex justify-content-between align-items-center mb-3 no-print">
+  <h5 class="fw-bold mb-0">
+    <i class="bi bi-exclamation-triangle me-2 text-warning"></i>Contratos Inconsistentes
+  </h5>
+  <div class="d-flex gap-2">
+    <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+      <i class="bi bi-printer me-1"></i>Imprimir
+    </button>
+    <span class="text-muted small align-self-center">Emitido em {{ data_hoje }}</span>
+  </div>
+</div>
+
+<!-- Barra de filtros (checkboxes) -->
+<div class="filter-bar no-print d-flex flex-wrap gap-3 align-items-center mb-3">
+  <span class="fw-semibold small me-1">Exibir:</span>
+  <div class="form-check mb-0">
+    <input class="form-check-input" type="checkbox" id="f-rel" checked onchange="toggleSecao('sec-rel',this)">
+    <label class="form-check-label small" for="f-rel">
+      Relatórios Pendentes
+      <span class="badge bg-warning text-dark badge-cnt">{{ rel_pend|length }}</span>
+    </label>
+  </div>
+  <div class="form-check mb-0">
+    <input class="form-check-input" type="checkbox" id="f-docs" checked onchange="toggleSecao('sec-docs',this)">
+    <label class="form-check-label small" for="f-docs">
+      TCE / Plano Assinado Pendente
+      <span class="badge bg-primary badge-cnt">{{ docs_pend|length }}</span>
+    </label>
+  </div>
+  <div class="form-check mb-0">
+    <input class="form-check-input" type="checkbox" id="f-v30" checked onchange="toggleSecao('sec-v30',this)">
+    <label class="form-check-label small" for="f-v30">
+      Vencendo em 30 dias
+      <span class="badge bg-warning text-dark badge-cnt">{{ venc_30|length }}</span>
+    </label>
+  </div>
+  <div class="form-check mb-0">
+    <input class="form-check-input" type="checkbox" id="f-venc" checked onchange="toggleSecao('sec-venc',this)">
+    <label class="form-check-label small" for="f-venc">
+      Vencidos
+      <span class="badge bg-danger badge-cnt">{{ vencidos|length }}</span>
+    </label>
+  </div>
+</div>
+
+<!-- ── 1. Relatórios Semestrais Pendentes ── -->
+<div id="sec-rel" class="mb-4">
+  <div class="section-title section-rel">
+    <i class="bi bi-file-earmark-text text-warning"></i>
+    Relatórios Semestrais Pendentes
+    <span class="badge bg-warning text-dark badge-cnt">{{ rel_pend|length }}</span>
+  </div>
+  <table class="table table-hover inc-table mb-0">
+    <thead>
+      <tr>
+        <th>Estagiário</th>
+        <th>Empresa</th>
+        <th>IE</th>
+        <th>Curso</th>
+        <th>Início</th>
+        <th>Último Rel.</th>
+        <th>Vencimento</th>
+        <th class="no-print">Ação</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in rel_pend %}
+      <tr>
+        <td>{{ c.est_nome }}</td>
+        <td>{{ c.emp_display }}</td>
+        <td>{{ c.ie_sigla }}</td>
+        <td>{{ c.curso or '—' }}</td>
+        <td>{{ fmt_date(c.data_inicio) }}</td>
+        <td>{{ fmt_date(c.ult_rel_fim) if c.ult_rel_fim else '<span class="text-muted">Nunca</span>'|safe }}</td>
+        <td>{{ fmt_date(c.data_efetiva) }}</td>
+        <td class="no-print">
+          <a href="{{ url_for('contrato_editar', id=c.id) }}" class="btn btn-xs btn-outline-warning" style="font-size:.65rem;padding:1px 7px">Abrir</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr class="empty-row"><td colspan="8">Nenhum contrato com relatório semestral pendente.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- ── 2. TCE / Plano Assinado Pendente ── -->
+<div id="sec-docs" class="mb-4">
+  <div class="section-title section-docs">
+    <i class="bi bi-file-earmark-check text-primary"></i>
+    TCE / Plano de Atividades — Retorno Assinado Pendente
+    <span class="badge bg-primary badge-cnt">{{ docs_pend|length }}</span>
+  </div>
+  <table class="table table-hover inc-table mb-0">
+    <thead>
+      <tr>
+        <th>Estagiário</th>
+        <th>Empresa</th>
+        <th>IE</th>
+        <th>Início</th>
+        <th style="text-align:center">TCE Assinado</th>
+        <th style="text-align:center">Plano Assinado</th>
+        <th>Vencimento</th>
+        <th class="no-print">Ação</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in docs_pend %}
+      <tr>
+        <td>{{ c.est_nome }}</td>
+        <td>{{ c.emp_display }}</td>
+        <td>{{ c.ie_sigla }}</td>
+        <td>{{ fmt_date(c.data_inicio) }}</td>
+        <td style="text-align:center">
+          {% if c.tce_assinado %}
+            <span class="chip chip-ok"><i class="bi bi-check-lg"></i> Sim</span>
+          {% else %}
+            <span class="chip chip-nok"><i class="bi bi-x-lg"></i> Pendente</span>
+          {% endif %}
+        </td>
+        <td style="text-align:center">
+          {% if c.plano_assinado %}
+            <span class="chip chip-ok"><i class="bi bi-check-lg"></i> Sim</span>
+          {% else %}
+            <span class="chip chip-nok"><i class="bi bi-x-lg"></i> Pendente</span>
+          {% endif %}
+        </td>
+        <td>{{ fmt_date(c.data_efetiva) }}</td>
+        <td class="no-print">
+          <a href="{{ url_for('contrato_editar', id=c.id) }}" class="btn btn-xs btn-outline-primary" style="font-size:.65rem;padding:1px 7px">Abrir</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr class="empty-row"><td colspan="8">Nenhum contrato com TCE/Plano pendente de retorno.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- ── 3. Vencendo em 30 dias ── -->
+<div id="sec-v30" class="mb-4">
+  <div class="section-title section-venc30">
+    <i class="bi bi-clock-history text-warning"></i>
+    Vencendo nos Próximos 30 Dias
+    <span class="badge bg-warning text-dark badge-cnt">{{ venc_30|length }}</span>
+  </div>
+  <table class="table table-hover inc-table mb-0">
+    <thead>
+      <tr>
+        <th>Estagiário</th>
+        <th>Empresa</th>
+        <th>IE</th>
+        <th>Curso</th>
+        <th>Início</th>
+        <th>Vencimento</th>
+        <th style="text-align:right">Bolsa</th>
+        <th class="no-print">Ação</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in venc_30 %}
+      {% set dias = (c.data_efetiva - hoje|string|e) %}
+      <tr>
+        <td>{{ c.est_nome }}</td>
+        <td>{{ c.emp_display }}</td>
+        <td>{{ c.ie_sigla }}</td>
+        <td>{{ c.curso or '—' }}</td>
+        <td>{{ fmt_date(c.data_inicio) }}</td>
+        <td>
+          <span class="chip chip-warn">{{ fmt_date(c.data_efetiva) }}</span>
+        </td>
+        <td style="text-align:right">{{ 'R$ {:,.2f}'.format(c.bolsa).replace(',','X').replace('.',',').replace('X','.') if c.bolsa else '—' }}</td>
+        <td class="no-print">
+          <a href="{{ url_for('contrato_editar', id=c.id) }}" class="btn btn-xs btn-outline-warning" style="font-size:.65rem;padding:1px 7px">Abrir</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr class="empty-row"><td colspan="8">Nenhum contrato vencendo nos próximos 30 dias.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- ── 4. Vencidos ── -->
+<div id="sec-venc" class="mb-4">
+  <div class="section-title section-vencid">
+    <i class="bi bi-exclamation-octagon text-danger"></i>
+    Contratos Vencidos sem Encerramento
+    <span class="badge bg-danger badge-cnt">{{ vencidos|length }}</span>
+  </div>
+  <table class="table table-hover inc-table mb-0">
+    <thead>
+      <tr>
+        <th>Estagiário</th>
+        <th>Empresa</th>
+        <th>IE</th>
+        <th>Curso</th>
+        <th>Início</th>
+        <th>Venceu em</th>
+        <th style="text-align:right">Bolsa</th>
+        <th class="no-print">Ação</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in vencidos %}
+      <tr>
+        <td>{{ c.est_nome }}</td>
+        <td>{{ c.emp_display }}</td>
+        <td>{{ c.ie_sigla }}</td>
+        <td>{{ c.curso or '—' }}</td>
+        <td>{{ fmt_date(c.data_inicio) }}</td>
+        <td><span class="chip chip-nok">{{ fmt_date(c.data_efetiva) }}</span></td>
+        <td style="text-align:right">{{ 'R$ {:,.2f}'.format(c.bolsa).replace(',','X').replace('.',',').replace('X','.') if c.bolsa else '—' }}</td>
+        <td class="no-print">
+          <a href="{{ url_for('contrato_editar', id=c.id) }}" class="btn btn-xs btn-outline-danger" style="font-size:.65rem;padding:1px 7px">Abrir</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr class="empty-row"><td colspan="8">Nenhum contrato vencido sem encerramento.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+function toggleSecao(id, cb) {
+  document.getElementById(id).style.display = cb.checked ? '' : 'none';
+}
+</script>
+{% endblock %}
