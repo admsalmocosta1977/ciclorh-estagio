@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block title %}Relatório por Empresa{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <h4 class="fw-bold mb-0"><i class="bi bi-building me-2"></i>Relatório de Estagiários por Empresa</h4>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+  <div class="card-header fw-semibold py-2">
+    <i class="bi bi-funnel me-1 text-primary"></i> Filtros
+  </div>
+  <div class="card-body">
+    <div class="row g-2">
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold mb-1">Segmento / Ramo de Atividade</label>
+        <select id="sel-ramo" class="form-select form-select-sm">
+          <option value="">— Todos —</option>
+          {% for r in ramos %}
+          <option value="{{ r.ramo }}" {% if r.ramo == ramo %}selected{% endif %}>{{ r.ramo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold mb-1">Cidade</label>
+        <select id="sel-cidade" class="form-select form-select-sm">
+          <option value="">— Todas —</option>
+          {% for c in cidades %}
+          <option value="{{ c.cidade }}" {% if c.cidade == cidade %}selected{% endif %}>{{ c.cidade }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold mb-1">Estado</label>
+        <select id="sel-estado" class="form-select form-select-sm">
+          <option value="">— Todos —</option>
+          {% for e in estados %}
+          <option value="{{ e.estado }}" {% if e.estado == estado %}selected{% endif %}>{{ e.estado }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-flex align-items-end">
+        <button class="btn btn-primary btn-sm w-100" onclick="buscarEmpresas()">
+          <i class="bi bi-search me-1"></i>Buscar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lista de empresas -->
+<div class="card mb-3" id="card-empresas" style="display:none!important">
+  <div class="card-header d-flex justify-content-between align-items-center py-2">
+    <span class="fw-semibold"><i class="bi bi-list-check me-1 text-success"></i>Empresas encontradas</span>
+    <div class="d-flex gap-2 align-items-center">
+      <span id="badge-total" class="badge bg-secondary"></span>
+      <button class="btn btn-outline-secondary btn-sm" onclick="toggleTodas()">
+        <i class="bi bi-check2-all me-1"></i><span id="lbl-toggle">Selecionar todas</span>
+      </button>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div id="lista-empresas" style="max-height:380px;overflow-y:auto"></div>
+  </div>
+  <div class="card-footer d-flex justify-content-between align-items-center py-2">
+    <span class="text-muted small"><span id="qtd-sel">0</span> empresa(s) selecionada(s)</span>
+    <button class="btn btn-success btn-sm" id="btn-gerar" disabled onclick="gerarRelatorio()">
+      <i class="bi bi-file-earmark-text me-1"></i>Gerar Relatório
+    </button>
+  </div>
+</div>
+
+<div id="msg-vazio" class="alert alert-warning d-none">
+  <i class="bi bi-info-circle me-1"></i>Nenhuma empresa com estagiários ativos encontrada para os filtros selecionados.
+</div>
+
+<script>
+let empresasData = [];
+let todasSelecionadas = false;
+
+async function buscarEmpresas() {
+  const ramo   = document.getElementById('sel-ramo').value;
+  const cidade = document.getElementById('sel-cidade').value;
+  const estado = document.getElementById('sel-estado').value;
+
+  const params = new URLSearchParams();
+  if (ramo)   params.set('ramo', ramo);
+  if (cidade) params.set('cidade', cidade);
+  if (estado) params.set('estado', estado);
+
+  const resp = await fetch('/relatorio/por-empresa/empresas?' + params);
+  empresasData = await resp.json();
+
+  const card  = document.getElementById('card-empresas');
+  const vazio = document.getElementById('msg-vazio');
+
+  if (!empresasData.length) {
+    card.style.setProperty('display', 'none', 'important');
+    vazio.classList.remove('d-none');
+    return;
+  }
+  vazio.classList.add('d-none');
+  card.style.removeProperty('display');
+
+  document.getElementById('badge-total').textContent = empresasData.length + ' empresa(s)';
+  renderLista();
+}
+
+function renderLista() {
+  const container = document.getElementById('lista-empresas');
+  container.innerHTML = '';
+
+  empresasData.forEach((emp, i) => {
+    const row = document.createElement('div');
+    row.className = 'px-3 py-2 border-bottom d-flex align-items-center gap-3 empresa-row';
+    row.innerHTML = `
+      <input type="checkbox" class="form-check-input cb-emp flex-shrink-0" id="emp-${i}"
+             value="${emp.id}" onchange="atualizarContador()">
+      <label for="emp-${i}" class="mb-0 flex-grow-1 cursor-pointer" style="cursor:pointer">
+        <span class="fw-semibold">${emp.display}</span>
+        <span class="text-muted small ms-2">${emp.ramo || ''}${emp.cidade ? ' · ' + emp.cidade : ''}${emp.estado ? '/' + emp.estado : ''}</span>
+      </label>
+      <span class="badge bg-primary-subtle text-primary-emphasis">${emp.total_ativos} estagiário(s)</span>
+    `;
+    container.appendChild(row);
+  });
+  atualizarContador();
+}
+
+function atualizarContador() {
+  const sels = document.querySelectorAll('.cb-emp:checked').length;
+  document.getElementById('qtd-sel').textContent = sels;
+  document.getElementById('btn-gerar').disabled = sels === 0;
+  const all = document.querySelectorAll('.cb-emp').length;
+  todasSelecionadas = sels === all;
+  document.getElementById('lbl-toggle').textContent = todasSelecionadas ? 'Desmarcar todas' : 'Selecionar todas';
+}
+
+function toggleTodas() {
+  const cbs = document.querySelectorAll('.cb-emp');
+  todasSelecionadas = !todasSelecionadas;
+  cbs.forEach(cb => cb.checked = todasSelecionadas);
+  atualizarContador();
+}
+
+function gerarRelatorio() {
+  const ids = [...document.querySelectorAll('.cb-emp:checked')].map(cb => cb.value).join(',');
+  if (!ids) return;
+  window.open('/relatorio/por-empresa/doc?empresas=' + ids, '_blank');
+}
+</script>
+{% endblock %}

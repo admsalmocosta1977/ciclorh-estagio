@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Relatório de Estagiários por Empresa — Ciclo RH</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 7.5pt; color: #111; background: #fff; }
+  .page { width:210mm; min-height:297mm; margin:0 auto; padding:13mm 16mm 12mm; }
+
+  /* ── Cabeçalho ── */
+  .cabecalho { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+  .cabecalho img { height:40px; object-fit:contain; }
+  .cab-info { flex:1; }
+  .cab-nome { font-size:9.5pt; font-weight:700; color:#1a2845; display:block; }
+  .cab-sub  { font-size:7pt; color:#555; display:block; }
+  .cab-det  { font-size:6.5pt; color:#777; display:block; margin-top:1px; }
+  .stripe { height:3px; background:linear-gradient(90deg,#1a2845 70%,#4a7ab5); margin:6px 0 8px; border-radius:1px; }
+
+  /* ── Título ── */
+  .titulo-bloco { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px; }
+  .titulo-bloco h1 { font-size:10pt; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#1a2845; }
+  .titulo-bloco .meta { font-size:6.5pt; color:#777; text-align:right; }
+
+  /* ── Empresa grupo ── */
+  .grupo { margin-bottom:10px; page-break-inside:avoid; }
+  .grupo-header { background:#1a2845; color:#fff; padding:3px 7px; display:flex; justify-content:space-between; align-items:center; }
+  .grupo-header .emp-nome { font-size:7.5pt; font-weight:700; letter-spacing:.02em; }
+  .grupo-header .emp-meta { font-size:6.5pt; color:#c8d6e8; }
+
+  /* ── Tabela ── */
+  table { width:100%; border-collapse:collapse; }
+  thead tr { background:#e9ecef; }
+  thead th { font-size:6pt; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+             color:#444; padding:2px 5px; border-bottom:1px solid #ccc; white-space:nowrap; }
+  tbody td { font-size:7pt; padding:2px 5px; border-bottom:1px solid #ebebeb; vertical-align:middle; }
+  tbody tr:last-child td { border-bottom:none; }
+  tbody tr:nth-child(even) td { background:#f8fafc; }
+
+  .subtotal-row td { background:#eef2f8; font-size:6.5pt; font-weight:600; padding:2px 5px;
+                     border-top:1px solid #c8d6e8; }
+
+  /* ── Totalizador final ── */
+  .totais-bloco { margin-top:14px; border-top:2px solid #1a2845; padding-top:6px;
+                  display:flex; gap:24px; justify-content:flex-end; }
+  .totais-bloco .item { text-align:right; }
+  .totais-bloco .item .lbl { font-size:6pt; text-transform:uppercase; letter-spacing:.05em; color:#666; display:block; }
+  .totais-bloco .item .val { font-size:9pt; font-weight:700; color:#1a2845; display:block; }
+
+  /* ── Rodapé ── */
+  .rodape { margin-top:16px; border-top:1px solid #ddd; padding-top:5px;
+            font-size:6pt; color:#888; display:flex; justify-content:space-between; }
+
+  @media print {
+    @page { size: A4 portrait; margin: 0; }
+    .no-print { display:none !important; }
+    .page { padding:13mm 16mm 12mm; }
+    .grupo { page-break-inside:avoid; }
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+function salvarPDF(btn) {
+  var orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = 'Gerando…';
+  html2pdf().set({
+    margin: 0, filename: 'Relatorio-Estagiarios-por-Empresa.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: 'avoid-all' }
+  }).from(document.querySelector('.page')).save().finally(function(){
+    btn.disabled = false; btn.innerHTML = orig;
+  });
+}
+</script>
+</head>
+<body>
+
+<!-- Barra de ações -->
+<div class="no-print" style="background:#1a2845;color:#fff;padding:8px 18px;display:flex;justify-content:space-between;align-items:center">
+  <span style="font-size:8.5pt;font-weight:600">Relatório de Estagiários por Empresa</span>
+  <div>
+    <button onclick="salvarPDF(this)" style="background:#fff;color:#1a2845;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;font-weight:700;margin-right:6px;font-size:8pt">Salvar PDF</button>
+    <button onclick="window.print()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);padding:5px 14px;border-radius:4px;cursor:pointer;font-weight:700;font-size:8pt">Imprimir</button>
+    <button onclick="window.close()" style="background:transparent;color:#aaa;border:none;padding:5px 12px;cursor:pointer;font-size:9pt">✕</button>
+  </div>
+</div>
+
+<div class="page">
+  <!-- Cabeçalho -->
+  <div class="cabecalho">
+    <img src="/static/Logo_CicloRH.png" alt="Ciclo RH">
+    <div class="cab-info">
+      <span class="cab-nome">{{ agente.nome }}</span>
+      <span class="cab-sub">Agente de Integração de Estágio — Lei Federal n.º 11.788/2008</span>
+      <span class="cab-det">CNPJ: {{ agente.cnpj }} &nbsp;|&nbsp; {{ agente.email }} &nbsp;|&nbsp; {{ agente.telefone }}</span>
+    </div>
+  </div>
+  <div class="stripe"></div>
+
+  <!-- Título -->
+  <div class="titulo-bloco">
+    <h1>Relatório de Estagiários por Empresa</h1>
+    <div class="meta">
+      Emitido em: {{ data_hoje }}<br>
+      Total de estagiários: <strong>{{ total_geral }}</strong>
+    </div>
+  </div>
+
+  <!-- Grupos por empresa -->
+  {% for emp_nome, g in grupos.items() %}
+  <div class="grupo">
+    <div class="grupo-header">
+      <span class="emp-nome">{{ g.display }}</span>
+      <span class="emp-meta">
+        {% if g.ramo != '—' %}{{ g.ramo }} · {% endif %}
+        {% if g.cidade %}{{ g.cidade }}{% if g.estado %}/{{ g.estado }}{% endif %}{% endif %}
+        &nbsp;|&nbsp; {{ g.itens|length }} estagiário(s)
+      </span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:26%">Estagiário</th>
+          <th style="width:10%">CPF</th>
+          <th style="width:18%">Curso / IE</th>
+          <th style="width:8%">Área</th>
+          <th style="width:8%">Início</th>
+          <th style="width:8%">Término</th>
+          <th style="width:8%;text-align:right">Bolsa</th>
+          <th style="width:7%;text-align:right">Taxa</th>
+          <th style="width:7%;text-align:center">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in g.itens %}
+        <tr>
+          <td>{{ c.est_nome }}</td>
+          <td style="white-space:nowrap">{{ c.est_cpf or '—' }}</td>
+          <td>{{ c.curso or '—' }}<br><span style="font-size:6pt;color:#777">{{ c.ie_sigla or c.ie_nome }}</span></td>
+          <td>{{ c.area_atuacao or '—' }}</td>
+          <td style="white-space:nowrap">{{ fmt_date(c.data_inicio) }}</td>
+          <td style="white-space:nowrap">{{ fmt_date(c.data_fim) }}</td>
+          <td style="text-align:right;white-space:nowrap">{{ br_currency(c.bolsa) if c.bolsa else '—' }}</td>
+          <td style="text-align:right;white-space:nowrap">{{ br_currency(c.taxa) if c.taxa else '—' }}</td>
+          <td style="text-align:center">
+            {% if c.data_encerramento %}
+              <span style="color:#dc3545;font-size:6pt;font-weight:700">ENCERRADO</span>
+            {% else %}
+              <span style="color:#198754;font-size:6pt;font-weight:700">ATIVO</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        <tr class="subtotal-row">
+          <td colspan="6">Subtotal — {{ g.itens|length }} estagiário(s)</td>
+          <td style="text-align:right">{{ br_currency(g.itens|sum(attribute='bolsa')) }}</td>
+          <td style="text-align:right">{{ br_currency(g.itens|sum(attribute='taxa')) }}</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+
+  <!-- Totais gerais -->
+  <div class="totais-bloco">
+    <div class="item">
+      <span class="lbl">Total Estagiários</span>
+      <span class="val">{{ total_geral }}</span>
+    </div>
+    <div class="item">
+      <span class="lbl">Total Bolsas</span>
+      <span class="val">{{ br_currency(total_bolsa) }}</span>
+    </div>
+    <div class="item">
+      <span class="lbl">Total Taxas</span>
+      <span class="val">{{ br_currency(total_taxa) }}</span>
+    </div>
+  </div>
+
+  <!-- Rodapé -->
+  <div class="rodape">
+    <span>{{ agente.nome }} — CNPJ {{ agente.cnpj }} — {{ agente.endereco }}, {{ agente.cidade }}</span>
+    <span>Documento gerado em {{ data_hoje }} — Uso interno</span>
+  </div>
+</div>
+</body>
+</html>

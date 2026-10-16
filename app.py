@@ -2574,6 +2574,111 @@ def admin_config():
 
 # ─── RELATÓRIOS ───────────────────────────────────────────────────────────────
 
+@app.route('/relatorio/por-empresa')
+@login_required
+def relatorio_por_empresa():
+    ramo    = request.args.get('ramo', '').strip()
+    cidade  = request.args.get('cidade', '').strip()
+    estado  = request.args.get('estado', '').strip()
+
+    ramos   = _q("SELECT DISTINCT ramo FROM empresa WHERE ramo IS NOT NULL AND ramo <> '' ORDER BY ramo")
+    cidades = _q("SELECT DISTINCT cidade FROM empresa WHERE cidade IS NOT NULL AND cidade <> '' ORDER BY cidade")
+    estados = _q("SELECT DISTINCT estado FROM empresa WHERE estado IS NOT NULL AND estado <> '' ORDER BY estado")
+
+    return render_template('relatorio/por_empresa.html',
+                           ramo=ramo, cidade=cidade, estado=estado,
+                           ramos=ramos, cidades=cidades, estados=estados)
+
+
+@app.route('/relatorio/por-empresa/empresas')
+@login_required
+def relatorio_por_empresa_lista():
+    ramo   = request.args.get('ramo', '').strip()
+    cidade = request.args.get('cidade', '').strip()
+    estado = request.args.get('estado', '').strip()
+
+    sql = """
+        SELECT emp.id, COALESCE(emp.nome_fantasia, emp.nome) AS display,
+               emp.nome, emp.ramo, emp.cidade, emp.estado,
+               COUNT(c.id) AS total_ativos
+        FROM empresa emp
+        LEFT JOIN contrato c ON c.empresa_id = emp.id AND c.data_encerramento IS NULL
+        WHERE emp.status = 'ativo'
+    """
+    params = []
+    if ramo:
+        sql += " AND emp.ramo = %s"; params.append(ramo)
+    if cidade:
+        sql += " AND emp.cidade = %s"; params.append(cidade)
+    if estado:
+        sql += " AND emp.estado = %s"; params.append(estado)
+    sql += " GROUP BY emp.id, emp.nome_fantasia, emp.nome, emp.ramo, emp.cidade, emp.estado"
+    sql += " HAVING COUNT(c.id) > 0 ORDER BY emp.nome"
+
+    rows = _q(sql, params) or []
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route('/relatorio/por-empresa/doc')
+@login_required
+def relatorio_por_empresa_doc():
+    ids_raw = request.args.get('empresas', '')
+    if not ids_raw:
+        flash('Selecione ao menos uma empresa.', 'warning')
+        return redirect(url_for('relatorio_por_empresa'))
+
+    try:
+        ids = [int(i) for i in ids_raw.split(',') if i.strip().isdigit()]
+    except ValueError:
+        ids = []
+    if not ids:
+        flash('Parâmetro inválido.', 'danger')
+        return redirect(url_for('relatorio_por_empresa'))
+
+    placeholders = ','.join(['%s'] * len(ids))
+    contratos = _q(f"""
+        SELECT c.*, e.nome est_nome, e.cpf est_cpf, e.telefone est_telefone,
+               e.tipo_ensino est_tipo_ensino, e.semestre est_semestre,
+               COALESCE(emp.nome_fantasia, emp.nome) emp_display, emp.nome emp_nome,
+               emp.ramo emp_ramo, emp.cidade emp_cidade, emp.estado emp_estado,
+               ie.nome ie_nome, ie.sigla ie_sigla
+        FROM contrato c
+        JOIN estagiario e ON e.id = c.estagiario_id
+        JOIN empresa emp ON emp.id = c.empresa_id
+        JOIN ie ON ie.id = c.ie_id
+        WHERE c.empresa_id IN ({placeholders})
+          AND c.data_encerramento IS NULL
+        ORDER BY emp.nome, e.nome
+    """, ids)
+
+    grupos = {}
+    for c in (contratos or []):
+        k = c['emp_nome']
+        if k not in grupos:
+            grupos[k] = {
+                'display': c['emp_display'],
+                'ramo': c['emp_ramo'] or '—',
+                'cidade': c['emp_cidade'] or '',
+                'estado': c['emp_estado'] or '',
+                'itens': []
+            }
+        grupos[k]['itens'].append(c)
+
+    total_geral = sum(len(g['itens']) for g in grupos.values())
+    total_bolsa = sum(c['bolsa'] or 0 for c in (contratos or []))
+    total_taxa  = sum(c['taxa'] or 0 for c in (contratos or []))
+
+    return render_template('docs/relatorio_por_empresa.html',
+                           grupos=grupos,
+                           total_geral=total_geral,
+                           total_bolsa=total_bolsa,
+                           total_taxa=total_taxa,
+                           agente=AGENTE,
+                           fmt_date=fmt_date,
+                           br_currency=br_currency,
+                           data_hoje=fmt_date(date.today()))
+
+
 @app.route('/relatorio/vencimentos')
 @login_required
 def relatorio_vencimentos():

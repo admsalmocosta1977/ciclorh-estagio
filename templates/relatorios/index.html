@@ -51,6 +51,25 @@
     </div>
   </div>
 
+  <!-- ── Por Empresa ── -->
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-header fw-semibold">
+        <i class="bi bi-building me-2 text-success"></i>Estagiários por Empresa
+      </div>
+      <div class="card-body d-flex flex-column gap-2">
+        <p class="text-muted small mb-2">
+          Filtros por segmento, cidade e estado. Selecione uma ou mais empresas e gere um relatório executivo em PDF com subtotais por empresa.
+        </p>
+        <a href="{{ url_for('relatorio_por_empresa') }}"
+           class="btn btn-outline-success btn-sm">
+          <i class="bi bi-file-earmark-text me-1"></i>
+          Abrir Relatório por Empresa
+        </a>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Indicadores ── -->
   <div class="col-md-4">
     <div class="card h-100">
