@@ -212,7 +212,6 @@
     </thead>
     <tbody>
       {% for c in venc_30 %}
-      {% set dias = (c.data_efetiva - hoje|string|e) %}
       <tr>
         <td>{{ c.est_nome }}</td>
         <td>{{ c.emp_display }}</td>
