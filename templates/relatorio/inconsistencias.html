@@ -408,7 +408,14 @@ function toggleValores(cb) {
 }
 
 function gerarDoc() {
-  var ids = [...document.querySelectorAll('.cb-emp:checked')].map(function(cb){ return cb.value; }).join(',');
+  // Usa o hidden input que reflete o filtro ativo na página
+  var ids = document.getElementById('inp-empresa-ids').value;
+  // Também checa o estado atual dos checkboxes (para quando o usuário selecionou sem clicar Filtrar)
+  var checked = [...document.querySelectorAll('.cb-emp:checked')].map(function(cb){ return cb.value; });
+  var allCount = document.querySelectorAll('.cb-emp').length;
+  if (checked.length > 0 && checked.length < allCount) {
+    ids = checked.join(',');
+  }
   var url = '/relatorio/inconsistencias?modo=doc';
   if (ids) url += '&empresa_ids=' + encodeURIComponent(ids);
   var chk = document.getElementById('chk-valores');
