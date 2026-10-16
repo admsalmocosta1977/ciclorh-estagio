@@ -116,6 +116,7 @@ function salvarPDF(btn) {
     </div>
   </div>
 
+  {% if show_rel %}
   <!-- 1. Relatórios Semestrais Pendentes -->
   <div class="grupo">
     <div class="grupo-header header-rel">
@@ -149,7 +150,9 @@ function salvarPDF(btn) {
       </tbody>
     </table>
   </div>
+  {% endif %}
 
+  {% if show_docs %}
   <!-- 2. TCE / Plano Assinado Pendente -->
   <div class="grupo">
     <div class="grupo-header header-docs">
@@ -187,7 +190,9 @@ function salvarPDF(btn) {
       </tbody>
     </table>
   </div>
+  {% endif %}
 
+  {% if show_v30 %}
   <!-- 3. Vencendo em 30 dias -->
   <div class="grupo">
     <div class="grupo-header header-v30">
@@ -229,7 +234,9 @@ function salvarPDF(btn) {
       </tbody>
     </table>
   </div>
+  {% endif %}
 
+  {% if show_venc %}
   <!-- 4. Vencidos -->
   <div class="grupo">
     <div class="grupo-header header-venc">
@@ -271,6 +278,7 @@ function salvarPDF(btn) {
       </tbody>
     </table>
   </div>
+  {% endif %}
 
   <div class="rodape">
     <span>{{ agente.nome }} — CNPJ {{ agente.cnpj }} — {{ agente.endereco }}, {{ agente.cidade }}</span>

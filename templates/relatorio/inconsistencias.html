@@ -408,18 +408,25 @@ function toggleValores(cb) {
 }
 
 function gerarDoc() {
-  // Usa o hidden input que reflete o filtro ativo na página
+  // Filtro de empresa: usa hidden input (filtro ativo) ou checkboxes (se o usuário alterou sem filtrar)
   var ids = document.getElementById('inp-empresa-ids').value;
-  // Também checa o estado atual dos checkboxes (para quando o usuário selecionou sem clicar Filtrar)
   var checked = [...document.querySelectorAll('.cb-emp:checked')].map(function(cb){ return cb.value; });
   var allCount = document.querySelectorAll('.cb-emp').length;
   if (checked.length > 0 && checked.length < allCount) {
     ids = checked.join(',');
   }
+
+  // Seções visíveis
+  var secoes = [];
+  if (document.getElementById('f-rel').checked)  secoes.push('rel');
+  if (document.getElementById('f-docs').checked) secoes.push('docs');
+  if (document.getElementById('f-v30').checked)  secoes.push('v30');
+  if (document.getElementById('f-venc').checked) secoes.push('venc');
+
   var url = '/relatorio/inconsistencias?modo=doc';
   if (ids) url += '&empresa_ids=' + encodeURIComponent(ids);
-  var chk = document.getElementById('chk-valores');
-  url += '&mostrar_valores=' + (chk && chk.checked ? 'sim' : 'nao');
+  url += '&mostrar_valores=' + (document.getElementById('chk-valores').checked ? 'sim' : 'nao');
+  if (secoes.length > 0 && secoes.length < 4) url += '&secoes=' + secoes.join(',');
   window.open(url, '_blank');
 }
 </script>

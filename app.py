@@ -2585,6 +2585,12 @@ def relatorio_inconsistencias():
     empresa_ids     = [int(x) for x in empresa_ids_raw.split(',') if x.strip().isdigit()]
     mostrar_valores = request.args.get('mostrar_valores', 'nao') == 'sim'
     modo            = request.args.get('modo', 'tela')
+    secoes_raw      = request.args.get('secoes', '')
+    secoes          = set(secoes_raw.split(',')) if secoes_raw else {'rel', 'docs', 'v30', 'venc'}
+    show_rel  = 'rel'  in secoes
+    show_docs = 'docs' in secoes
+    show_v30  = 'v30'  in secoes
+    show_venc = 'venc' in secoes
 
     # Lista de empresas com contratos ativos para o filtro
     empresas = _q("""
@@ -2686,6 +2692,10 @@ def relatorio_inconsistencias():
                            empresa_ids_list=[str(x) for x in empresa_ids],
                            emp_nomes=emp_nomes,
                            mostrar_valores=mostrar_valores,
+                           show_rel=show_rel,
+                           show_docs=show_docs,
+                           show_v30=show_v30,
+                           show_venc=show_venc,
                            fmt_date=fmt_date,
                            br_currency=br_currency,
                            agente=AGENTE,
