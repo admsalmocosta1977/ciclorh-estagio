@@ -58,7 +58,8 @@
             <option value="superior">Ensino Superior</option>
             <option value="tecnico">Ensino Técnico</option>
             <option value="medio">Ensino Médio</option>
-            <option value="eja">EJA</option>
+            <option value="fundamental">Ensino Fundamental</option>
+            <option value="eja">EJA — Ensino Médio / Fundamental</option>
             <option value="proeja">PROEJA</option>
           </select>
         </div>
@@ -111,11 +112,17 @@ initEstadoCidade('sel-estado-cadest','sel-cidade-cadest','','','BA');
   const txt = document.getElementById('cad-txt-periodo');
   function atualizar(){
     if(sel.value==='medio'){
-      lbl.textContent='Ano Atual'; inp.max=3; txt.textContent='Ensino Médio: 1º, 2º ou 3º Ano';
+      lbl.textContent='Ano Atual'; inp.min=1; inp.max=3; inp.placeholder='Ex: 1';
+      txt.textContent='Ensino Médio: 1º, 2º ou 3º Ano';
+    } else if(sel.value==='fundamental'){
+      lbl.textContent='Série Atual'; inp.min=1; inp.max=9; inp.placeholder='Ex: 9';
+      txt.textContent='Ensino Fundamental: 1º ao 9º Ano (informe 9 para 9º Ano)';
     } else if(sel.value==='eja'||sel.value==='proeja'){
-      lbl.textContent='Módulo Atual'; inp.max=4; txt.textContent='EJA/PROEJA: módulo 1 a 4';
+      lbl.textContent='Módulo Atual'; inp.min=1; inp.max=4; inp.placeholder='Ex: 2';
+      txt.textContent='EJA/PROEJA: módulo 1 a 4';
     } else {
-      lbl.textContent='Período Atual'; inp.max=10; txt.textContent='Superior/Técnico: 1 a 10';
+      lbl.textContent='Período Atual'; inp.min=1; inp.max=10; inp.placeholder='Ex: 3';
+      txt.textContent='Superior/Técnico: 1 a 10';
     }
   }
   sel.addEventListener('change', atualizar);
