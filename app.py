@@ -3240,61 +3240,47 @@ def admin_merge_ie():
     GET  → mostra diagnóstico
     GET ?executar=1&manter=X&excluir=Y → executa a fusão
     """
-    ies = _q("""
-        SELECT ie.id, ie.nome, ie.sigla, ie.cidade, ie.estado, ie.cnpj,
-               COUNT(DISTINCT c.id)   AS contratos,
-               COUNT(DISTINCT e.id)   AS estagiarios
-        FROM ie
-        LEFT JOIN contrato   c ON c.ie_id = ie.id
-        LEFT JOIN estagiario e ON e.ie_id = ie.id
-        WHERE ie.nome ILIKE '%anhanguera%'
-        GROUP BY ie.id
-        ORDER BY ie.cidade
-    """) or []
+    try:
+        ies = _q("""
+            SELECT ie.id, ie.nome, ie.sigla, ie.cidade, ie.estado, ie.cnpj,
+                   (SELECT COUNT(*) FROM contrato c WHERE c.ie_id = ie.id)   AS contratos,
+                   (SELECT COUNT(*) FROM estagiario e WHERE e.ie_id = ie.id) AS estagiarios
+            FROM ie
+            WHERE ie.nome ILIKE '%anhanguera%'
+            ORDER BY ie.cidade
+        """) or []
 
-    manter_id  = request.args.get('manter',  type=int)
-    excluir_id = request.args.get('excluir', type=int)
-    executar   = request.args.get('executar') == '1'
+        manter_id  = request.args.get('manter',  type=int)
+        excluir_id = request.args.get('excluir', type=int)
+        executar   = request.args.get('executar') == '1'
 
-    resultado = None
-    if executar and manter_id and excluir_id and manter_id != excluir_id:
-        # Verifica que ambos existem
-        ids_validos = {ie['id'] for ie in ies}
-        if manter_id in ids_validos and excluir_id in ids_validos:
-            _run("UPDATE contrato   SET ie_id = %s WHERE ie_id = %s", (manter_id, excluir_id))
-            _run("UPDATE estagiario SET ie_id = %s WHERE ie_id = %s", (manter_id, excluir_id))
-            _run("DELETE FROM ie_professor WHERE ie_id = %s", (excluir_id,))
-            _run("DELETE FROM ie WHERE id = %s", (excluir_id,))
-            _log('admin', 'ie', manter_id,
-                 f'Merge IE: excluiu id={excluir_id}, transferiu para id={manter_id}')
-            resultado = f'Concluído! IE id={excluir_id} excluída. Todos os contratos e estagiários foram transferidos para id={manter_id}.'
-            ies = _q("""
-                SELECT ie.id, ie.nome, ie.sigla, ie.cidade, ie.estado, ie.cnpj,
-                       COUNT(DISTINCT c.id) AS contratos,
-                       COUNT(DISTINCT e.id) AS estagiarios
-                FROM ie LEFT JOIN contrato c ON c.ie_id=ie.id LEFT JOIN estagiario e ON e.ie_id=ie.id
-                WHERE ie.id = %s GROUP BY ie.id
-            """, (manter_id,)) or []
+        resultado = None
+        if executar and manter_id and excluir_id and manter_id != excluir_id:
+            ids_validos = {ie['id'] for ie in ies}
+            if manter_id in ids_validos and excluir_id in ids_validos:
+                _run("UPDATE contrato   SET ie_id = %s WHERE ie_id = %s", (manter_id, excluir_id))
+                _run("UPDATE estagiario SET ie_id = %s WHERE ie_id = %s", (manter_id, excluir_id))
+                _run("DELETE FROM ie_professor WHERE ie_id = %s", (excluir_id,))
+                _run("DELETE FROM ie WHERE id = %s", (excluir_id,))
+                _log('admin', 'ie', manter_id,
+                     'Merge IE: excluiu id=%s, transferiu para id=%s' % (excluir_id, manter_id))
+                resultado = 'Concluido! IE id=%s excluida. Contratos e estagiarios transferidos para id=%s.' % (excluir_id, manter_id)
+                ies = _q("""
+                    SELECT ie.id, ie.nome, ie.sigla, ie.cidade, ie.estado, ie.cnpj,
+                           (SELECT COUNT(*) FROM contrato c WHERE c.ie_id = ie.id)   AS contratos,
+                           (SELECT COUNT(*) FROM estagiario e WHERE e.ie_id = ie.id) AS estagiarios
+                    FROM ie WHERE ie.id = %s
+                """, (manter_id,)) or []
 
-    linhas = ''.join(
-        f'<tr><td>{ie["id"]}</td><td>{ie["nome"]}</td><td>{ie["sigla"] or "—"}</td>'
-        f'<td>{ie["cidade"] or "—"}</td><td>{ie["cnpj"] or "—"}</td>'
-        f'<td><b>{ie["contratos"]}</b></td><td><b>{ie["estagiarios"]}</b></td></tr>'
-        for ie in ies
-    )
-    html = f"""<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-    <title>Merge IE Anhanguera</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-    </head><body class="p-4">
-    <h4>Merge — Instituições de Ensino Anhanguera</h4>
-    {'<div class="alert alert-success">' + resultado + '</div>' if resultado else ''}
-    <table class="table table-bordered table-sm mb-4">
-      <thead><tr><th>ID</th><th>Nome</th><th>Sigla</th><th>Cidade</th><th>CNPJ</th><th>Contratos</th><th>Estagiários</th></tr></thead>
-      <tbody>{linhas}</tbody>
-    </table>
-    {'<p class="text-success fw-bold">Merge concluído com sucesso.</p>' if resultado else ''}
-    """ + ('' if resultado else f"""
-    <form method="GET" class="row g-2 align-items-end">
+        linhas = ''
+        for ie in ies:
+            linhas += '<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td><b>%s</b></td><td><b>%s</b></td></tr>' % (
+                ie['id'], ie['nome'], ie['sigla'] or '-', ie['cidade'] or '-',
+                ie['cnpj'] or '-', ie['contratos'], ie['estagiarios'])
+
+        alerta = ('<div class="alert alert-success">%s</div>' % resultado) if resultado else ''
+        form_html = '' if resultado else """
+    <form method="GET" class="row g-2 align-items-end mt-2">
       <input type="hidden" name="executar" value="1">
       <div class="col-auto">
         <label class="form-label small fw-semibold">ID a MANTER (Valinhos)</label>
@@ -3306,11 +3292,25 @@ def admin_merge_ie():
       </div>
       <div class="col-auto align-self-end">
         <button type="submit" class="btn btn-danger"
-          onclick="return confirm('Confirma? Esta ação é irreversível.')">Executar Merge</button>
+          onclick="return confirm('Confirma? Esta acao e irreversivel.')">Executar Merge</button>
       </div>
-    </form>
-    """) + "</body></html>"
-    return html
+    </form>"""
+
+        html = """<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+    <title>Merge IE Anhanguera</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    </head><body class="p-4">
+    <h4>Merge -- Instituicoes de Ensino Anhanguera</h4>
+    %s
+    <table class="table table-bordered table-sm mb-4">
+      <thead><tr><th>ID</th><th>Nome</th><th>Sigla</th><th>Cidade</th><th>CNPJ</th><th>Contratos</th><th>Estagiarios</th></tr></thead>
+      <tbody>%s</tbody>
+    </table>%s
+    </body></html>""" % (alerta, linhas, form_html)
+        return html
+    except Exception as ex:
+        import traceback
+        return '<pre style="color:red">ERRO:\n' + traceback.format_exc() + '</pre>', 500
 
 
 @app.route('/admin/migrar_data_fim_aditivos')
