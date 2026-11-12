@@ -3246,9 +3246,10 @@ def admin_merge_ie():
                    (SELECT COUNT(*) FROM contrato c WHERE c.ie_id = ie.id)   AS contratos,
                    (SELECT COUNT(*) FROM estagiario e WHERE e.ie_id = ie.id) AS estagiarios
             FROM ie
-            WHERE ie.nome ILIKE %s
+            WHERE ie.cnpj = '04.310.392/0001-46'
+               OR ie.nome ILIKE %s OR ie.nome ILIKE %s
             ORDER BY ie.cidade
-        """, ('%anhanguera%',)) or []
+        """, ('%anhanguera%', '%anhaguera%')) or []
 
         manter_id  = request.args.get('manter',  type=int)
         excluir_id = request.args.get('excluir', type=int)
