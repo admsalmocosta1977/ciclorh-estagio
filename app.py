@@ -3261,6 +3261,7 @@ def admin_merge_ie():
             if manter_id in ids_validos and excluir_id in ids_validos:
                 _run("UPDATE contrato   SET ie_id = %s WHERE ie_id = %s", (manter_id, excluir_id))
                 _run("UPDATE estagiario SET ie_id = %s WHERE ie_id = %s", (manter_id, excluir_id))
+                _run("UPDATE candidato  SET ie_id = %s WHERE ie_id = %s", (manter_id, excluir_id))
                 _run("DELETE FROM ie_professor WHERE ie_id = %s", (excluir_id,))
                 _run("DELETE FROM ie WHERE id = %s", (excluir_id,))
                 _log('admin', 'ie', manter_id,
