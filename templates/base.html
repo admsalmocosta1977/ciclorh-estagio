@@ -550,6 +550,9 @@
       <a href="https://ba-vitoriadaconquista-pm-nfs.cloud.el.com.br/#/login" target="_blank" rel="noopener" class="nav-link">
         <i class="bi bi-receipt"></i> Emitir Nota Fiscal <i class="bi bi-box-arrow-up-right ms-auto" style="font-size:.65rem;opacity:.6"></i>
       </a>
+      <a href="#" onclick="copiarLinkLanding(this);return false;" class="nav-link" title="Clique para copiar o link da landing page">
+        <i class="bi bi-megaphone"></i> Landing Page <i class="bi bi-clipboard ms-auto" style="font-size:.65rem;opacity:.6"></i>
+      </a>
     </div>
     {% endif %}
 
@@ -721,6 +724,9 @@
     <a href="https://ba-vitoriadaconquista-pm-nfs.cloud.el.com.br/#/login" target="_blank" rel="noopener" class="nav-link">
       <i class="bi bi-receipt"></i> Emitir Nota Fiscal <i class="bi bi-box-arrow-up-right ms-auto" style="font-size:.65rem;opacity:.6"></i>
     </a>
+    <a href="#" onclick="copiarLinkLanding(this);return false;" class="nav-link" title="Clique para copiar o link da landing page">
+      <i class="bi bi-megaphone"></i> Landing Page <i class="bi bi-clipboard ms-auto" style="font-size:.65rem;opacity:.6"></i>
+    </a>
   </div>
   {% endif %}
 
@@ -770,6 +776,15 @@ document.addEventListener('input', function(e) {
     try { e.target.setSelectionRange(pos, pos); } catch(x) {}
   }
 });
+
+function copiarLinkLanding(el) {
+  var url = 'https://claude.ai/artifact/BicGyQvHvJdrTqS3R67Upc';
+  navigator.clipboard.writeText(url).then(function() {
+    var orig = el.innerHTML;
+    el.innerHTML = '<i class="bi bi-check-lg"></i> Link copiado!';
+    setTimeout(function(){ el.innerHTML = orig; }, 2000);
+  });
+}
 </script>
 </body>
 </html>
