@@ -3234,26 +3234,32 @@ def admin_restaurar():
 @app.route('/admin/merge_ie')
 @admin_required
 def admin_merge_ie():
-    """
-    Exibe as duas IEs Anhanguera e permite fundir: transfere contratos,
-    estagiários e exclui a IE duplicada (mantém a de Valinhos).
-    GET  → mostra diagnóstico
-    GET ?executar=1&manter=X&excluir=Y → executa a fusão
-    """
+    """Ferramenta genérica para fundir IEs duplicadas."""
     try:
-        ies = _q("""
-            SELECT ie.id, ie.nome, ie.sigla, ie.cidade, ie.estado, ie.cnpj,
-                   (SELECT COUNT(*) FROM contrato c WHERE c.ie_id = ie.id)   AS contratos,
-                   (SELECT COUNT(*) FROM estagiario e WHERE e.ie_id = ie.id) AS estagiarios
-            FROM ie
-            WHERE ie.cnpj = '04.310.392/0001-46'
-               OR ie.nome ILIKE %s OR ie.nome ILIKE %s
-            ORDER BY ie.cidade
-        """, ('%anhanguera%', '%anhaguera%')) or []
-
+        busca      = request.args.get('busca', '').strip()
         manter_id  = request.args.get('manter',  type=int)
         excluir_id = request.args.get('excluir', type=int)
         executar   = request.args.get('executar') == '1'
+
+        ies = []
+        if busca:
+            ies = _q("""
+                SELECT ie.id, ie.nome, ie.sigla, ie.cidade, ie.estado, ie.cnpj,
+                       (SELECT COUNT(*) FROM contrato c WHERE c.ie_id = ie.id)   AS contratos,
+                       (SELECT COUNT(*) FROM estagiario e WHERE e.ie_id = ie.id) AS estagiarios
+                FROM ie
+                WHERE ie.nome ILIKE %s OR ie.sigla ILIKE %s
+                ORDER BY ie.cidade
+            """, ('%' + busca + '%', '%' + busca + '%')) or []
+        elif manter_id or excluir_id:
+            ids = list({i for i in [manter_id, excluir_id] if i})
+            ph  = ','.join(['%s'] * len(ids))
+            ies = _q("""
+                SELECT ie.id, ie.nome, ie.sigla, ie.cidade, ie.estado, ie.cnpj,
+                       (SELECT COUNT(*) FROM contrato c WHERE c.ie_id = ie.id)   AS contratos,
+                       (SELECT COUNT(*) FROM estagiario e WHERE e.ie_id = ie.id) AS estagiarios
+                FROM ie WHERE ie.id IN (%s) ORDER BY ie.cidade
+            """ % ph, tuple(ids)) or []
 
         resultado = None
         if executar and manter_id and excluir_id and manter_id != excluir_id:
@@ -3266,7 +3272,7 @@ def admin_merge_ie():
                 _run("DELETE FROM ie WHERE id = %s", (excluir_id,))
                 _log('admin', 'ie', manter_id,
                      'Merge IE: excluiu id=%s, transferiu para id=%s' % (excluir_id, manter_id))
-                resultado = 'Concluido! IE id=%s excluida. Contratos e estagiarios transferidos para id=%s.' % (excluir_id, manter_id)
+                resultado = 'Concluido! IE id=%s excluida. Todos os vinculos transferidos para id=%s.' % (excluir_id, manter_id)
                 ies = _q("""
                     SELECT ie.id, ie.nome, ie.sigla, ie.cidade, ie.estado, ie.cnpj,
                            (SELECT COUNT(*) FROM contrato c WHERE c.ie_id = ie.id)   AS contratos,
@@ -3280,35 +3286,41 @@ def admin_merge_ie():
                 ie['id'], ie['nome'], ie['sigla'] or '-', ie['cidade'] or '-',
                 ie['cnpj'] or '-', ie['contratos'], ie['estagiarios'])
 
-        alerta = ('<div class="alert alert-success">%s</div>' % resultado) if resultado else ''
-        form_html = '' if resultado else """
-    <form method="GET" class="row g-2 align-items-end mt-2">
-      <input type="hidden" name="executar" value="1">
-      <div class="col-auto">
-        <label class="form-label small fw-semibold">ID a MANTER (Valinhos)</label>
-        <input type="number" name="manter" class="form-control" required placeholder="ID correto">
-      </div>
-      <div class="col-auto">
-        <label class="form-label small fw-semibold">ID a EXCLUIR (duplicada)</label>
-        <input type="number" name="excluir" class="form-control" required placeholder="ID duplicado">
-      </div>
-      <div class="col-auto align-self-end">
-        <button type="submit" class="btn btn-danger"
-          onclick="return confirm('Confirma? Esta acao e irreversivel.')">Executar Merge</button>
-      </div>
-    </form>"""
+        alerta   = ('<div class="alert alert-success">%s</div>' % resultado) if resultado else ''
+        tabela   = ('<table class="table table-bordered table-sm mb-3"><thead><tr><th>ID</th><th>Nome</th><th>Sigla</th><th>Cidade</th><th>CNPJ</th><th>Contratos</th><th>Estagiarios</th></tr></thead><tbody>%s</tbody></table>' % linhas) if ies else ('<p class="text-muted">Nenhuma IE encontrada. Use a busca acima.</p>' if busca else '')
+        busca_val = busca.replace('"', '&quot;')
 
         html = """<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-    <title>Merge IE Anhanguera</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-    </head><body class="p-4">
-    <h4>Merge -- Instituicoes de Ensino Anhanguera</h4>
-    %s
-    <table class="table table-bordered table-sm mb-4">
-      <thead><tr><th>ID</th><th>Nome</th><th>Sigla</th><th>Cidade</th><th>CNPJ</th><th>Contratos</th><th>Estagiarios</th></tr></thead>
-      <tbody>%s</tbody>
-    </table>%s
-    </body></html>""" % (alerta, linhas, form_html)
+<title>Merge IE</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+</head><body class="p-4" style="max-width:960px">
+<h4 class="mb-3">Merge de Instituicoes de Ensino Duplicadas</h4>
+%s
+<form method="GET" class="row g-2 align-items-end mb-3">
+  <div class="col-auto"><input type="text" name="busca" class="form-control" placeholder="Buscar IE (ex: unicesumar)" value="%s"></div>
+  <div class="col-auto"><button class="btn btn-secondary" type="submit">Buscar</button></div>
+</form>
+%s
+%s
+</body></html>""" % (
+            alerta, busca_val, tabela,
+            '' if resultado else """
+<form method="GET" class="row g-2 align-items-end mt-2">
+  <input type="hidden" name="executar" value="1">
+  <input type="hidden" name="busca" value="%s">
+  <div class="col-auto">
+    <label class="form-label small fw-semibold">ID a MANTER</label>
+    <input type="number" name="manter" class="form-control" required placeholder="ID correto" value="%s">
+  </div>
+  <div class="col-auto">
+    <label class="form-label small fw-semibold">ID a EXCLUIR</label>
+    <input type="number" name="excluir" class="form-control" required placeholder="ID duplicado" value="%s">
+  </div>
+  <div class="col-auto align-self-end">
+    <button type="submit" class="btn btn-danger"
+      onclick="return confirm('Confirma? Esta acao e irreversivel.')">Executar Merge</button>
+  </div>
+</form>""" % (busca_val, manter_id or '', excluir_id or ''))
         return html
     except Exception as ex:
         import traceback
